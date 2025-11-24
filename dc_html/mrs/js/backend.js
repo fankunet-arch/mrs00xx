@@ -722,6 +722,7 @@ async function importSkus() {
  */
 function showNewCategoryModal() {
   document.getElementById('form-category').reset();
+  document.getElementById('category-id').value = '';
   document.getElementById('modal-category-title').textContent = '新增品类';
   modal.show('modal-category');
 }
@@ -933,7 +934,20 @@ async function deleteSku(skuId) {
  * 编辑品类
  */
 async function editCategory(categoryId) {
-  showAlert('info', '编辑品类功能开发中...');
+  const result = await api.call(`api.php?route=backend_category_detail&category_id=${categoryId}`);
+
+  if (result.success) {
+    const category = result.data;
+
+    document.getElementById('category-id').value = category.category_id;
+    document.getElementById('category-name').value = category.category_name;
+    document.getElementById('category-code').value = category.category_code || '';
+
+    document.getElementById('modal-category-title').textContent = '编辑品类';
+    modal.show('modal-category');
+  } else {
+    showAlert('danger', '获取品类信息失败: ' + result.message);
+  }
 }
 
 /**
