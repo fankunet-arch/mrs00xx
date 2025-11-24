@@ -609,7 +609,9 @@ function showNewBatchModal() {
  */
 function showNewSkuModal() {
   document.getElementById('form-sku').reset();
+  document.getElementById('sku-id').value = ''; // 清除ID
   document.getElementById('modal-sku-title').textContent = '新增SKU';
+  document.getElementById('sku-code').readOnly = false; // 允许输入编码
   // 加载品类选项
   loadCategoryOptions();
   modal.show('modal-sku');
@@ -881,7 +883,33 @@ async function deleteBatch(batchId) {
  * 编辑SKU
  */
 async function editSku(skuId) {
-  showAlert('info', '编辑SKU功能开发中...');
+  // 加载品类选项 (确保下拉框有值)
+  await loadCategoryOptions();
+
+  // 获取SKU详情
+  const result = await api.call(`api.php?route=backend_sku_detail&sku_id=${skuId}`);
+
+  if (result.success) {
+    const sku = result.data;
+
+    // 填充表单
+    document.getElementById('sku-id').value = sku.sku_id;
+    document.getElementById('sku-name').value = sku.sku_name;
+    document.getElementById('sku-category').value = sku.category_id;
+    document.getElementById('sku-brand').value = sku.brand_name;
+    document.getElementById('sku-code').value = sku.sku_code;
+    // document.getElementById('sku-code').readOnly = true; // 编码通常不建议修改
+    document.getElementById('sku-type').value = sku.is_precise_item;
+    document.getElementById('sku-unit').value = sku.standard_unit;
+    document.getElementById('sku-case-unit').value = sku.case_unit_name || '';
+    document.getElementById('sku-case-qty').value = sku.case_to_standard_qty || '';
+    document.getElementById('sku-note').value = sku.note || '';
+
+    document.getElementById('modal-sku-title').textContent = '编辑SKU';
+    modal.show('modal-sku');
+  } else {
+    showAlert('danger', '获取SKU信息失败: ' + result.message);
+  }
 }
 
 /**

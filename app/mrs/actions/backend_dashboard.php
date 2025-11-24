@@ -318,6 +318,7 @@ $current_user = '管理员';
         <button class="text" onclick="modal.hide('modal-sku')">×</button>
       </div>
       <form id="form-sku" onsubmit="saveSku(event)">
+        <input type="hidden" name="sku_id" id="sku-id" />
         <div class="form-grid">
           <div class="form-group">
             <label>SKU名称 *</label>
@@ -411,6 +412,6 @@ $current_user = '管理员';
     </div>
   </div>
 
-  <script src="js/backend.js?v=<?php echo time(); ?>"></script>
+  <script src="js/backend.js?v=<?php echo time() + 1; ?>"></script>
 </body>
 </html>
