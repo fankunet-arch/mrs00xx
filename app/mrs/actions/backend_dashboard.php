@@ -284,8 +284,8 @@ $current_user = '管理员';
         <textarea id="import-sku-text" rows="10" placeholder="90-700注塑细磨砂杯 | 500 | 箱 | 包材&#10;茉莉银毫 | 500g/30包 | 箱 | 茶叶" style="width: 100%; font-family: monospace;"></textarea>
       </div>
       <div class="modal-actions">
-        <!-- AI Prompt Helper Button -->
-        <button type="button" class="text" style="margin-right: auto;" onclick="showAiPromptHelper()">💡 获取 AI 提示词</button>
+        <!-- AI Prompt Helper Button (Updated Class) -->
+        <button type="button" class="light-success" style="margin-right: auto;" onclick="showAiPromptHelper()">💡 获取 AI 提示词</button>
         <button type="button" class="text" onclick="modal.hide('modal-import-sku')">取消</button>
         <button class="primary" onclick="importSkus()">开始导入</button>
       </div>
