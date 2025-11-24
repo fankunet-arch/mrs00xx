@@ -395,6 +395,22 @@ $current_user = '管理员';
     </div>
   </div>
 
-  <script src="js/backend.js"></script>
+  <!-- 模态框: 查看批次详情 -->
+  <div class="modal-backdrop" id="modal-batch-detail">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>批次详情</h3>
+        <button class="text" onclick="modal.hide('modal-batch-detail')">×</button>
+      </div>
+      <div class="modal-body" id="batch-detail-content">
+        <!-- 动态加载内容 -->
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="primary" onclick="modal.hide('modal-batch-detail')">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/backend.js?v=<?php echo time(); ?>"></script>
 </body>
 </html>
