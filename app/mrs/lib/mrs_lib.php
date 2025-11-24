@@ -479,7 +479,7 @@ function is_user_logged_in() {
  * 获取当前登录用户信息
  * @return array|null
  */
-function get_current_user() {
+function mrs_get_current_user() {
     if (!is_user_logged_in()) {
         return null;
     }
