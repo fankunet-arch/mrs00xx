@@ -15,7 +15,7 @@ require_once __DIR__ . '/../config_mrs/env_mrs.php';
 require_once MRS_LIB_PATH . '/mrs_lib.php';
 
 try {
-    $user = get_current_user();
+    $user = mrs_get_current_user();
 
     if ($user) {
         mrs_log("用户注销: {$user['user_login']}", 'INFO', [
