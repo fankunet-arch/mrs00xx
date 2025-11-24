@@ -36,8 +36,7 @@ try {
     $params = [];
 
     if ($search) {
-        $sql .= " AND (s.sku_name LIKE :search OR s.brand_name LIKE :search OR s.sku_code LIKE :search)";
-        $params['search'] = '%' . $search . '%';
+        $sql .= " AND (s.sku_name LIKE :search1 OR s.brand_name LIKE :search2 OR s.sku_code LIKE :search3)";
     }
 
     if ($categoryId !== '') {
@@ -58,6 +57,14 @@ try {
 
     // 准备和执行查询
     $stmt = $pdo->prepare($sql);
+
+    if ($search) {
+        $searchTerm = '%' . $search . '%';
+        $stmt->bindValue(':search1', $searchTerm);
+        $stmt->bindValue(':search2', $searchTerm);
+        $stmt->bindValue(':search3', $searchTerm);
+    }
+
     foreach ($params as $key => $value) {
         $stmt->bindValue(':' . $key, $value);
     }

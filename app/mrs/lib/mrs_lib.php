@@ -123,15 +123,18 @@ function search_sku($keyword, $limit = 20) {
                 FROM mrs_sku s
                 LEFT JOIN mrs_category c ON s.category_id = c.category_id
                 WHERE (
-                    s.sku_name LIKE :keyword
-                    OR s.sku_code LIKE :keyword
-                    OR s.brand_name LIKE :keyword
+                    s.sku_name LIKE :keyword1
+                    OR s.sku_code LIKE :keyword2
+                    OR s.brand_name LIKE :keyword3
                 )
                 ORDER BY s.is_precise_item DESC, s.sku_name ASC
                 LIMIT :limit";
 
         $stmt = $pdo->prepare($sql);
-        $stmt->bindValue(':keyword', '%' . $keyword . '%', PDO::PARAM_STR);
+        $searchTerm = '%' . $keyword . '%';
+        $stmt->bindValue(':keyword1', $searchTerm, PDO::PARAM_STR);
+        $stmt->bindValue(':keyword2', $searchTerm, PDO::PARAM_STR);
+        $stmt->bindValue(':keyword3', $searchTerm, PDO::PARAM_STR);
         $stmt->bindValue(':limit', (int)$limit, PDO::PARAM_INT);
         $stmt->execute();
 
