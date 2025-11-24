@@ -1,0 +1,546 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>物料档案管理 (SKU)</title>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --primary: #1f7aec;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --card: #ffffff;
+      --border: #e5e7eb;
+      --accent: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "PingFang SC", "Segoe UI", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 20px;
+    }
+    header {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    h1 { margin: 0; color: var(--primary); font-size: 24px; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    }
+    .filters { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+    input[type="text"], select, input[type="number"] {
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 14px;
+      min-width: 120px;
+    }
+    button {
+      border: none;
+      border-radius: 10px;
+      padding: 10px 14px;
+      background: var(--primary);
+      color: #fff;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 14px;
+      transition: transform 0.08s ease, box-shadow 0.12s ease;
+    }
+    button:hover { box-shadow: 0 6px 14px rgba(31, 122, 236, 0.18); transform: translateY(-1px); }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+    button.secondary { background: #0ea5e9; }
+    button.text { background: transparent; color: var(--muted); box-shadow: none; }
+    button.text:hover { background: rgba(0,0,0,0.04); transform: none; }
+    button.danger { background: var(--danger); }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    th, td {
+      padding: 12px 10px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+    th { color: var(--muted); font-weight: 600; font-size: 13px; }
+    .badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .badge.info { background: var(--primary); }
+    .badge.success { background: var(--accent); }
+    .table-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .flex-between { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.35);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 40;
+    }
+    .modal {
+      width: min(600px, 92vw);
+      background: var(--card);
+      border-radius: 14px;
+      padding: 20px;
+      box-shadow: 0 18px 40px rgba(0,0,0,0.14);
+      border: 1px solid var(--border);
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+    .modal-title { font-size: 18px; font-weight: 700; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+    .form-group { display: flex; flex-direction: column; }
+    .form-group label { font-size: 13px; color: var(--muted); margin-bottom: 5px; font-weight: 600; }
+    .form-group.full-width { grid-column: 1 / -1; }
+    .required { color: red; }
+    .loading { text-align: center; padding: 40px; color: var(--muted); }
+    .error { color: var(--danger); padding: 20px; text-align: center; }
+    .empty { text-align: center; padding: 40px; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>物料档案管理 (SKU)</h1>
+  </header>
+
+  <div class="card">
+    <div class="flex-between">
+      <div class="filters">
+        <input type="text" id="search-keyword" placeholder="搜索品牌/品类/SKU名称" />
+        <button id="btn-search">搜索</button>
+        <button class="secondary" id="btn-refresh">刷新列表</button>
+      </div>
+      <button id="btn-new-sku">新增SKU</button>
+    </div>
+
+    <div id="sku-list-container">
+      <div class="loading">加载中...</div>
+    </div>
+  </div>
+
+  <!-- 编辑SKU模态框 -->
+  <div class="modal-backdrop" id="edit-backdrop">
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal-header">
+        <div class="modal-title" id="edit-title">编辑品牌SKU</div>
+        <button class="text" id="edit-close">✕</button>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>品类 <span class="required">*</span></label>
+          <select id="edit-category-id">
+            <option value="">请选择品类</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>品牌名 <span class="required">*</span></label>
+          <input type="text" id="edit-brand-name" placeholder="请输入品牌名" />
+        </div>
+        <div class="form-group">
+          <label>SKU名称 <span class="required">*</span></label>
+          <input type="text" id="edit-sku-name" placeholder="请输入SKU名称" />
+        </div>
+        <div class="form-group">
+          <label>SKU编码 <span class="required">*</span></label>
+          <input type="text" id="edit-sku-code" placeholder="请输入SKU编码" />
+        </div>
+        <div class="form-group">
+          <label>类型</label>
+          <select id="edit-is-precise">
+            <option value="1">精计</option>
+            <option value="0">粗计</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>标准单位 <span class="required">*</span></label>
+          <input type="text" id="edit-standard-unit" placeholder="如: 瓶/包/个" />
+        </div>
+        <div class="form-group">
+          <label>箱单位名称</label>
+          <input type="text" id="edit-case-unit-name" placeholder="如: 箱" />
+        </div>
+        <div class="form-group">
+          <label>箱规换算(1箱=?标准单位)</label>
+          <input type="number" id="edit-case-to-standard-qty" placeholder="如: 10" step="0.01" />
+        </div>
+        <div class="form-group">
+          <label>包单位名称</label>
+          <input type="text" id="edit-pack-unit-name" placeholder="如: 包" />
+        </div>
+        <div class="form-group">
+          <label>包规换算(1包=?标准单位)</label>
+          <input type="number" id="edit-pack-to-standard-qty" placeholder="如: 5" step="0.01" />
+        </div>
+        <div class="form-group full-width">
+          <label>备注</label>
+          <input type="text" id="edit-note" placeholder="备注信息" />
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="text" id="edit-cancel">取消</button>
+        <button id="edit-save-btn">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // API基础路径
+    const API_BASE = '../dc_html/mrs/api.php';
+
+    // 存储当前编辑的SKU ID
+    let currentEditSkuId = null;
+
+    // HTML编码函数,防止XSS攻击
+    function escapeHtml(text) {
+      if (text === null || text === undefined) return '';
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // 加载品类列表
+    async function loadCategories() {
+      try {
+        const response = await fetch(`${API_BASE}?route=backend_categories`);
+        const result = await response.json();
+        if (result.success && result.data) {
+          const categorySelect = document.getElementById('edit-category-id');
+          categorySelect.innerHTML = '<option value="">请选择品类</option>';
+          result.data.forEach(cat => {
+            const option = document.createElement('option');
+            option.value = cat.category_id;
+            option.textContent = cat.category_name;
+            categorySelect.appendChild(option);
+          });
+        }
+      } catch (error) {
+        console.error('加载品类列表失败:', error);
+      }
+    }
+
+    // 加载SKU列表
+    async function loadSkuList(search = '') {
+      const container = document.getElementById('sku-list-container');
+      container.innerHTML = '<div class="loading">加载中...</div>';
+
+      try {
+        let url = `${API_BASE}?route=backend_skus`;
+        if (search) {
+          url += `&search=${encodeURIComponent(search)}`;
+        }
+
+        const response = await fetch(url);
+        const result = await response.json();
+
+        if (result.success && result.data) {
+          if (result.data.length === 0) {
+            container.innerHTML = '<div class="empty">暂无数据</div>';
+            return;
+          }
+
+          let tableHtml = `
+            <div style="overflow-x:auto; margin-top: 10px;">
+              <table>
+                <thead>
+                  <tr>
+                    <th>SKU ID</th>
+                    <th>品牌SKU名称</th>
+                    <th>品类</th>
+                    <th>品牌</th>
+                    <th>类型</th>
+                    <th>标准单位</th>
+                    <th>单位规则</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+          `;
+
+          result.data.forEach(sku => {
+            const unitRule = [];
+            if (sku.case_unit_name && sku.case_to_standard_qty) {
+              unitRule.push(`1 ${escapeHtml(sku.case_unit_name)} = ${escapeHtml(sku.case_to_standard_qty)} ${escapeHtml(sku.standard_unit)}`);
+            }
+            if (sku.pack_unit_name && sku.pack_to_standard_qty) {
+              unitRule.push(`1 ${escapeHtml(sku.pack_unit_name)} = ${escapeHtml(sku.pack_to_standard_qty)} ${escapeHtml(sku.standard_unit)}`);
+            }
+            const unitRuleText = unitRule.length > 0 ? unitRule.join('<br>') : '—';
+
+            tableHtml += `
+              <tr>
+                <td>${escapeHtml(sku.sku_id)}</td>
+                <td>${escapeHtml(sku.sku_name)}</td>
+                <td>${escapeHtml(sku.category_name) || '—'}</td>
+                <td>${escapeHtml(sku.brand_name)}</td>
+                <td><span class="badge ${sku.is_precise_item ? 'info' : 'success'}">${sku.is_precise_item ? '精计' : '粗计'}</span></td>
+                <td>${escapeHtml(sku.standard_unit)}</td>
+                <td>${unitRuleText}</td>
+                <td class="table-actions">
+                  <button class="text edit-btn" data-sku-id="${escapeHtml(sku.sku_id)}">编辑</button>
+                  <button class="text danger" onclick="deleteSku(${parseInt(sku.sku_id)})">删除</button>
+                </td>
+              </tr>
+            `;
+          });
+
+          tableHtml += `
+                </tbody>
+              </table>
+            </div>
+          `;
+
+          container.innerHTML = tableHtml;
+
+          // 绑定编辑按钮事件
+          document.querySelectorAll('.edit-btn').forEach(btn => {
+            btn.addEventListener('click', async function() {
+              const skuId = this.getAttribute('data-sku-id');
+              if (skuId) {
+                document.getElementById('edit-backdrop').style.display = 'flex';
+                await loadSkuDetail(skuId);
+              }
+            });
+          });
+        } else {
+          container.innerHTML = `<div class="error">加载失败: ${escapeHtml(result.message) || '未知错误'}</div>`;
+        }
+      } catch (error) {
+        console.error('加载SKU列表失败:', error);
+        container.innerHTML = '<div class="error">加载失败,请检查网络连接</div>';
+      }
+    }
+
+    // 加载SKU详情
+    async function loadSkuDetail(skuId) {
+      try {
+        const response = await fetch(`${API_BASE}?route=backend_sku_detail&sku_id=${skuId}`);
+        const result = await response.json();
+        if (result.success && result.data) {
+          const sku = result.data;
+          document.getElementById('edit-category-id').value = sku.category_id || '';
+          document.getElementById('edit-brand-name').value = sku.brand_name || '';
+          document.getElementById('edit-sku-name').value = sku.sku_name || '';
+          document.getElementById('edit-sku-code').value = sku.sku_code || '';
+          document.getElementById('edit-is-precise').value = sku.is_precise_item || '1';
+          document.getElementById('edit-standard-unit').value = sku.standard_unit || '';
+          document.getElementById('edit-case-unit-name').value = sku.case_unit_name || '';
+          document.getElementById('edit-case-to-standard-qty').value = sku.case_to_standard_qty || '';
+          document.getElementById('edit-pack-unit-name').value = sku.pack_unit_name || '';
+          document.getElementById('edit-pack-to-standard-qty').value = sku.pack_to_standard_qty || '';
+          document.getElementById('edit-note').value = sku.note || '';
+          currentEditSkuId = skuId;
+          document.getElementById('edit-title').textContent = '编辑品牌SKU';
+        } else {
+          alert(result.message || '加载SKU详情失败');
+        }
+      } catch (error) {
+        console.error('加载SKU详情失败:', error);
+        alert('加载SKU详情失败,请重试');
+      }
+    }
+
+    // 清空表单
+    function clearForm() {
+      document.getElementById('edit-category-id').value = '';
+      document.getElementById('edit-brand-name').value = '';
+      document.getElementById('edit-sku-name').value = '';
+      document.getElementById('edit-sku-code').value = '';
+      document.getElementById('edit-is-precise').value = '1';
+      document.getElementById('edit-standard-unit').value = '';
+      document.getElementById('edit-case-unit-name').value = '';
+      document.getElementById('edit-case-to-standard-qty').value = '';
+      document.getElementById('edit-pack-unit-name').value = '';
+      document.getElementById('edit-pack-to-standard-qty').value = '';
+      document.getElementById('edit-note').value = '';
+      currentEditSkuId = null;
+    }
+
+    // 保存SKU
+    async function saveSku() {
+      const categoryId = document.getElementById('edit-category-id').value;
+      const brandName = document.getElementById('edit-brand-name').value.trim();
+      const skuName = document.getElementById('edit-sku-name').value.trim();
+      const skuCode = document.getElementById('edit-sku-code').value.trim();
+      const isPrecise = document.getElementById('edit-is-precise').value;
+      const standardUnit = document.getElementById('edit-standard-unit').value.trim();
+      const caseUnitName = document.getElementById('edit-case-unit-name').value.trim();
+      const caseToStandardQty = document.getElementById('edit-case-to-standard-qty').value;
+      const packUnitName = document.getElementById('edit-pack-unit-name').value.trim();
+      const packToStandardQty = document.getElementById('edit-pack-to-standard-qty').value;
+      const note = document.getElementById('edit-note').value.trim();
+
+      // 验证必填字段
+      if (!categoryId) {
+        alert('请选择品类');
+        return;
+      }
+      if (!brandName) {
+        alert('请输入品牌名');
+        return;
+      }
+      if (!skuName) {
+        alert('请输入SKU名称');
+        return;
+      }
+      if (!skuCode) {
+        alert('请输入SKU编码');
+        return;
+      }
+      if (!standardUnit) {
+        alert('请输入标准单位');
+        return;
+      }
+
+      // 验证箱规数据
+      if (caseToStandardQty && (isNaN(caseToStandardQty) || parseFloat(caseToStandardQty) <= 0)) {
+        alert('箱规换算数量必须为大于0的数字');
+        return;
+      }
+
+      // 验证包规数据
+      if (packToStandardQty && (isNaN(packToStandardQty) || parseFloat(packToStandardQty) <= 0)) {
+        alert('包规换算数量必须为大于0的数字');
+        return;
+      }
+
+      const data = {
+        sku_id: currentEditSkuId,
+        category_id: parseInt(categoryId),
+        brand_name: brandName,
+        sku_name: skuName,
+        sku_code: skuCode,
+        is_precise_item: parseInt(isPrecise),
+        standard_unit: standardUnit,
+        case_unit_name: caseUnitName || null,
+        case_to_standard_qty: caseToStandardQty ? parseFloat(caseToStandardQty) : null,
+        pack_unit_name: packUnitName || null,
+        pack_to_standard_qty: packToStandardQty ? parseFloat(packToStandardQty) : null,
+        note: note
+      };
+
+      const saveBtn = document.getElementById('edit-save-btn');
+      try {
+        saveBtn.disabled = true;
+        saveBtn.textContent = '保存中...';
+
+        const response = await fetch(`${API_BASE}?route=backend_save_sku`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          alert('保存成功');
+          document.getElementById('edit-backdrop').style.display = 'none';
+          clearForm();
+          await loadSkuList(document.getElementById('search-keyword').value);
+        } else {
+          alert('保存失败: ' + (result.message || '未知错误'));
+        }
+      } catch (error) {
+        console.error('保存SKU失败:', error);
+        alert('保存失败,请检查网络连接后重试');
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = '保存';
+      }
+    }
+
+    // 删除SKU
+    async function deleteSku(skuId) {
+      if (!confirm('确定要删除这个SKU吗?此操作不可恢复!')) {
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE}?route=backend_delete_sku`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ sku_id: skuId })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          alert('删除成功');
+          await loadSkuList(document.getElementById('search-keyword').value);
+        } else {
+          alert('删除失败: ' + (result.message || '未知错误'));
+        }
+      } catch (error) {
+        console.error('删除SKU失败:', error);
+        alert('删除失败,请检查网络连接后重试');
+      }
+    }
+
+    // 事件绑定
+    document.getElementById('btn-search').addEventListener('click', () => {
+      loadSkuList(document.getElementById('search-keyword').value);
+    });
+
+    document.getElementById('search-keyword').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        loadSkuList(document.getElementById('search-keyword').value);
+      }
+    });
+
+    document.getElementById('btn-refresh').addEventListener('click', () => {
+      document.getElementById('search-keyword').value = '';
+      loadSkuList();
+    });
+
+    document.getElementById('btn-new-sku').addEventListener('click', () => {
+      clearForm();
+      document.getElementById('edit-title').textContent = '新增品牌SKU';
+      document.getElementById('edit-backdrop').style.display = 'flex';
+    });
+
+    document.getElementById('edit-close').addEventListener('click', () => {
+      document.getElementById('edit-backdrop').style.display = 'none';
+      clearForm();
+    });
+
+    document.getElementById('edit-cancel').addEventListener('click', () => {
+      document.getElementById('edit-backdrop').style.display = 'none';
+      clearForm();
+    });
+
+    document.getElementById('edit-save-btn').addEventListener('click', saveSku);
+
+    // 页面加载时初始化
+    document.addEventListener('DOMContentLoaded', async () => {
+      await loadCategories();
+      await loadSkuList();
+    });
+  </script>
+</body>
+</html>
