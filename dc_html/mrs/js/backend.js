@@ -2,6 +2,7 @@
  * MRS 物料收发管理系统 - 后台管理交互逻辑
  * 文件路径: dc_html/mrs/js/backend.js
  * 说明: 后台管理页面的所有交互逻辑
+ * Update: Implemented Batch Import JS Logic (P1 Task)
  */
 
 // 全局状态
@@ -15,6 +16,7 @@ const appState = {
   currentCategory: null
 };
 
+// P1 Task: AI Prompt
 const SKU_IMPORT_PROMPT = `
 你是一个WMS数据专员。请识别图片中的物料清单。
 输出格式要求（使用 "|" 分隔）：
@@ -174,7 +176,7 @@ const api = {
   },
 
   /**
-   * 批量导入SKU
+   * 批量导入SKU (P1 Task)
    */
   async importSkusText(text) {
     return await this.call('api.php?route=backend_import_skus_text', {
@@ -548,7 +550,6 @@ const modal = {
 
 // ================================================================
 // 全局函数供 HTML onclick 调用
-// 这些函数从 backend_dashboard.php 迁移而来
 // ================================================================
 
 /**
@@ -581,7 +582,7 @@ function showNewSkuModal() {
 }
 
 /**
- * 显示批量导入SKU模态框
+ * 显示批量导入SKU模态框 (P1 Task)
  */
 function showImportSkuModal() {
   document.getElementById('import-sku-text').value = '';
@@ -591,7 +592,7 @@ function showImportSkuModal() {
 }
 
 /**
- * 执行批量导入
+ * 执行批量导入 (P1 Task)
  */
 async function importSkus() {
   const textarea = document.getElementById('import-sku-text');
