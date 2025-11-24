@@ -14,10 +14,10 @@ if (!defined('MRS_ENTRY')) {
 // 数据库配置
 // ============================================
 
-define('DB_HOST', 'mhdlmskp2kpxguj.mysql.db');
+define('DB_HOST', '127.0.0.1');
 define('DB_NAME', 'mhdlmskp2kpxguj');
-define('DB_USER', 'mhdlmskp2kpxguj');
-define('DB_PASS', ''); // TODO: 填入实际密码
+define('DB_USER', 'root');
+define('DB_PASS', '123456'); // TODO: 填入实际密码
 define('DB_CHARSET', 'utf8mb4');
 
 // ============================================

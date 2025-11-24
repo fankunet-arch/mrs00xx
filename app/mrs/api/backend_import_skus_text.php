@@ -1,5 +1,8 @@
 <?php
-if (!defined('MRS_ENTRY')) die('Access denied');
+// 防止直接访问 (适配 Gateway 模式)
+if (!defined('MRS_ENTRY')) {
+    die('Access denied');
+}
 
 /**
  * Backend API: Import SKUs from text
