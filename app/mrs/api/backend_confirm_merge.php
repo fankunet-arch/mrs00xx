@@ -82,10 +82,22 @@ try {
         $insertStmt = $pdo->prepare($insertSql);
 
         foreach ($items as $item) {
+            // [SECURITY FIX] 绝不信任前端传入的换算率，必须反查数据库
+            $skuId = intval($item['sku_id']);
+            $skuInfo = get_sku_by_id($skuId);
+
+            if (!$skuInfo) {
+                // 如果SKU不存在，回滚事务并报错
+                $pdo->rollBack();
+                json_response(false, null, "SKU ID {$skuId} 不存在");
+            }
+
+            // 使用数据库中的真实换算率
+            $caseToStandard = floatval($skuInfo['case_to_standard_qty'] ?? 0);
+
             // 计算总标准数量
             $caseQty = floatval($item['case_qty'] ?? 0);
             $singleQty = floatval($item['single_qty'] ?? 0);
-            $caseToStandard = floatval($item['case_to_standard'] ?? 0);
 
             // [FIX] 强制整数规则：计算结果必须为标准单位的整数
             // 1. 计算理论浮点值
@@ -116,7 +128,7 @@ try {
 
             // 插入记录
             $insertStmt->bindValue(':batch_id', $batchId, PDO::PARAM_INT);
-            $insertStmt->bindValue(':sku_id', intval($item['sku_id']), PDO::PARAM_INT);
+            $insertStmt->bindValue(':sku_id', $skuId, PDO::PARAM_INT);
             $insertStmt->bindValue(':total_standard_qty', $totalStandard); // 存入取整后的值
             $insertStmt->bindValue(':confirmed_case_qty', $caseQty);
             $insertStmt->bindValue(':confirmed_single_qty', $singleQty);

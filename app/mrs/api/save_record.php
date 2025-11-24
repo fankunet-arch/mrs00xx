@@ -41,6 +41,26 @@ try {
         json_response(false, null, '数量必须为有效数字');
     }
 
+    // [SECURITY FIX] 验证单位合法性 (白名单)
+    // 只有当提供了 sku_id 时才能校验，但在严格模式下，我们假设收货记录应当关联SKU
+    if (isset($input['sku_id']) && !empty($input['sku_id'])) {
+        $sku = get_sku_by_id($input['sku_id']);
+        if (!$sku) {
+            json_response(false, null, 'SKU不存在');
+        }
+
+        $allowedUnits = [
+            $sku['standard_unit'],
+            $sku['case_unit_name']
+        ];
+        // 过滤掉空值（有些SKU可能没有箱规单位）
+        $allowedUnits = array_filter($allowedUnits);
+
+        if (!in_array($input['unit_name'], $allowedUnits)) {
+            json_response(false, null, "非法单位: {$input['unit_name']}。仅允许: " . implode(', ', $allowedUnits));
+        }
+    }
+
     // 验证批次是否存在
     $batch = get_batch_by_id($input['batch_id']);
     if (!$batch) {
