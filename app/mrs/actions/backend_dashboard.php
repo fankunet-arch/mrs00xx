@@ -238,6 +238,7 @@ $current_user = '管理员';
         <button class="text" onclick="modal.hide('modal-batch')">×</button>
       </div>
       <form id="form-batch" onsubmit="saveBatch(event)">
+        <input type="hidden" name="batch_id" id="batch-id" />
         <div class="form-grid">
           <div class="form-group">
             <label>批次编号 *</label>

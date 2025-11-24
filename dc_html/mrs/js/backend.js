@@ -49,6 +49,7 @@ function initDom() {
   // 模态框
   dom.modals = {
     batch: document.getElementById('modal-batch'),
+    batchDetail: document.getElementById('modal-batch-detail'),
     sku: document.getElementById('modal-sku'),
     category: document.getElementById('modal-category'),
     importSku: document.getElementById('modal-import-sku'),
@@ -586,7 +587,10 @@ const modal = {
  */
 function showNewBatchModal() {
   document.getElementById('form-batch').reset();
+  // 清除 hidden ID 防止变成更新
+  document.getElementById('batch-id').value = '';
   document.getElementById('modal-batch-title').textContent = '新建批次';
+
   // [SECURITY FIX] 移除前端生成批次编号逻辑，改为后端生成
   const today = new Date().toISOString().split('T')[0];
   const batchCodeInput = document.getElementById('batch-code');
@@ -594,6 +598,7 @@ function showNewBatchModal() {
   // 清空值并设置占位符，由后端生成
   batchCodeInput.value = '';
   batchCodeInput.placeholder = '系统自动生成';
+  batchCodeInput.readOnly = false;
 
   document.getElementById('batch-date').value = today;
   modal.show('modal-batch');
@@ -789,14 +794,70 @@ async function saveCategory(event) {
  * 查看批次详情
  */
 async function viewBatch(batchId) {
-  showAlert('info', '查看批次详情功能开发中...');
+  const result = await api.getBatchDetail(batchId);
+  if (result.success) {
+    const data = result.data;
+    const batch = data.batch;
+    const stats = data.stats;
+
+    const content = `
+      <div class="detail-grid">
+        <div class="detail-item"><label>批次编号:</label> <span>${escapeHtml(batch.batch_code)}</span></div>
+        <div class="detail-item"><label>收货日期:</label> <span>${escapeHtml(batch.batch_date)}</span></div>
+        <div class="detail-item"><label>地点/门店:</label> <span>${escapeHtml(batch.location_name)}</span></div>
+        <div class="detail-item"><label>状态:</label> <span class="badge ${getStatusBadgeClass(batch.batch_status)}">${getStatusText(batch.batch_status)}</span></div>
+        <div class="detail-item full"><label>备注:</label> <span>${escapeHtml(batch.remark || '-')}</span></div>
+      </div>
+      <hr class="my-4" />
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-value">${stats.raw_records_count}</div>
+          <div class="stat-label">原始记录</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">${stats.expected_items_count}</div>
+          <div class="stat-label">预计清单</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">${stats.confirmed_items_count}</div>
+          <div class="stat-label">确认条目</div>
+        </div>
+      </div>
+      <div class="mt-4 text-center">
+        <p class="text-muted small">创建时间: ${new Date(batch.created_at).toLocaleString('zh-CN')} | 更新时间: ${new Date(batch.updated_at).toLocaleString('zh-CN')}</p>
+      </div>
+    `;
+
+    document.getElementById('batch-detail-content').innerHTML = content;
+    modal.show('modal-batch-detail');
+  } else {
+    showAlert('danger', '获取详情失败: ' + result.message);
+  }
 }
 
 /**
  * 编辑批次
  */
 async function editBatch(batchId) {
-  showAlert('info', '编辑批次功能开发中...');
+  const result = await api.getBatchDetail(batchId);
+  if (result.success) {
+    const batch = result.data.batch;
+
+    // 填充表单
+    document.getElementById('batch-id').value = batch.batch_id;
+    document.getElementById('batch-code').value = batch.batch_code;
+    // 批次号通常不允许修改，或者设为只读
+    // document.getElementById('batch-code').readOnly = true;
+    document.getElementById('batch-date').value = batch.batch_date;
+    document.getElementById('batch-location').value = batch.location_name;
+    document.getElementById('batch-remark').value = batch.remark || '';
+    document.getElementById('batch-status').value = batch.batch_status;
+
+    document.getElementById('modal-batch-title').textContent = '编辑批次';
+    modal.show('modal-batch');
+  } else {
+    showAlert('danger', '获取批次信息失败: ' + result.message);
+  }
 }
 
 /**
