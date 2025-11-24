@@ -59,7 +59,7 @@ $current_user = '管理员';
             </div>
             <button onclick="showNewBatchModal()">新建批次</button>
           </div>
-          <div style="overflow-x:auto; margin-top: 10px;">
+          <div class="table-responsive mt-10">
             <table>
               <thead>
                 <tr>
@@ -83,7 +83,7 @@ $current_user = '管理员';
 
       <!-- 页面B: 收货批次合并确认 -->
       <div class="page" id="page-merge">
-        <div class="flex-between" style="margin-bottom: 12px;">
+        <div class="flex-between mb-12">
           <h2>收货批次合并确认</h2>
           <button onclick="showPage('batches')">返回列表</button>
         </div>
@@ -99,7 +99,7 @@ $current_user = '管理员';
             <div class="section-title">原始记录汇总（按品牌SKU）</div>
             <button class="success" onclick="confirmAllMerge()">确认全部并入库</button>
           </div>
-          <div style="overflow-x:auto; margin-top: 10px;">
+          <div class="table-responsive mt-10">
             <table>
               <thead>
                 <tr>
@@ -143,7 +143,7 @@ $current_user = '管理员';
             </div>
             <button onclick="showNewSkuModal()">新增SKU</button>
           </div>
-          <div style="overflow-x:auto; margin-top: 10px;">
+          <div class="table-responsive mt-10">
             <table>
               <thead>
                 <tr>
@@ -178,7 +178,7 @@ $current_user = '管理员';
             </div>
             <button onclick="showNewCategoryModal()">新增品类</button>
           </div>
-          <div style="overflow-x:auto; margin-top: 10px;">
+          <div class="table-responsive mt-10">
             <table>
               <thead>
                 <tr>
@@ -353,160 +353,5 @@ $current_user = '管理员';
   </div>
 
   <script src="js/backend.js"></script>
-  <script>
-    // 全局函数供HTML onclick调用
-
-    function showNewBatchModal() {
-      document.getElementById('form-batch').reset();
-      document.getElementById('modal-batch-title').textContent = '新建批次';
-      // 生成批次编号
-      const today = new Date().toISOString().split('T')[0];
-      document.getElementById('batch-code').value = 'IN-' + today + '-001';
-      document.getElementById('batch-date').value = today;
-      modal.show('modal-batch');
-    }
-
-    function showNewSkuModal() {
-      document.getElementById('form-sku').reset();
-      document.getElementById('modal-sku-title').textContent = '新增SKU';
-      // 加载品类选项
-      loadCategoryOptions();
-      modal.show('modal-sku');
-    }
-
-    function showNewCategoryModal() {
-      document.getElementById('form-category').reset();
-      document.getElementById('modal-category-title').textContent = '新增品类';
-      modal.show('modal-category');
-    }
-
-    async function loadCategoryOptions() {
-      const result = await api.getCategories();
-      if (result.success) {
-        const select = document.getElementById('sku-category');
-        select.innerHTML = '<option value="">请选择</option>' +
-          result.data.map(cat => `<option value="${cat.category_id}">${cat.category_name}</option>`).join('');
-      }
-    }
-
-    async function saveBatch(event) {
-      event.preventDefault();
-      const formData = new FormData(event.target);
-      const data = Object.fromEntries(formData);
-
-      const result = await api.saveBatch(data);
-      if (result.success) {
-        showAlert('success', '批次保存成功');
-        modal.hide('modal-batch');
-        loadBatches();
-      } else {
-        showAlert('danger', '保存失败: ' + result.message);
-      }
-    }
-
-    async function saveSku(event) {
-      event.preventDefault();
-      const formData = new FormData(event.target);
-      const data = Object.fromEntries(formData);
-
-      const result = await api.saveSku(data);
-      if (result.success) {
-        showAlert('success', 'SKU保存成功');
-        modal.hide('modal-sku');
-        loadSkus();
-      } else {
-        showAlert('danger', '保存失败: ' + result.message);
-      }
-    }
-
-    async function saveCategory(event) {
-      event.preventDefault();
-      const formData = new FormData(event.target);
-      const data = Object.fromEntries(formData);
-
-      const result = await api.saveCategory(data);
-      if (result.success) {
-        showAlert('success', '品类保存成功');
-        modal.hide('modal-category');
-        loadCategories();
-      } else {
-        showAlert('danger', '保存失败: ' + result.message);
-      }
-    }
-
-    async function viewBatch(batchId) {
-      showAlert('info', '查看批次详情功能开发中...');
-    }
-
-    async function editBatch(batchId) {
-      showAlert('info', '编辑批次功能开发中...');
-    }
-
-    async function deleteBatch(batchId) {
-      if (!confirm('确定要删除这个批次吗?此操作不可撤销!')) {
-        return;
-      }
-
-      const result = await api.deleteBatch(batchId);
-      if (result.success) {
-        showAlert('success', '批次删除成功');
-        loadBatches();
-      } else {
-        showAlert('danger', '删除失败: ' + result.message);
-      }
-    }
-
-    async function editSku(skuId) {
-      showAlert('info', '编辑SKU功能开发中...');
-    }
-
-    async function deleteSku(skuId) {
-      if (!confirm('确定要删除这个SKU吗?')) {
-        return;
-      }
-
-      const result = await api.deleteSku(skuId);
-      if (result.success) {
-        showAlert('success', 'SKU删除成功');
-        loadSkus();
-      } else {
-        showAlert('danger', '删除失败: ' + result.message);
-      }
-    }
-
-    async function editCategory(categoryId) {
-      showAlert('info', '编辑品类功能开发中...');
-    }
-
-    async function deleteCategory(categoryId) {
-      if (!confirm('确定要删除这个品类吗?')) {
-        return;
-      }
-
-      const result = await api.deleteCategory(categoryId);
-      if (result.success) {
-        showAlert('success', '品类删除成功');
-        loadCategories();
-      } else {
-        showAlert('danger', '删除失败: ' + result.message);
-      }
-    }
-
-    async function confirmItem(index) {
-      showAlert('info', '确认单项功能开发中...');
-    }
-
-    async function confirmAllMerge() {
-      showAlert('info', '确认全部合并功能开发中...');
-    }
-
-    async function viewRawRecords(skuId) {
-      showAlert('info', '查看原始记录功能开发中...');
-    }
-
-    async function exportReport() {
-      showAlert('info', '导出报表功能开发中...');
-    }
-  </script>
 </body>
 </html>
