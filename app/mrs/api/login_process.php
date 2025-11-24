@@ -17,7 +17,7 @@ require_once MRS_LIB_PATH . '/mrs_lib.php';
 try {
     // 只接受POST请求
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-        header('Location: /backend/login_view.php?error=invalid');
+        header('Location: login.php?error=invalid');
         exit;
     }
 
@@ -28,7 +28,7 @@ try {
 
     // 验证输入
     if (empty($username) || empty($password)) {
-        header('Location: /backend/login_view.php?error=invalid');
+        header('Location: login.php?error=invalid');
         exit;
     }
 
@@ -42,7 +42,7 @@ try {
         mrs_log("登录失败: 尝试次数过多 - {$username}", 'WARNING', [
             'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown'
         ]);
-        header('Location: /backend/login_view.php?error=too_many_attempts');
+        header('Location: login.php?error=too_many_attempts');
         exit;
     }
 
@@ -59,7 +59,7 @@ try {
             'attempts' => $_SESSION['login_attempts']
         ]);
 
-        header('Location: /backend/login_view.php?error=invalid');
+        header('Location: login.php?error=invalid');
         exit;
     }
 
@@ -83,12 +83,12 @@ try {
         'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown'
     ]);
 
-    // 跳转到SKU管理页面
-    header('Location: /backend/sku_management.html');
+    // 跳转到后台首页
+    header('Location: backend.php');
     exit;
 
 } catch (Exception $e) {
     mrs_log('登录处理异常: ' . $e->getMessage(), 'ERROR');
-    header('Location: /backend/login_view.php?error=system');
+    header('Location: login.php?error=system');
     exit;
 }

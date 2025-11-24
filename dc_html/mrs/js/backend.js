@@ -72,6 +72,13 @@ const api = {
           ...options.headers
         }
       });
+
+      // 处理 401 未授权
+      if (response.status === 401) {
+        window.location.href = 'login.php';
+        return { success: false, message: '登录失效，正在跳转...' };
+      }
+
       return await response.json();
     } catch (error) {
       console.error('API错误:', error);

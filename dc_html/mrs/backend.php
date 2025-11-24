@@ -15,6 +15,9 @@ require_once __DIR__ . '/../../app/mrs/config_mrs/env_mrs.php';
 // 加载业务库
 require_once MRS_LIB_PATH . '/mrs_lib.php';
 
+// 强制用户登录
+require_login();
+
 // 获取 action 参数
 $action = $_GET['action'] ?? 'dashboard';
 
