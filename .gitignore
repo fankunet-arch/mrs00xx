@@ -1,0 +1,29 @@
+# MRS System - Git Ignore File
+
+# Environment configuration (local development)
+.env.local
+.env
+
+# Logs
+logs/
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# PHP
+vendor/
+composer.phar
+
+# Temporary files
+tmp/
+temp/
+*.tmp
