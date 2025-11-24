@@ -157,6 +157,7 @@ function get_sku_by_id($sku_id) {
 
         $sql = "SELECT
                     s.sku_id,
+                    s.category_id,
                     s.sku_name,
                     s.sku_code,
                     s.brand_name,
@@ -166,6 +167,7 @@ function get_sku_by_id($sku_id) {
                     s.pack_unit_name,
                     s.pack_to_standard_qty,
                     s.is_precise_item,
+                    s.note,
                     c.category_name
                 FROM mrs_sku s
                 LEFT JOIN mrs_category c ON s.category_id = c.category_id

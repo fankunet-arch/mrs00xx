@@ -505,51 +505,58 @@
       </div>
       <div class="form-grid">
         <div>
-          <label>品类</label>
-          <input type="text" value="糖浆" />
+          <label>品类 <span style="color: red;">*</span></label>
+          <select id="edit-category-id">
+            <option value="">请选择品类</option>
+          </select>
         </div>
         <div>
-          <label>品牌名</label>
-          <input type="text" value="品牌 A" />
+          <label>品牌名 <span style="color: red;">*</span></label>
+          <input type="text" id="edit-brand-name" placeholder="请输入品牌名" />
         </div>
         <div>
-          <label>规格描述</label>
-          <input type="text" value="1L" />
+          <label>SKU名称 <span style="color: red;">*</span></label>
+          <input type="text" id="edit-sku-name" placeholder="请输入SKU名称" />
+        </div>
+        <div>
+          <label>SKU编码 <span style="color: red;">*</span></label>
+          <input type="text" id="edit-sku-code" placeholder="请输入SKU编码" />
         </div>
         <div>
           <label>类型</label>
-          <select>
-            <option selected>精计</option>
-            <option>粗计</option>
+          <select id="edit-is-precise">
+            <option value="1">精计</option>
+            <option value="0">粗计</option>
           </select>
         </div>
         <div>
-          <label>标准单位</label>
-          <select>
-            <option>瓶</option>
-            <option>箱</option>
-            <option>包</option>
-          </select>
+          <label>标准单位 <span style="color: red;">*</span></label>
+          <input type="text" id="edit-standard-unit" placeholder="如: 瓶/包/个" />
         </div>
         <div>
-          <label>允许单位</label>
-          <input type="text" value="瓶 / 箱" />
+          <label>箱单位名称</label>
+          <input type="text" id="edit-case-unit-name" placeholder="如: 箱" />
         </div>
         <div>
-          <label>换算规则</label>
-          <input type="text" value="1 箱 = 10 瓶" />
+          <label>箱规换算(1箱=?标准单位)</label>
+          <input type="number" id="edit-case-to-standard-qty" placeholder="如: 10" step="0.01" />
         </div>
         <div>
-          <label>启用状态</label>
-          <select>
-            <option>启用</option>
-            <option>停用</option>
-          </select>
+          <label>包单位名称</label>
+          <input type="text" id="edit-pack-unit-name" placeholder="如: 包" />
+        </div>
+        <div>
+          <label>包规换算(1包=?标准单位)</label>
+          <input type="number" id="edit-pack-to-standard-qty" placeholder="如: 5" step="0.01" />
+        </div>
+        <div style="grid-column: 1 / -1;">
+          <label>备注</label>
+          <input type="text" id="edit-note" placeholder="备注信息" />
         </div>
       </div>
       <div class="modal-actions">
         <button class="text" id="edit-cancel">取消</button>
-        <button>保存（演示）</button>
+        <button id="edit-save-btn">保存</button>
       </div>
     </div>
   </div>
@@ -590,9 +597,190 @@
     const editBackdrop = document.getElementById('edit-backdrop');
     const editClose = document.getElementById('edit-close');
     const editCancel = document.getElementById('edit-cancel');
+    const editSaveBtn = document.getElementById('edit-save-btn');
+
+    // 用于存储当前编辑的SKU ID
+    let currentEditSkuId = null;
+
+    // API基础路径
+    const API_BASE = '../dc_html/mrs/api.php';
+
+    // 加载品类列表
+    async function loadCategories() {
+      try {
+        const response = await fetch(`${API_BASE}?route=backend_categories`);
+        const result = await response.json();
+        if (result.success && result.data) {
+          const categorySelect = document.getElementById('edit-category-id');
+          categorySelect.innerHTML = '<option value="">请选择品类</option>';
+          result.data.forEach(cat => {
+            const option = document.createElement('option');
+            option.value = cat.category_id;
+            option.textContent = cat.category_name;
+            categorySelect.appendChild(option);
+          });
+        }
+      } catch (error) {
+        console.error('加载品类列表失败:', error);
+        alert('加载品类列表失败,请刷新页面重试');
+      }
+    }
+
+    // 加载SKU详情
+    async function loadSkuDetail(skuId) {
+      try {
+        const response = await fetch(`${API_BASE}?route=backend_sku_detail&sku_id=${skuId}`);
+        const result = await response.json();
+        if (result.success && result.data) {
+          const sku = result.data;
+          document.getElementById('edit-category-id').value = sku.category_id || '';
+          document.getElementById('edit-brand-name').value = sku.brand_name || '';
+          document.getElementById('edit-sku-name').value = sku.sku_name || '';
+          document.getElementById('edit-sku-code').value = sku.sku_code || '';
+          document.getElementById('edit-is-precise').value = sku.is_precise_item || '1';
+          document.getElementById('edit-standard-unit').value = sku.standard_unit || '';
+          document.getElementById('edit-case-unit-name').value = sku.case_unit_name || '';
+          document.getElementById('edit-case-to-standard-qty').value = sku.case_to_standard_qty || '';
+          document.getElementById('edit-pack-unit-name').value = sku.pack_unit_name || '';
+          document.getElementById('edit-pack-to-standard-qty').value = sku.pack_to_standard_qty || '';
+          document.getElementById('edit-note').value = sku.note || '';
+          currentEditSkuId = skuId;
+        } else {
+          alert(result.message || '加载SKU详情失败');
+        }
+      } catch (error) {
+        console.error('加载SKU详情失败:', error);
+        alert('加载SKU详情失败,请重试');
+      }
+    }
+
+    // 保存SKU
+    async function saveSku() {
+      // 获取表单数据
+      const categoryId = document.getElementById('edit-category-id').value;
+      const brandName = document.getElementById('edit-brand-name').value.trim();
+      const skuName = document.getElementById('edit-sku-name').value.trim();
+      const skuCode = document.getElementById('edit-sku-code').value.trim();
+      const isPrecise = document.getElementById('edit-is-precise').value;
+      const standardUnit = document.getElementById('edit-standard-unit').value.trim();
+      const caseUnitName = document.getElementById('edit-case-unit-name').value.trim();
+      const caseToStandardQty = document.getElementById('edit-case-to-standard-qty').value;
+      const packUnitName = document.getElementById('edit-pack-unit-name').value.trim();
+      const packToStandardQty = document.getElementById('edit-pack-to-standard-qty').value;
+      const note = document.getElementById('edit-note').value.trim();
+
+      // 验证必填字段
+      if (!categoryId) {
+        alert('请选择品类');
+        return;
+      }
+      if (!brandName) {
+        alert('请输入品牌名');
+        return;
+      }
+      if (!skuName) {
+        alert('请输入SKU名称');
+        return;
+      }
+      if (!skuCode) {
+        alert('请输入SKU编码');
+        return;
+      }
+      if (!standardUnit) {
+        alert('请输入标准单位');
+        return;
+      }
+
+      // 验证箱规数据
+      if (caseToStandardQty && (isNaN(caseToStandardQty) || parseFloat(caseToStandardQty) <= 0)) {
+        alert('箱规换算数量必须为大于0的数字');
+        return;
+      }
+
+      // 验证包规数据
+      if (packToStandardQty && (isNaN(packToStandardQty) || parseFloat(packToStandardQty) <= 0)) {
+        alert('包规换算数量必须为大于0的数字');
+        return;
+      }
+
+      // 构建提交数据
+      const data = {
+        sku_id: currentEditSkuId,
+        category_id: parseInt(categoryId),
+        brand_name: brandName,
+        sku_name: skuName,
+        sku_code: skuCode,
+        is_precise_item: parseInt(isPrecise),
+        standard_unit: standardUnit,
+        case_unit_name: caseUnitName || null,
+        case_to_standard_qty: caseToStandardQty ? parseFloat(caseToStandardQty) : null,
+        pack_unit_name: packUnitName || null,
+        pack_to_standard_qty: packToStandardQty ? parseFloat(packToStandardQty) : null,
+        note: note
+      };
+
+      try {
+        editSaveBtn.disabled = true;
+        editSaveBtn.textContent = '保存中...';
+
+        const response = await fetch(`${API_BASE}?route=backend_save_sku`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          alert('保存成功');
+          editBackdrop.style.display = 'none';
+          // 刷新页面以显示更新后的数据
+          location.reload();
+        } else {
+          alert('保存失败: ' + (result.message || '未知错误'));
+        }
+      } catch (error) {
+        console.error('保存SKU失败:', error);
+        alert('保存失败,请检查网络连接后重试');
+      } finally {
+        editSaveBtn.disabled = false;
+        editSaveBtn.textContent = '保存';
+      }
+    }
+
+    // 编辑按钮点击事件
     const editButtons = document.querySelectorAll('.edit-btn');
-    editButtons.forEach((btn) => btn.addEventListener('click', () => editBackdrop.style.display = 'flex'));
-    [editClose, editCancel].forEach((el) => el.addEventListener('click', () => editBackdrop.style.display = 'none'));
+    editButtons.forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        // 在实际应用中,应该从按钮的data属性中获取SKU ID
+        // 这里暂时使用演示数据,需要在HTML中添加data-sku-id属性
+        const skuId = btn.getAttribute('data-sku-id');
+        if (skuId) {
+          editBackdrop.style.display = 'flex';
+          await loadSkuDetail(skuId);
+        } else {
+          alert('无法获取SKU ID');
+        }
+      });
+    });
+
+    // 关闭编辑对话框
+    [editClose, editCancel].forEach((el) => {
+      el.addEventListener('click', () => {
+        editBackdrop.style.display = 'none';
+        currentEditSkuId = null;
+      });
+    });
+
+    // 保存按钮点击事件
+    editSaveBtn.addEventListener('click', saveSku);
+
+    // 页面加载时初始化品类列表
+    document.addEventListener('DOMContentLoaded', () => {
+      loadCategories();
+    });
   </script>
 </body>
 </html>

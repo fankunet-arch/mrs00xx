@@ -44,6 +44,17 @@ try {
     $skuId = $input['sku_id'] ?? null;
 
     if ($skuId) {
+        // [FIX] 更新时检查SKU编码是否与其他记录重复
+        $checkSql = "SELECT sku_id FROM mrs_sku WHERE sku_code = :sku_code AND sku_id != :sku_id";
+        $checkStmt = $pdo->prepare($checkSql);
+        $checkStmt->bindValue(':sku_code', $input['sku_code']);
+        $checkStmt->bindValue(':sku_id', $skuId, PDO::PARAM_INT);
+        $checkStmt->execute();
+
+        if ($checkStmt->fetch()) {
+            json_response(false, null, 'SKU编码已被其他记录使用');
+        }
+
         // 更新现有SKU
         $sql = "UPDATE mrs_sku SET
                     category_id = :category_id,
