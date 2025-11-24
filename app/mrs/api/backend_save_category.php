@@ -34,6 +34,17 @@ try {
     $categoryId = $input['category_id'] ?? null;
 
     if ($categoryId) {
+        // [FIX] 检查品类名称是否与其他记录重复
+        $checkSql = "SELECT category_id FROM mrs_category WHERE category_name = :category_name AND category_id != :category_id";
+        $checkStmt = $pdo->prepare($checkSql);
+        $checkStmt->bindValue(':category_name', $input['category_name']);
+        $checkStmt->bindValue(':category_id', $categoryId, PDO::PARAM_INT);
+        $checkStmt->execute();
+
+        if ($checkStmt->fetch()) {
+            json_response(false, null, '品类名称已存在');
+        }
+
         // 更新现有品类
         $sql = "UPDATE mrs_category SET
                     category_name = :category_name,
