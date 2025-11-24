@@ -277,7 +277,15 @@ async function loadPageData(pageName) {
  * 加载批次列表
  */
 async function loadBatches() {
-  const result = await api.getBatches();
+  // [FIX] 获取筛选参数
+  const filters = {
+    search: document.getElementById('filter-search')?.value.trim() || '',
+    date_start: document.getElementById('filter-date-start')?.value || '',
+    date_end: document.getElementById('filter-date-end')?.value || '',
+    status: document.getElementById('filter-status')?.value || ''
+  };
+
+  const result = await api.getBatches(filters);
   if (result.success) {
     // [FIX] API 返回结构是 { batches: [], pagination: {} }
     appState.batches = result.data.batches || [];

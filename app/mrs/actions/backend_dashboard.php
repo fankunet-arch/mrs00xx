@@ -413,6 +413,6 @@ $current_user = '管理员';
     </div>
   </div>
 
-  <script src="js/backend.js?v=<?php echo time() + 2; ?>"></script>
+  <script src="js/backend.js?v=<?php echo time() + 3; ?>"></script>
 </body>
 </html>
