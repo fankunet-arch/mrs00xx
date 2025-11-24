@@ -26,8 +26,10 @@ try {
     $params = [];
 
     if ($search) {
-        $sql .= " AND (category_name LIKE :search OR category_code LIKE :search)";
-        $params['search'] = '%' . $search . '%';
+        // [FIX] Use unique parameter names to avoid PDO invalid parameter number error
+        $sql .= " AND (category_name LIKE :search1 OR category_code LIKE :search2)";
+        $params['search1'] = '%' . $search . '%';
+        $params['search2'] = '%' . $search . '%';
     }
 
     $sql .= " ORDER BY category_name ASC";
