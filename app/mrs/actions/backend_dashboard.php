@@ -3,7 +3,7 @@
  * MRS 物料收发管理系统 - 后台管理主控制台
  * 文件路径: app/mrs/actions/backend_dashboard.php
  * 说明: 后台管理主页面
- * Implements P1 Task: Batch Import Button and Modal
+ * Implements P1 Task: Batch Import Button and Modal + AI Prompt Helper
  */
 
 // 防止直接访问
@@ -284,8 +284,27 @@ $current_user = '管理员';
         <textarea id="import-sku-text" rows="10" placeholder="90-700注塑细磨砂杯 | 500 | 箱 | 包材&#10;茉莉银毫 | 500g/30包 | 箱 | 茶叶" style="width: 100%; font-family: monospace;"></textarea>
       </div>
       <div class="modal-actions">
+        <!-- AI Prompt Helper Button -->
+        <button type="button" class="text" style="margin-right: auto;" onclick="showAiPromptHelper()">💡 获取 AI 提示词</button>
         <button type="button" class="text" onclick="modal.hide('modal-import-sku')">取消</button>
         <button class="primary" onclick="importSkus()">开始导入</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 模态框: AI 提示词助手 (P1 Task) -->
+  <div class="modal-backdrop" id="modal-ai-prompt">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>AI 提示词模板</h3>
+        <button class="text" onclick="closeAiPromptHelper()">×</button>
+      </div>
+      <div class="modal-body">
+        <textarea id="ai-prompt-text" rows="10" readonly style="width: 100%; font-family: monospace; background: #f9fafb;"></textarea>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="text" onclick="closeAiPromptHelper()">返回</button>
+        <button type="button" class="success" onclick="copyAiPrompt()">复制提示词</button>
       </div>
     </div>
   </div>

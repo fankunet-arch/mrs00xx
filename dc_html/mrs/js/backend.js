@@ -2,7 +2,7 @@
  * MRS 物料收发管理系统 - 后台管理交互逻辑
  * 文件路径: dc_html/mrs/js/backend.js
  * 说明: 后台管理页面的所有交互逻辑
- * Update: Implemented Batch Import JS Logic (P1 Task)
+ * Update: Implemented Batch Import JS Logic + AI Prompt Helper
  */
 
 // 全局状态
@@ -51,7 +51,8 @@ function initDom() {
     batch: document.getElementById('modal-batch'),
     sku: document.getElementById('modal-sku'),
     category: document.getElementById('modal-category'),
-    importSku: document.getElementById('modal-import-sku')
+    importSku: document.getElementById('modal-import-sku'),
+    aiPrompt: document.getElementById('modal-ai-prompt')
   };
 }
 
@@ -589,6 +590,74 @@ function showImportSkuModal() {
   // 可以在这里打印Prompt供开发者调试，或在UI显示复制按钮
   console.log('Use this prompt for AI:', SKU_IMPORT_PROMPT);
   modal.show('modal-import-sku');
+}
+
+/**
+ * 显示AI提示词助手 (P1 Task)
+ */
+function showAiPromptHelper() {
+  // 填充提示词
+  const textarea = document.getElementById('ai-prompt-text');
+  if (textarea) {
+    textarea.value = SKU_IMPORT_PROMPT;
+  }
+
+  // 显示模态框
+  const modalEl = document.getElementById('modal-ai-prompt');
+  if (modalEl) {
+    modalEl.classList.add('show');
+  }
+}
+
+/**
+ * 关闭AI提示词助手 (P1 Task)
+ */
+function closeAiPromptHelper() {
+  const modalEl = document.getElementById('modal-ai-prompt');
+  if (modalEl) {
+    modalEl.classList.remove('show');
+  }
+}
+
+/**
+ * 复制AI提示词 (P1 Task)
+ */
+function copyAiPrompt() {
+  const textarea = document.getElementById('ai-prompt-text');
+  if (!textarea) return;
+
+  // 选中文本
+  textarea.select();
+  textarea.setSelectionRange(0, 99999); // 适配移动端
+
+  // 尝试使用现代 Clipboard API
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(textarea.value).then(() => {
+      showAlert('success', '复制成功');
+    }).catch(err => {
+      console.error('Clipboard API failed', err);
+      fallbackCopy(textarea);
+    });
+  } else {
+    fallbackCopy(textarea);
+  }
+}
+
+/**
+ * 降级复制策略
+ */
+function fallbackCopy(textarea) {
+  try {
+    const successful = document.execCommand('copy');
+    if (successful) {
+      showAlert('success', '复制成功');
+    } else {
+      showAlert('warning', '复制失败，请手动复制');
+    }
+  } catch (err) {
+    console.error('Fallback copy failed', err);
+    showAlert('danger', '浏览器不支持自动复制');
+  }
 }
 
 /**
