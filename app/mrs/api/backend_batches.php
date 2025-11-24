@@ -32,8 +32,12 @@ try {
     $params = [];
 
     if ($search) {
-        $sql .= " AND (batch_code LIKE :search OR location_name LIKE :search OR remark LIKE :search)";
-        $params['search'] = '%' . $search . '%';
+        // [FIX] Use unique parameter names to avoid PDO reuse issues on some drivers
+        $sql .= " AND (batch_code LIKE :search1 OR location_name LIKE :search2 OR remark LIKE :search3)";
+        $searchTerm = '%' . $search . '%';
+        $params['search1'] = $searchTerm;
+        $params['search2'] = $searchTerm;
+        $params['search3'] = $searchTerm;
     }
 
     if ($status) {
@@ -71,7 +75,7 @@ try {
     // 获取总数
     $countSql = "SELECT COUNT(*) FROM mrs_batch WHERE 1=1";
     if ($search) {
-        $countSql .= " AND (batch_code LIKE :search OR location_name LIKE :search OR remark LIKE :search)";
+        $countSql .= " AND (batch_code LIKE :search1 OR location_name LIKE :search2 OR remark LIKE :search3)";
     }
     if ($status) {
         $countSql .= " AND batch_status = :status";
