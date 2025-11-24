@@ -218,9 +218,10 @@ MRS 专注以下内容：
   - case_unit_qty（当前使用的箱规，如 10 瓶/箱）
   - received_cases（实收整件数）
   - received_units（实收散件数）
-  - total_base_units（折算后的总基础单位数，内部使用）
+  - total_base_units（折算后的总基础单位数，**必须为整数**。例如箱规 1 箱 = 10 瓶时，系统将 6.5 箱统一视为 65 瓶，并拆解为 6 箱 + 5 瓶保存；不允许以“6.5 箱”直接计入库存。）
   - remarks
   - created_at, updated_at
+
 
 #### 7.2.3 出库单（框架）
 - 表名：`mrs_outbound_order`
@@ -307,6 +308,7 @@ MRS 专注以下内容：
   └── mrs/                      # 若沿用全局 logs 目录，则在此分子目录存放
       └── debug.log
 ```
+特别说明：https://<domain>/mrs/index.php 对齐目录代码库文件 /dc_html/mrs/index.php
 
 说明：业务逻辑统一放在 `/app/mrs/` 下，前端入口只做路由分发；配置文件固定为 `/app/mrs/config_mrs/env_mrs.php`；日志要么放在 `/app/mrs/logs/`，要么统一放在 `/app/logs/mrs/`，但必须项目独立子目录。
 
