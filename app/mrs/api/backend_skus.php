@@ -5,8 +5,10 @@
  * 说明: 获取品牌SKU列表,支持筛选和分页
  */
 
-// 定义API入口
-define('MRS_ENTRY', true);
+// 防止直接访问 (适配 Gateway 模式)
+if (!defined('MRS_ENTRY')) {
+    die('Access denied');
+}
 
 // 加载配置
 require_once __DIR__ . '/../config_mrs/env_mrs.php';
