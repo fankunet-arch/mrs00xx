@@ -3,6 +3,24 @@
 
 USE `mhdlmskp2kpxguj`;
 
+-- 创建用户表（如果不存在）
+CREATE TABLE IF NOT EXISTS sys_users (
+    user_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_login VARCHAR(255) NOT NULL UNIQUE,
+    user_secret_hash VARCHAR(255) NOT NULL,
+    user_status VARCHAR(50) DEFAULT 'pending',
+    user_display_name VARCHAR(255) NOT NULL,
+    user_email VARCHAR(255),
+    user_registered_at DATETIME(6),
+    user_last_login_at DATETIME(6)
+);
+
+-- 插入默认管理员用户 (admin / admin123)
+-- 密码哈希对应 'admin123' 使用 PASSWORD_DEFAULT
+INSERT INTO `sys_users` (`user_login`, `user_secret_hash`, `user_status`, `user_display_name`, `user_email`, `user_registered_at`)
+VALUES ('admin', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'active', 'Administrator', 'admin@example.com', NOW())
+ON DUPLICATE KEY UPDATE user_status = 'active';
+
 -- 插入测试品类
 INSERT INTO `mrs_category` (`category_name`, `category_code`, `created_at`, `updated_at`) VALUES
 ('糖浆类', 'SYRUP', NOW(6), NOW(6)),
@@ -68,6 +86,7 @@ ON DUPLICATE KEY UPDATE batch_code = VALUES(batch_code);
 
 -- 显示插入结果
 SELECT '测试数据插入完成！' as message;
+SELECT CONCAT('插入了 ', COUNT(*), ' 个用户') as result FROM sys_users;
 SELECT CONCAT('插入了 ', COUNT(*), ' 个SKU') as result FROM mrs_sku;
 SELECT CONCAT('插入了 ', COUNT(*), ' 个品类') as result FROM mrs_category;
 SELECT CONCAT('插入了 ', COUNT(*), ' 个批次') as result FROM mrs_batch;

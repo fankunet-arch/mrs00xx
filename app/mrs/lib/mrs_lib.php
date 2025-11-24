@@ -540,11 +540,7 @@ function create_user($username, $password, $email, $display_name) {
         }
 
         // 哈希密码
-        $passwordHash = password_hash($password, PASSWORD_ARGON2ID, [
-            'memory_cost' => 65536,
-            'time_cost' => 4,
-            'threads' => 3
-        ]);
+        $passwordHash = password_hash($password, PASSWORD_DEFAULT);
 
         // 插入新用户
         $sql = "INSERT INTO sys_users (
@@ -587,7 +583,8 @@ function create_user($username, $password, $email, $display_name) {
  */
 function require_login() {
     if (!is_user_logged_in()) {
-        header('Location: /backend/login_view.php');
+        // 跳转到相对于入口的 login.php
+        header('Location: login.php');
         exit;
     }
 }

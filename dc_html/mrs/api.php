@@ -10,6 +10,9 @@ define('MRS_ENTRY', true);
 // Load environment configuration
 require_once __DIR__ . '/../../app/mrs/config_mrs/env_mrs.php';
 
+// Load business library for auth functions if needed (for protected routes)
+require_once MRS_LIB_PATH . '/mrs_lib.php';
+
 // Get the route parameter
 $route = $_GET['route'] ?? '';
 
@@ -28,6 +31,21 @@ if (empty($route) || !preg_match('/^[a-zA-Z0-9_]+$/', $route)) {
 // Construct the target file path
 // basename() is used as an extra layer of security
 $target_file = __DIR__ . '/../../app/mrs/api/' . basename($route) . '.php';
+
+// Protect backend API routes
+// If the route starts with "backend_", require login
+if (strpos($route, 'backend_') === 0) {
+    if (!is_user_logged_in()) {
+        header('Content-Type: application/json');
+        http_response_code(401);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Unauthorized: Please login first',
+            'redirect' => 'login.php'
+        ]);
+        exit;
+    }
+}
 
 // Check if the file exists
 if (file_exists($target_file)) {

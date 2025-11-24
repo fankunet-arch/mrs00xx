@@ -32,11 +32,11 @@ try {
     }
 
     // 跳转到登录页面
-    header('Location: /backend/login_view.php?error=logout');
+    header('Location: login.php?error=logout');
     exit;
 
 } catch (Exception $e) {
     mrs_log('注销处理异常: ' . $e->getMessage(), 'ERROR');
-    header('Location: /backend/login_view.php');
+    header('Location: login.php');
     exit;
 }
