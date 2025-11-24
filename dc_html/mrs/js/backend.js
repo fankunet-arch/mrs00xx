@@ -184,8 +184,9 @@ const api = {
   /**
    * 获取品类列表
    */
-  async getCategories() {
-    return await this.call('api.php?route=backend_categories');
+  async getCategories(filters = {}) {
+    const params = new URLSearchParams(filters);
+    return await this.call(`api.php?route=backend_categories&${params}`);
   },
 
   /**
@@ -266,6 +267,7 @@ async function loadPageData(pageName) {
       await loadBatches();
       break;
     case 'catalog':
+      await loadCategoryFilterOptions();
       await loadSkus();
       break;
     case 'categories':
@@ -390,12 +392,34 @@ function renderSkus() {
  * 加载品类列表
  */
 async function loadCategories() {
-  const result = await api.getCategories();
+  const filters = {
+    search: document.getElementById('category-filter-search')?.value.trim() || ''
+  };
+  const result = await api.getCategories(filters);
   if (result.success) {
     appState.categories = result.data;
     renderCategories();
   } else {
     showAlert('danger', '加载品类列表失败: ' + result.message);
+  }
+}
+
+/**
+ * 加载品类筛选选项 (for SKU catalog filter)
+ */
+async function loadCategoryFilterOptions() {
+  const result = await api.getCategories();
+  if (result.success) {
+    const select = document.getElementById('catalog-filter-category');
+    if (select) {
+      const currentVal = select.value;
+      select.innerHTML = '<option value="">全部品类</option>' +
+        result.data.map(cat => `<option value="${cat.category_id}">${escapeHtml(cat.category_name)}</option>`).join('');
+      // 尝试恢复之前的选择
+      if (currentVal) {
+        select.value = currentVal;
+      }
+    }
   }
 }
 
