@@ -6,7 +6,9 @@
  */
 
 // 定义API入口
-define('MRS_ENTRY', true);
+if (!defined('MRS_ENTRY')) {
+    define('MRS_ENTRY', true);
+}
 
 // 加载配置
 require_once __DIR__ . '/../config_mrs/env_mrs.php';

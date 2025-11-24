@@ -6,8 +6,12 @@
  */
 
 // 定义入口常量
-define('MRS_ENTRY', true);
-define('MRS_BACKEND', true);
+if (!defined('MRS_ENTRY')) {
+    define('MRS_ENTRY', true);
+}
+if (!defined('MRS_BACKEND')) {
+    define('MRS_BACKEND', true);
+}
 
 // 加载配置文件
 require_once __DIR__ . '/../../app/mrs/config_mrs/env_mrs.php';

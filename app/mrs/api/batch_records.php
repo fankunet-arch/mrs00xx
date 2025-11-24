@@ -6,7 +6,9 @@
  */
 
 // 定义入口常量
-define('MRS_ENTRY', true);
+if (!defined('MRS_ENTRY')) {
+    define('MRS_ENTRY', true);
+}
 
 // 加载配置和库文件
 require_once __DIR__ . '/../config_mrs/env_mrs.php';
