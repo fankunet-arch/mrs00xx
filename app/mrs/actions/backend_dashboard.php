@@ -378,6 +378,7 @@ $current_user = '管理员';
         <button class="text" onclick="modal.hide('modal-category')">×</button>
       </div>
       <form id="form-category" onsubmit="saveCategory(event)">
+        <input type="hidden" name="category_id" id="category-id" />
         <div class="form-grid">
           <div class="form-group">
             <label>品类名称 *</label>
@@ -412,6 +413,6 @@ $current_user = '管理员';
     </div>
   </div>
 
-  <script src="js/backend.js?v=<?php echo time() + 1; ?>"></script>
+  <script src="js/backend.js?v=<?php echo time() + 2; ?>"></script>
 </body>
 </html>
