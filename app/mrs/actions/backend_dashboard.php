@@ -1,0 +1,512 @@
+<?php
+/**
+ * MRS 物料收发管理系统 - 后台管理主控制台
+ * 文件路径: app/mrs/actions/backend_dashboard.php
+ * 说明: 后台管理主页面
+ */
+
+// 防止直接访问
+if (!defined('MRS_ENTRY')) {
+    die('Access denied');
+}
+
+// TODO: 这里应该检查用户登录状态和权限
+// 暂时使用默认用户
+$current_user = '管理员';
+
+?>
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MRS 物料收发管理系统 - 后台管理</title>
+  <link rel="stylesheet" href="css/backend.css" />
+</head>
+<body>
+  <header>
+    <div class="title">MRS 物料收发管理系统 - 后台管理</div>
+    <div class="user">当前用户：<?php echo htmlspecialchars($current_user); ?></div>
+  </header>
+
+  <div class="layout">
+    <aside>
+      <div class="menu-item active" data-target="batches">收货批次管理</div>
+      <div class="menu-item" data-target="catalog">物料档案(SKU)</div>
+      <div class="menu-item" data-target="categories">品类管理</div>
+      <div class="menu-item" data-target="reports">统计报表</div>
+    </aside>
+
+    <div class="content">
+      <!-- 页面A: 收货批次管理 -->
+      <div class="page active" id="page-batches">
+        <h2>收货批次列表</h2>
+        <div class="card">
+          <div class="flex-between">
+            <div class="filters">
+              <input type="text" id="filter-search" placeholder="搜索批次/地点/备注" />
+              <input type="date" id="filter-date-start" placeholder="开始日期" />
+              <input type="date" id="filter-date-end" placeholder="结束日期" />
+              <select id="filter-status">
+                <option value="">全部状态</option>
+                <option value="draft">草稿</option>
+                <option value="receiving">收货中</option>
+                <option value="pending_merge">待合并</option>
+                <option value="confirmed">已确认</option>
+                <option value="posted">已过账</option>
+              </select>
+              <button class="secondary" onclick="loadBatches()">搜索</button>
+            </div>
+            <button onclick="showNewBatchModal()">新建批次</button>
+          </div>
+          <div style="overflow-x:auto; margin-top: 10px;">
+            <table>
+              <thead>
+                <tr>
+                  <th>批次编号</th>
+                  <th>收货日期</th>
+                  <th>地点/门店</th>
+                  <th>状态</th>
+                  <th>备注</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td colspan="6" class="loading">加载中...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- 页面B: 收货批次合并确认 -->
+      <div class="page" id="page-merge">
+        <div class="flex-between" style="margin-bottom: 12px;">
+          <h2>收货批次合并确认</h2>
+          <button onclick="showPage('batches')">返回列表</button>
+        </div>
+
+        <div class="card">
+          <div class="columns" id="merge-batch-info">
+            <!-- 批次信息将通过JS动态加载 -->
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="flex-between">
+            <div class="section-title">原始记录汇总（按品牌SKU）</div>
+            <button class="success" onclick="confirmAllMerge()">确认全部并入库</button>
+          </div>
+          <div style="overflow-x:auto; margin-top: 10px;">
+            <table>
+              <thead>
+                <tr>
+                  <th>品牌SKU名称</th>
+                  <th>品类</th>
+                  <th>类型</th>
+                  <th>单位规则</th>
+                  <th>预计数量</th>
+                  <th>原始记录汇总</th>
+                  <th>系统建议</th>
+                  <th>状态</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td colspan="9" class="loading">加载中...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- 页面C: 物料档案(SKU)管理 -->
+      <div class="page" id="page-catalog">
+        <h2>物料档案 (SKU)</h2>
+        <div class="card">
+          <div class="flex-between">
+            <div class="filters">
+              <input type="text" id="catalog-filter-search" placeholder="搜索品牌/品类/规格" />
+              <select id="catalog-filter-category">
+                <option value="">全部品类</option>
+              </select>
+              <select id="catalog-filter-type">
+                <option value="">全部类型</option>
+                <option value="1">精计</option>
+                <option value="0">粗计</option>
+              </select>
+              <button class="secondary" onclick="loadSkus()">搜索</button>
+            </div>
+            <button onclick="showNewSkuModal()">新增SKU</button>
+          </div>
+          <div style="overflow-x:auto; margin-top: 10px;">
+            <table>
+              <thead>
+                <tr>
+                  <th>SKU名称</th>
+                  <th>品类</th>
+                  <th>品牌</th>
+                  <th>类型</th>
+                  <th>标准单位</th>
+                  <th>单位规则</th>
+                  <th>状态</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td colspan="8" class="loading">加载中...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- 页面D: 品类管理 -->
+      <div class="page" id="page-categories">
+        <h2>品类管理</h2>
+        <div class="card">
+          <div class="flex-between">
+            <div class="filters">
+              <input type="text" id="category-filter-search" placeholder="搜索品类名称" />
+              <button class="secondary" onclick="loadCategories()">搜索</button>
+            </div>
+            <button onclick="showNewCategoryModal()">新增品类</button>
+          </div>
+          <div style="overflow-x:auto; margin-top: 10px;">
+            <table>
+              <thead>
+                <tr>
+                  <th>品类名称</th>
+                  <th>品类编码</th>
+                  <th>创建时间</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td colspan="4" class="loading">加载中...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- 页面E: 统计报表 -->
+      <div class="page" id="page-reports">
+        <h2>统计报表</h2>
+        <div class="card">
+          <div class="section-title">报表类型</div>
+          <div class="filters">
+            <select id="report-type">
+              <option value="daily">每日收货统计</option>
+              <option value="monthly">月度收货统计</option>
+              <option value="sku">SKU收货汇总</option>
+              <option value="category">品类收货汇总</option>
+            </select>
+            <input type="date" id="report-date-start" />
+            <input type="date" id="report-date-end" />
+            <button class="secondary" onclick="loadReports()">生成报表</button>
+            <button class="success" onclick="exportReport()">导出Excel</button>
+          </div>
+        </div>
+        <div class="card">
+          <div id="report-content">
+            <div class="empty">请选择报表类型并点击生成报表</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 模态框: 新建/编辑批次 -->
+  <div class="modal-backdrop" id="modal-batch">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modal-batch-title">新建批次</h3>
+        <button class="text" onclick="modal.hide('modal-batch')">×</button>
+      </div>
+      <form id="form-batch" onsubmit="saveBatch(event)">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>批次编号 *</label>
+            <input type="text" name="batch_code" id="batch-code" required />
+          </div>
+          <div class="form-group">
+            <label>收货日期 *</label>
+            <input type="date" name="batch_date" id="batch-date" required />
+          </div>
+          <div class="form-group full">
+            <label>收货地点 *</label>
+            <input type="text" name="location_name" id="batch-location" required />
+          </div>
+          <div class="form-group full">
+            <label>备注</label>
+            <textarea name="remark" id="batch-remark" rows="3"></textarea>
+          </div>
+          <div class="form-group">
+            <label>状态</label>
+            <select name="batch_status" id="batch-status">
+              <option value="draft">草稿</option>
+              <option value="receiving">收货中</option>
+              <option value="pending_merge">待合并</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="text" onclick="modal.hide('modal-batch')">取消</button>
+          <button type="submit">保存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 模态框: 新建/编辑SKU -->
+  <div class="modal-backdrop" id="modal-sku">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modal-sku-title">新增SKU</h3>
+        <button class="text" onclick="modal.hide('modal-sku')">×</button>
+      </div>
+      <form id="form-sku" onsubmit="saveSku(event)">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>SKU名称 *</label>
+            <input type="text" name="sku_name" id="sku-name" required />
+          </div>
+          <div class="form-group">
+            <label>品类 *</label>
+            <select name="category_id" id="sku-category" required>
+              <option value="">请选择</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>品牌名称 *</label>
+            <input type="text" name="brand_name" id="sku-brand" required />
+          </div>
+          <div class="form-group">
+            <label>SKU编码 *</label>
+            <input type="text" name="sku_code" id="sku-code" required />
+          </div>
+          <div class="form-group">
+            <label>类型 *</label>
+            <select name="is_precise_item" id="sku-type" required>
+              <option value="1">精计物料</option>
+              <option value="0">粗计物料</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>标准单位 *</label>
+            <input type="text" name="standard_unit" id="sku-unit" required placeholder="如: 瓶, kg, 包" />
+          </div>
+          <div class="form-group">
+            <label>箱单位名称</label>
+            <input type="text" name="case_unit_name" id="sku-case-unit" placeholder="如: 箱, 盒" />
+          </div>
+          <div class="form-group">
+            <label>箱规换算</label>
+            <input type="number" name="case_to_standard_qty" id="sku-case-qty" step="0.01" placeholder="1箱=?标准单位" />
+          </div>
+          <div class="form-group full">
+            <label>备注</label>
+            <textarea name="note" id="sku-note" rows="2"></textarea>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="text" onclick="modal.hide('modal-sku')">取消</button>
+          <button type="submit">保存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 模态框: 新建/编辑品类 -->
+  <div class="modal-backdrop" id="modal-category">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modal-category-title">新增品类</h3>
+        <button class="text" onclick="modal.hide('modal-category')">×</button>
+      </div>
+      <form id="form-category" onsubmit="saveCategory(event)">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>品类名称 *</label>
+            <input type="text" name="category_name" id="category-name" required />
+          </div>
+          <div class="form-group">
+            <label>品类编码</label>
+            <input type="text" name="category_code" id="category-code" placeholder="可选" />
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="text" onclick="modal.hide('modal-category')">取消</button>
+          <button type="submit">保存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="js/backend.js"></script>
+  <script>
+    // 全局函数供HTML onclick调用
+
+    function showNewBatchModal() {
+      document.getElementById('form-batch').reset();
+      document.getElementById('modal-batch-title').textContent = '新建批次';
+      // 生成批次编号
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById('batch-code').value = 'IN-' + today + '-001';
+      document.getElementById('batch-date').value = today;
+      modal.show('modal-batch');
+    }
+
+    function showNewSkuModal() {
+      document.getElementById('form-sku').reset();
+      document.getElementById('modal-sku-title').textContent = '新增SKU';
+      // 加载品类选项
+      loadCategoryOptions();
+      modal.show('modal-sku');
+    }
+
+    function showNewCategoryModal() {
+      document.getElementById('form-category').reset();
+      document.getElementById('modal-category-title').textContent = '新增品类';
+      modal.show('modal-category');
+    }
+
+    async function loadCategoryOptions() {
+      const result = await api.getCategories();
+      if (result.success) {
+        const select = document.getElementById('sku-category');
+        select.innerHTML = '<option value="">请选择</option>' +
+          result.data.map(cat => `<option value="${cat.category_id}">${cat.category_name}</option>`).join('');
+      }
+    }
+
+    async function saveBatch(event) {
+      event.preventDefault();
+      const formData = new FormData(event.target);
+      const data = Object.fromEntries(formData);
+
+      const result = await api.saveBatch(data);
+      if (result.success) {
+        showAlert('success', '批次保存成功');
+        modal.hide('modal-batch');
+        loadBatches();
+      } else {
+        showAlert('danger', '保存失败: ' + result.message);
+      }
+    }
+
+    async function saveSku(event) {
+      event.preventDefault();
+      const formData = new FormData(event.target);
+      const data = Object.fromEntries(formData);
+
+      const result = await api.saveSku(data);
+      if (result.success) {
+        showAlert('success', 'SKU保存成功');
+        modal.hide('modal-sku');
+        loadSkus();
+      } else {
+        showAlert('danger', '保存失败: ' + result.message);
+      }
+    }
+
+    async function saveCategory(event) {
+      event.preventDefault();
+      const formData = new FormData(event.target);
+      const data = Object.fromEntries(formData);
+
+      const result = await api.saveCategory(data);
+      if (result.success) {
+        showAlert('success', '品类保存成功');
+        modal.hide('modal-category');
+        loadCategories();
+      } else {
+        showAlert('danger', '保存失败: ' + result.message);
+      }
+    }
+
+    async function viewBatch(batchId) {
+      showAlert('info', '查看批次详情功能开发中...');
+    }
+
+    async function editBatch(batchId) {
+      showAlert('info', '编辑批次功能开发中...');
+    }
+
+    async function deleteBatch(batchId) {
+      if (!confirm('确定要删除这个批次吗?此操作不可撤销!')) {
+        return;
+      }
+
+      const result = await api.deleteBatch(batchId);
+      if (result.success) {
+        showAlert('success', '批次删除成功');
+        loadBatches();
+      } else {
+        showAlert('danger', '删除失败: ' + result.message);
+      }
+    }
+
+    async function editSku(skuId) {
+      showAlert('info', '编辑SKU功能开发中...');
+    }
+
+    async function deleteSku(skuId) {
+      if (!confirm('确定要删除这个SKU吗?')) {
+        return;
+      }
+
+      const result = await api.deleteSku(skuId);
+      if (result.success) {
+        showAlert('success', 'SKU删除成功');
+        loadSkus();
+      } else {
+        showAlert('danger', '删除失败: ' + result.message);
+      }
+    }
+
+    async function editCategory(categoryId) {
+      showAlert('info', '编辑品类功能开发中...');
+    }
+
+    async function deleteCategory(categoryId) {
+      if (!confirm('确定要删除这个品类吗?')) {
+        return;
+      }
+
+      const result = await api.deleteCategory(categoryId);
+      if (result.success) {
+        showAlert('success', '品类删除成功');
+        loadCategories();
+      } else {
+        showAlert('danger', '删除失败: ' + result.message);
+      }
+    }
+
+    async function confirmItem(index) {
+      showAlert('info', '确认单项功能开发中...');
+    }
+
+    async function confirmAllMerge() {
+      showAlert('info', '确认全部合并功能开发中...');
+    }
+
+    async function viewRawRecords(skuId) {
+      showAlert('info', '查看原始记录功能开发中...');
+    }
+
+    async function exportReport() {
+      showAlert('info', '导出报表功能开发中...');
+    }
+  </script>
+</body>
+</html>

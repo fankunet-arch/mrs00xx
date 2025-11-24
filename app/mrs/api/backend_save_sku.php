@@ -1,0 +1,142 @@
+<?php
+/**
+ * MRS 物料收发管理系统 - 后台API: 保存SKU
+ * 文件路径: app/mrs/api/backend_save_sku.php
+ * 说明: 创建或更新品牌SKU
+ */
+
+// 定义API入口
+define('MRS_ENTRY', true);
+
+// 加载配置
+require_once __DIR__ . '/../config_mrs/env_mrs.php';
+require_once MRS_LIB_PATH . '/mrs_lib.php';
+
+try {
+    // 获取POST数据
+    $input = get_json_input();
+
+    if (!$input) {
+        json_response(false, null, '无效的请求数据');
+    }
+
+    // 验证必填字段
+    $required = ['sku_name', 'category_id', 'brand_name', 'sku_code', 'standard_unit'];
+    foreach ($required as $field) {
+        if (!isset($input[$field]) || $input[$field] === '') {
+            json_response(false, null, "缺少必填字段: {$field}");
+        }
+    }
+
+    // 获取数据库连接
+    $pdo = get_db_connection();
+
+    // 判断是新建还是更新
+    $skuId = $input['sku_id'] ?? null;
+
+    if ($skuId) {
+        // 更新现有SKU
+        $sql = "UPDATE mrs_sku SET
+                    category_id = :category_id,
+                    brand_name = :brand_name,
+                    sku_name = :sku_name,
+                    sku_code = :sku_code,
+                    is_precise_item = :is_precise_item,
+                    standard_unit = :standard_unit,
+                    case_unit_name = :case_unit_name,
+                    case_to_standard_qty = :case_to_standard_qty,
+                    pack_unit_name = :pack_unit_name,
+                    pack_to_standard_qty = :pack_to_standard_qty,
+                    note = :note,
+                    updated_at = NOW(6)
+                WHERE sku_id = :sku_id";
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->bindValue(':category_id', $input['category_id'], PDO::PARAM_INT);
+        $stmt->bindValue(':brand_name', $input['brand_name']);
+        $stmt->bindValue(':sku_name', $input['sku_name']);
+        $stmt->bindValue(':sku_code', $input['sku_code']);
+        $stmt->bindValue(':is_precise_item', $input['is_precise_item'] ?? 1, PDO::PARAM_INT);
+        $stmt->bindValue(':standard_unit', $input['standard_unit']);
+        $stmt->bindValue(':case_unit_name', $input['case_unit_name'] ?? null);
+        $stmt->bindValue(':case_to_standard_qty', $input['case_to_standard_qty'] ?? null);
+        $stmt->bindValue(':pack_unit_name', $input['pack_unit_name'] ?? null);
+        $stmt->bindValue(':pack_to_standard_qty', $input['pack_to_standard_qty'] ?? null);
+        $stmt->bindValue(':note', $input['note'] ?? '');
+        $stmt->bindValue(':sku_id', $skuId, PDO::PARAM_INT);
+        $stmt->execute();
+
+        mrs_log("SKU更新成功: sku_id={$skuId}", 'INFO', $input);
+
+        json_response(true, ['sku_id' => $skuId], 'SKU更新成功');
+
+    } else {
+        // 检查SKU编码是否已存在
+        $checkSql = "SELECT sku_id FROM mrs_sku WHERE sku_code = :sku_code";
+        $checkStmt = $pdo->prepare($checkSql);
+        $checkStmt->bindValue(':sku_code', $input['sku_code']);
+        $checkStmt->execute();
+
+        if ($checkStmt->fetch()) {
+            json_response(false, null, 'SKU编码已存在');
+        }
+
+        // 创建新SKU
+        $sql = "INSERT INTO mrs_sku (
+                    category_id,
+                    brand_name,
+                    sku_name,
+                    sku_code,
+                    is_precise_item,
+                    standard_unit,
+                    case_unit_name,
+                    case_to_standard_qty,
+                    pack_unit_name,
+                    pack_to_standard_qty,
+                    note,
+                    created_at,
+                    updated_at
+                ) VALUES (
+                    :category_id,
+                    :brand_name,
+                    :sku_name,
+                    :sku_code,
+                    :is_precise_item,
+                    :standard_unit,
+                    :case_unit_name,
+                    :case_to_standard_qty,
+                    :pack_unit_name,
+                    :pack_to_standard_qty,
+                    :note,
+                    NOW(6),
+                    NOW(6)
+                )";
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->bindValue(':category_id', $input['category_id'], PDO::PARAM_INT);
+        $stmt->bindValue(':brand_name', $input['brand_name']);
+        $stmt->bindValue(':sku_name', $input['sku_name']);
+        $stmt->bindValue(':sku_code', $input['sku_code']);
+        $stmt->bindValue(':is_precise_item', $input['is_precise_item'] ?? 1, PDO::PARAM_INT);
+        $stmt->bindValue(':standard_unit', $input['standard_unit']);
+        $stmt->bindValue(':case_unit_name', $input['case_unit_name'] ?? null);
+        $stmt->bindValue(':case_to_standard_qty', $input['case_to_standard_qty'] ?? null);
+        $stmt->bindValue(':pack_unit_name', $input['pack_unit_name'] ?? null);
+        $stmt->bindValue(':pack_to_standard_qty', $input['pack_to_standard_qty'] ?? null);
+        $stmt->bindValue(':note', $input['note'] ?? '');
+        $stmt->execute();
+
+        $newSkuId = $pdo->lastInsertId();
+
+        mrs_log("新SKU创建成功: sku_id={$newSkuId}", 'INFO', $input);
+
+        json_response(true, ['sku_id' => $newSkuId], 'SKU创建成功');
+    }
+
+} catch (PDOException $e) {
+    mrs_log('保存SKU失败: ' . $e->getMessage(), 'ERROR', $input ?? []);
+    json_response(false, null, '数据库错误: ' . $e->getMessage());
+} catch (Exception $e) {
+    mrs_log('保存SKU异常: ' . $e->getMessage(), 'ERROR', $input ?? []);
+    json_response(false, null, '系统错误: ' . $e->getMessage());
+}

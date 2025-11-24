@@ -1,0 +1,569 @@
+/**
+ * MRS 物料收发管理系统 - 后台管理交互逻辑
+ * 文件路径: dc_html/mrs/js/backend.js
+ * 说明: 后台管理页面的所有交互逻辑
+ */
+
+// 全局状态
+const appState = {
+  currentPage: 'batches',
+  batches: [],
+  categories: [],
+  skus: [],
+  currentBatch: null,
+  currentSku: null,
+  currentCategory: null
+};
+
+// DOM 元素引用
+const dom = {};
+
+/**
+ * 初始化 DOM 引用
+ */
+function initDom() {
+  // 菜单项
+  dom.menuItems = document.querySelectorAll('.menu-item');
+
+  // 页面容器
+  dom.pages = {
+    batches: document.getElementById('page-batches'),
+    merge: document.getElementById('page-merge'),
+    catalog: document.getElementById('page-catalog'),
+    categories: document.getElementById('page-categories'),
+    reports: document.getElementById('page-reports')
+  };
+
+  // 模态框
+  dom.modals = {
+    batch: document.getElementById('modal-batch'),
+    sku: document.getElementById('modal-sku'),
+    category: document.getElementById('modal-category')
+  };
+}
+
+/**
+ * API 调用封装
+ */
+const api = {
+  /**
+   * 通用API调用
+   */
+  async call(url, options = {}) {
+    try {
+      const response = await fetch(url, {
+        ...options,
+        headers: {
+          'Content-Type': 'application/json',
+          ...options.headers
+        }
+      });
+      return await response.json();
+    } catch (error) {
+      console.error('API错误:', error);
+      return { success: false, message: '网络错误' };
+    }
+  },
+
+  /**
+   * 获取批次列表
+   */
+  async getBatches(filters = {}) {
+    const params = new URLSearchParams(filters);
+    return await this.call(`../app/mrs/api/backend_batches.php?${params}`);
+  },
+
+  /**
+   * 获取批次详情
+   */
+  async getBatchDetail(batchId) {
+    return await this.call(`../app/mrs/api/backend_batch_detail.php?batch_id=${batchId}`);
+  },
+
+  /**
+   * 保存批次
+   */
+  async saveBatch(data) {
+    return await this.call('../app/mrs/api/backend_save_batch.php', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+
+  /**
+   * 删除批次
+   */
+  async deleteBatch(batchId) {
+    return await this.call('../app/mrs/api/backend_delete_batch.php', {
+      method: 'POST',
+      body: JSON.stringify({ batch_id: batchId })
+    });
+  },
+
+  /**
+   * 获取批次合并数据
+   */
+  async getMergeData(batchId) {
+    return await this.call(`../app/mrs/api/backend_merge_data.php?batch_id=${batchId}`);
+  },
+
+  /**
+   * 确认批次合并
+   */
+  async confirmMerge(batchId, items) {
+    return await this.call('../app/mrs/api/backend_confirm_merge.php', {
+      method: 'POST',
+      body: JSON.stringify({ batch_id: batchId, items })
+    });
+  },
+
+  /**
+   * 获取SKU列表
+   */
+  async getSkus(filters = {}) {
+    const params = new URLSearchParams(filters);
+    return await this.call(`../app/mrs/api/backend_skus.php?${params}`);
+  },
+
+  /**
+   * 保存SKU
+   */
+  async saveSku(data) {
+    return await this.call('../app/mrs/api/backend_save_sku.php', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+
+  /**
+   * 删除SKU
+   */
+  async deleteSku(skuId) {
+    return await this.call('../app/mrs/api/backend_delete_sku.php', {
+      method: 'POST',
+      body: JSON.stringify({ sku_id: skuId })
+    });
+  },
+
+  /**
+   * 获取品类列表
+   */
+  async getCategories() {
+    return await this.call('../app/mrs/api/backend_categories.php');
+  },
+
+  /**
+   * 保存品类
+   */
+  async saveCategory(data) {
+    return await this.call('../app/mrs/api/backend_save_category.php', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+
+  /**
+   * 删除品类
+   */
+  async deleteCategory(categoryId) {
+    return await this.call('../app/mrs/api/backend_delete_category.php', {
+      method: 'POST',
+      body: JSON.stringify({ category_id: categoryId })
+    });
+  },
+
+  /**
+   * 获取统计报表数据
+   */
+  async getReports(type, filters = {}) {
+    const params = new URLSearchParams({ type, ...filters });
+    return await this.call(`../app/mrs/api/backend_reports.php?${params}`);
+  }
+};
+
+/**
+ * 页面导航
+ */
+function showPage(pageName) {
+  // 更新状态
+  appState.currentPage = pageName;
+
+  // 隐藏所有页面
+  Object.values(dom.pages).forEach(page => {
+    if (page) page.classList.remove('active');
+  });
+
+  // 显示目标页面
+  if (dom.pages[pageName]) {
+    dom.pages[pageName].classList.add('active');
+  }
+
+  // 更新菜单激活状态
+  dom.menuItems.forEach(item => {
+    if (item.dataset.target === pageName) {
+      item.classList.add('active');
+    } else {
+      item.classList.remove('active');
+    }
+  });
+
+  // 加载页面数据
+  loadPageData(pageName);
+}
+
+/**
+ * 加载页面数据
+ */
+async function loadPageData(pageName) {
+  switch (pageName) {
+    case 'batches':
+      await loadBatches();
+      break;
+    case 'catalog':
+      await loadSkus();
+      break;
+    case 'categories':
+      await loadCategories();
+      break;
+    case 'reports':
+      await loadReports();
+      break;
+  }
+}
+
+/**
+ * 加载批次列表
+ */
+async function loadBatches() {
+  const result = await api.getBatches();
+  if (result.success) {
+    appState.batches = result.data;
+    renderBatches();
+  } else {
+    showAlert('danger', '加载批次列表失败: ' + result.message);
+  }
+}
+
+/**
+ * 渲染批次列表
+ */
+function renderBatches() {
+  const tbody = document.querySelector('#page-batches tbody');
+  if (!tbody) return;
+
+  if (appState.batches.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" class="empty">暂无批次数据</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = appState.batches.map(batch => `
+    <tr>
+      <td>${escapeHtml(batch.batch_code)}</td>
+      <td>${escapeHtml(batch.batch_date)}</td>
+      <td>${escapeHtml(batch.location_name)}</td>
+      <td><span class="badge ${getStatusBadgeClass(batch.batch_status)}">${getStatusText(batch.batch_status)}</span></td>
+      <td>${escapeHtml(batch.remark || '-')}</td>
+      <td class="table-actions">
+        <button class="text" onclick="viewBatch(${batch.batch_id})">查看</button>
+        <button class="secondary" onclick="showMergePage(${batch.batch_id})">合并</button>
+        <button class="text" onclick="editBatch(${batch.batch_id})">编辑</button>
+        <button class="text danger" onclick="deleteBatch(${batch.batch_id})">删除</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+/**
+ * 加载SKU列表
+ */
+async function loadSkus() {
+  const result = await api.getSkus();
+  if (result.success) {
+    appState.skus = result.data;
+    renderSkus();
+  } else {
+    showAlert('danger', '加载SKU列表失败: ' + result.message);
+  }
+}
+
+/**
+ * 渲染SKU列表
+ */
+function renderSkus() {
+  const tbody = document.querySelector('#page-catalog tbody');
+  if (!tbody) return;
+
+  if (appState.skus.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" class="empty">暂无SKU数据</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = appState.skus.map(sku => {
+    const unitRule = sku.case_unit_name
+      ? `1 ${sku.case_unit_name} = ${sku.case_to_standard_qty} ${sku.standard_unit}`
+      : '—';
+
+    return `
+      <tr>
+        <td>${escapeHtml(sku.sku_name)}</td>
+        <td>${escapeHtml(sku.category_name || '-')}</td>
+        <td>${escapeHtml(sku.brand_name)}</td>
+        <td>${sku.is_precise_item ? '精计' : '粗计'}</td>
+        <td>${escapeHtml(sku.standard_unit)}</td>
+        <td>${escapeHtml(unitRule)}</td>
+        <td><span class="badge success">启用</span></td>
+        <td class="table-actions">
+          <button class="text" onclick="editSku(${sku.sku_id})">编辑</button>
+          <button class="text danger" onclick="deleteSku(${sku.sku_id})">删除</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+/**
+ * 加载品类列表
+ */
+async function loadCategories() {
+  const result = await api.getCategories();
+  if (result.success) {
+    appState.categories = result.data;
+    renderCategories();
+  } else {
+    showAlert('danger', '加载品类列表失败: ' + result.message);
+  }
+}
+
+/**
+ * 渲染品类列表
+ */
+function renderCategories() {
+  const tbody = document.querySelector('#page-categories tbody');
+  if (!tbody) return;
+
+  if (appState.categories.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" class="empty">暂无品类数据</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = appState.categories.map(category => `
+    <tr>
+      <td>${escapeHtml(category.category_name)}</td>
+      <td>${escapeHtml(category.category_code || '-')}</td>
+      <td>${new Date(category.created_at).toLocaleString('zh-CN')}</td>
+      <td class="table-actions">
+        <button class="text" onclick="editCategory(${category.category_id})">编辑</button>
+        <button class="text danger" onclick="deleteCategory(${category.category_id})">删除</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+/**
+ * 加载统计报表
+ */
+async function loadReports() {
+  // TODO: 实现报表加载逻辑
+}
+
+/**
+ * 显示合并页面
+ */
+async function showMergePage(batchId) {
+  appState.currentBatch = appState.batches.find(b => b.batch_id === batchId);
+
+  const result = await api.getMergeData(batchId);
+  if (result.success) {
+    renderMergePage(result.data);
+    showPage('merge');
+  } else {
+    showAlert('danger', '加载合并数据失败: ' + result.message);
+  }
+}
+
+/**
+ * 渲染合并页面
+ */
+function renderMergePage(data) {
+  // 渲染批次信息
+  const infoContainer = document.querySelector('#page-merge .columns');
+  if (infoContainer && appState.currentBatch) {
+    infoContainer.innerHTML = `
+      <div>
+        <div class="muted">批次编号</div>
+        <div class="status-label">${escapeHtml(appState.currentBatch.batch_code)}</div>
+      </div>
+      <div>
+        <div class="muted">收货日期</div>
+        <div class="status-label">${escapeHtml(appState.currentBatch.batch_date)}</div>
+      </div>
+      <div>
+        <div class="muted">地点</div>
+        <div class="status-label">${escapeHtml(appState.currentBatch.location_name)}</div>
+      </div>
+      <div>
+        <div class="muted">状态</div>
+        <div class="status-label"><span class="badge ${getStatusBadgeClass(appState.currentBatch.batch_status)}">${getStatusText(appState.currentBatch.batch_status)}</span></div>
+      </div>
+      <div>
+        <div class="muted">备注</div>
+        <div class="status-label">${escapeHtml(appState.currentBatch.remark || '-')}</div>
+      </div>
+    `;
+  }
+
+  // 渲染合并数据表格
+  const tbody = document.querySelector('#page-merge tbody');
+  if (tbody && data.items) {
+    tbody.innerHTML = data.items.map((item, index) => `
+      <tr>
+        <td>${escapeHtml(item.sku_name)}</td>
+        <td>${escapeHtml(item.category_name || '-')}</td>
+        <td>${item.is_precise_item ? '精计' : '粗计'}</td>
+        <td>${item.case_unit_name ? `1 ${item.case_unit_name} = ${item.case_to_standard_qty} ${item.standard_unit}` : '—'}</td>
+        <td>${item.expected_qty || '-'}</td>
+        <td>${escapeHtml(item.raw_summary || '-')}</td>
+        <td><span class="pill">${escapeHtml(item.suggested_qty || '-')}</span></td>
+        <td><span class="badge ${item.status === 'normal' ? 'success' : item.status === 'over' ? 'warning' : 'danger'}">${item.status_text || '正常'}</span></td>
+        <td>
+          <div class="table-actions">
+            <button class="text" onclick="viewRawRecords(${item.sku_id})">查看明细</button>
+            <input type="number" id="case-${index}" value="${item.confirmed_case || 0}" style="width: 70px;" placeholder="箱数" />
+            <input type="number" id="single-${index}" value="${item.confirmed_single || 0}" style="width: 70px;" placeholder="散件" />
+            <button class="secondary" onclick="confirmItem(${index})">确认</button>
+          </div>
+        </td>
+      </tr>
+    `).join('');
+  }
+}
+
+/**
+ * 辅助函数: HTML转义
+ */
+function escapeHtml(text) {
+  if (text === null || text === undefined) return '';
+  const map = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;'
+  };
+  return String(text).replace(/[&<>"']/g, m => map[m]);
+}
+
+/**
+ * 辅助函数: 获取状态文本
+ */
+function getStatusText(status) {
+  const statusMap = {
+    'draft': '草稿',
+    'receiving': '收货中',
+    'pending_merge': '待合并',
+    'confirmed': '已确认',
+    'posted': '已过账'
+  };
+  return statusMap[status] || status;
+}
+
+/**
+ * 辅助函数: 获取状态徽章样式
+ */
+function getStatusBadgeClass(status) {
+  const classMap = {
+    'draft': 'info',
+    'receiving': 'info',
+    'pending_merge': 'warning',
+    'confirmed': 'success',
+    'posted': 'success'
+  };
+  return classMap[status] || 'info';
+}
+
+/**
+ * 显示提示信息
+ */
+function showAlert(type, message) {
+  // 创建或获取alert容器
+  let alertContainer = document.querySelector('.alert-container');
+  if (!alertContainer) {
+    alertContainer = document.createElement('div');
+    alertContainer.className = 'alert-container';
+    alertContainer.style.cssText = 'position: fixed; top: 80px; right: 20px; z-index: 1000; max-width: 400px;';
+    document.body.appendChild(alertContainer);
+  }
+
+  // 创建alert元素
+  const alert = document.createElement('div');
+  alert.className = `alert ${type}`;
+  alert.textContent = message;
+  alertContainer.appendChild(alert);
+
+  // 3秒后自动移除
+  setTimeout(() => {
+    alert.remove();
+  }, 3000);
+}
+
+/**
+ * 模态框管理
+ */
+const modal = {
+  show(modalId) {
+    const backdrop = document.getElementById(modalId);
+    if (backdrop) {
+      backdrop.classList.add('show');
+    }
+  },
+
+  hide(modalId) {
+    const backdrop = document.getElementById(modalId);
+    if (backdrop) {
+      backdrop.classList.remove('show');
+    }
+  }
+};
+
+/**
+ * 初始化应用
+ */
+async function initApp() {
+  // 初始化 DOM 引用
+  initDom();
+
+  // 绑定菜单点击事件
+  dom.menuItems.forEach(item => {
+    item.addEventListener('click', () => {
+      const target = item.dataset.target;
+      if (target) {
+        showPage(target);
+      }
+    });
+  });
+
+  // 绑定按钮点击事件（通过事件委托）
+  document.body.addEventListener('click', (e) => {
+    const target = e.target;
+
+    // 处理带 data-target 的按钮
+    if (target.dataset.target) {
+      const page = target.dataset.target;
+      if (page === 'merge' && target.dataset.batchId) {
+        showMergePage(parseInt(target.dataset.batchId));
+      } else {
+        showPage(page);
+      }
+    }
+  });
+
+  // 加载初始页面
+  showPage('batches');
+}
+
+// 页面加载完成后初始化
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initApp);
+} else {
+  initApp();
+}
