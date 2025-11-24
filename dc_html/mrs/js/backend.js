@@ -278,7 +278,8 @@ async function loadPageData(pageName) {
 async function loadBatches() {
   const result = await api.getBatches();
   if (result.success) {
-    appState.batches = result.data;
+    // [FIX] API 返回结构是 { batches: [], pagination: {} }
+    appState.batches = result.data.batches || [];
     renderBatches();
   } else {
     showAlert('danger', '加载批次列表失败: ' + result.message);
