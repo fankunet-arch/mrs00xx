@@ -36,6 +36,11 @@ try {
         }
     }
 
+    // [安全修复] 严格验证数量必须为有效数字且大于0
+    if (!is_numeric($input['qty']) || floatval($input['qty']) <= 0) {
+        json_response(false, null, '数量必须为大于0的有效数字');
+    }
+
     // 验证批次是否存在
     $batch = get_batch_by_id($input['batch_id']);
     if (!$batch) {

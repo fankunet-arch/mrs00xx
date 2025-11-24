@@ -28,6 +28,20 @@ try {
         }
     }
 
+    // [安全修复] 严格验证箱规换算必须为有效的正数
+    if (!empty($input['case_to_standard_qty'])) {
+        if (!is_numeric($input['case_to_standard_qty']) || floatval($input['case_to_standard_qty']) <= 0) {
+            json_response(false, null, '箱规换算必须为大于0的有效数字');
+        }
+    }
+
+    // [安全修复] 严格验证包装规换算必须为有效的正数
+    if (!empty($input['pack_to_standard_qty'])) {
+        if (!is_numeric($input['pack_to_standard_qty']) || floatval($input['pack_to_standard_qty']) <= 0) {
+            json_response(false, null, '包装规换算必须为大于0的有效数字');
+        }
+    }
+
     // 获取数据库连接
     $pdo = get_db_connection();
 
