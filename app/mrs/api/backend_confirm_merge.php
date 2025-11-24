@@ -38,11 +38,14 @@ try {
         $batch = $checkStmt->fetch();
 
         if (!$batch) {
-            // [安全修复] 在提前退出前显式回滚事务，防止事务泄漏
-            if ($pdo->inTransaction()) {
-                $pdo->rollBack();
-            }
+            $pdo->rollBack();
             json_response(false, null, '批次不存在');
+        }
+
+        // [FIX] 检查状态，防止对已完成的批次进行操作
+        if ($batch['batch_status'] === 'confirmed' || $batch['batch_status'] === 'posted') {
+            $pdo->rollBack();
+            json_response(false, null, '该批次已确认或过账，不可再次合并');
         }
 
         // 删除旧的确认记录(如果有)
@@ -84,13 +87,12 @@ try {
             $singleQty = floatval($item['single_qty'] ?? 0);
             $caseToStandard = floatval($item['case_to_standard'] ?? 0);
 
-            $totalStandard = ($caseQty * $caseToStandard) + $singleQty;
-
-            // [业务规则强制执行] 库存必须为整数 - 符合需求文档
-            // "total_base_units（折算后的总基础单位数）必须为整数"
-            // 使用 round() 四舍五入避免浮点精度问题，然后强制转为整型
-            $totalStandard = round($totalStandard);
-            $totalStandard = intval($totalStandard);
+            // [FIX] 强制整数规则：计算结果必须为标准单位的整数
+            // 1. 计算理论浮点值
+            $rawTotal = ($caseQty * $caseToStandard) + $singleQty;
+            // 2. 四舍五入取整，防止浮点精度问题导致的小数（如 29.99999 -> 30）
+            // 需求文档明确：系统不允许以“6.5 箱”这种形式直接作为最终库存记账单位
+            $totalStandard = round($rawTotal, 0);
 
             // 计算差异
             $expectedQty = floatval($item['expected_qty'] ?? 0);
@@ -103,7 +105,7 @@ try {
             // 插入记录
             $insertStmt->bindValue(':batch_id', $batchId, PDO::PARAM_INT);
             $insertStmt->bindValue(':sku_id', intval($item['sku_id']), PDO::PARAM_INT);
-            $insertStmt->bindValue(':total_standard_qty', $totalStandard, PDO::PARAM_INT);
+            $insertStmt->bindValue(':total_standard_qty', $totalStandard); // 存入取整后的值
             $insertStmt->bindValue(':confirmed_case_qty', $caseQty);
             $insertStmt->bindValue(':confirmed_single_qty', $singleQty);
             $insertStmt->bindValue(':diff_against_expected', $diff);
@@ -130,7 +132,9 @@ try {
 
     } catch (Exception $e) {
         // 回滚事务
-        $pdo->rollBack();
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
         throw $e;
     }
 

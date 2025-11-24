@@ -37,18 +37,14 @@ try {
         $batch = $checkStmt->fetch();
 
         if (!$batch) {
-            // [安全修复] 在提前退出前显式回滚事务，防止事务泄漏
-            if ($pdo->inTransaction()) {
-                $pdo->rollBack();
-            }
+            // 即使是不存在，事务已开启，最好也回滚（虽然空事务影响小，但为了严谨）
+            $pdo->rollBack();
             json_response(false, null, '批次不存在');
         }
 
         if (in_array($batch['batch_status'], ['confirmed', 'posted'])) {
-            // [安全修复] 在提前退出前显式回滚事务，防止事务泄漏
-            if ($pdo->inTransaction()) {
-                $pdo->rollBack();
-            }
+            // [FIX] 显式回滚事务，防止连接未释放
+            $pdo->rollBack();
             json_response(false, null, '已确认或已过账的批次不能删除');
         }
 
@@ -85,7 +81,9 @@ try {
 
     } catch (Exception $e) {
         // 回滚事务
-        $pdo->rollBack();
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
         throw $e;
     }
 
