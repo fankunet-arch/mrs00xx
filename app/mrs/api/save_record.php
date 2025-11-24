@@ -78,6 +78,7 @@ try {
     $record_data = [
         'batch_id' => $input['batch_id'],
         'sku_id' => $input['sku_id'] ?? null,
+        'input_sku_name' => $input['sku_name'] ?? null, // [FIX] 保存手动输入的物料名称
         'qty' => $input['qty'],
         'unit_name' => $input['unit_name'],
         'operator_name' => $input['operator_name'],

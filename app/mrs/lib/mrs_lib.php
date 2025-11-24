@@ -205,6 +205,7 @@ function save_raw_record($data) {
         $sql = "INSERT INTO mrs_batch_raw_record (
                     batch_id,
                     sku_id,
+                    input_sku_name,
                     qty,
                     unit_name,
                     operator_name,
@@ -215,6 +216,7 @@ function save_raw_record($data) {
                 ) VALUES (
                     :batch_id,
                     :sku_id,
+                    :input_sku_name,
                     :qty,
                     :unit_name,
                     :operator_name,
@@ -227,6 +229,7 @@ function save_raw_record($data) {
         $stmt = $pdo->prepare($sql);
         $stmt->bindValue(':batch_id', $data['batch_id'], PDO::PARAM_INT);
         $stmt->bindValue(':sku_id', $data['sku_id'] ?? null, PDO::PARAM_INT);
+        $stmt->bindValue(':input_sku_name', $data['input_sku_name'] ?? null, PDO::PARAM_STR); // [FIX] 保存手动输入的物料名
         $stmt->bindValue(':qty', $data['qty'], PDO::PARAM_STR);
         $stmt->bindValue(':unit_name', $data['unit_name'], PDO::PARAM_STR);
         $stmt->bindValue(':operator_name', $data['operator_name'], PDO::PARAM_STR);
@@ -256,12 +259,13 @@ function get_batch_raw_records($batch_id) {
                     r.raw_record_id,
                     r.batch_id,
                     r.sku_id,
+                    r.input_sku_name,
                     r.qty,
                     r.unit_name,
                     r.operator_name,
                     r.recorded_at,
                     r.note,
-                    s.sku_name,
+                    COALESCE(r.input_sku_name, s.sku_name) AS sku_name,
                     s.brand_name
                 FROM mrs_batch_raw_record r
                 LEFT JOIN mrs_sku s ON r.sku_id = s.sku_id

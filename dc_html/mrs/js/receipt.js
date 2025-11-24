@@ -447,6 +447,7 @@ async function initApp() {
   renderBatches();
   renderBatchInfo();
   renderUnits();
+  renderCandidates(); // [FIX] 初始化候选列表（隐藏空列表）
 
   // 绑定事件
   dom.materialInput.addEventListener('input', (e) => {

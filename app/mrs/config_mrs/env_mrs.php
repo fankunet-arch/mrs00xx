@@ -14,11 +14,13 @@ if (!defined('MRS_ENTRY')) {
 // 数据库配置
 // ============================================
 
-define('DB_HOST', 'mhdlmskp2kpxguj.mysql.db');
-define('DB_NAME', 'mhdlmskp2kpxguj');
-define('DB_USER', 'mhdlmskp2kpxguj');
-define('DB_PASS', 'BWNrmksqMEqgbX37r3QNDJLGRrUka'); // TODO: 填入实际密码
-define('DB_CHARSET', 'utf8mb4');
+// [FIX] 支持环境变量，优先使用环境变量，否则使用默认配置
+// 本地开发环境可以使用 localhost，生产环境使用实际主机名
+define('DB_HOST', getenv('MRS_DB_HOST') ?: 'mhdlmskp2kpxguj.mysql.db');
+define('DB_NAME', getenv('MRS_DB_NAME') ?: 'mhdlmskp2kpxguj');
+define('DB_USER', getenv('MRS_DB_USER') ?: 'mhdlmskp2kpxguj');
+define('DB_PASS', getenv('MRS_DB_PASS') ?: 'BWNrmksqMEqgbX37r3QNDJLGRrUka');
+define('DB_CHARSET', getenv('MRS_DB_CHARSET') ?: 'utf8mb4');
 
 // ============================================
 // 路径常量

@@ -104,6 +104,7 @@ input:focus {
   border: 1px solid var(--border);
   border-radius: 12px;
   overflow: hidden;
+  display: none; /* 默认隐藏，由JS控制显示 */
 }
 
 .candidate {
