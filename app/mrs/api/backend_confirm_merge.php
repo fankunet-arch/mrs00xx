@@ -94,6 +94,18 @@ try {
             // 需求文档明确：系统不允许以“6.5 箱”这种形式直接作为最终库存记账单位
             $totalStandard = round($rawTotal, 0);
 
+            // [PATCH] 归一化逻辑：仅当箱规为整数并且 >0 时做归一化
+            if ($caseToStandard > 0 && fmod($caseToStandard, 1.0) == 0.0) {
+                $caseSize = (int)$caseToStandard;
+                $total    = (int)$totalStandard;
+
+                $normalizedCaseQty   = intdiv($total, $caseSize);
+                $normalizedSingleQty = $total % $caseSize;
+
+                $caseQty   = $normalizedCaseQty; // Update for binding
+                $singleQty = $normalizedSingleQty; // Update for binding
+            }
+
             // 计算差异
             $expectedQty = floatval($item['expected_qty'] ?? 0);
             $diff = $totalStandard - $expectedQty;
