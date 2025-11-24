@@ -1,6 +1,12 @@
 <?php
 if (!defined('MRS_ENTRY')) die('Access denied');
 
+/**
+ * Backend API: Import SKUs from text
+ * Implements parsing logic for Batch Import feature.
+ * Update: Switched to explicit '#END#' separator parsing to handle AI output more reliably.
+ */
+
 // Get raw text
 $input = get_json_input();
 $text = $input['text'] ?? '';
@@ -10,7 +16,9 @@ if (empty($text)) {
 }
 
 $pdo = get_db_connection();
-$lines = explode("\n", $text);
+
+// Split by Explicit Separator #END#
+$rawRows = explode('#END#', $text);
 $results = ['created' => 0, 'skipped' => 0, 'errors' => []];
 
 // Pre-fetch categories to minimize DB hits
@@ -27,16 +35,16 @@ try {
 $pdo->beginTransaction();
 
 try {
-    foreach ($lines as $index => $line) {
+    foreach ($rawRows as $index => $line) {
         $line = trim($line);
         if (empty($line)) continue;
 
         // Split by pipe
         $parts = array_map('trim', explode('|', $line));
 
-        // Validation: At least Name, Spec, CaseUnit
+        // Validation: At least Name, Spec, CaseUnit (3 parts)
         if (count($parts) < 3) {
-            $results['errors'][] = "Line " . ($index + 1) . ": Invalid format (need Name|Spec|CaseUnit)";
+            // Might be trailing whitespace or noise after #END#
             continue;
         }
 
@@ -45,31 +53,29 @@ try {
         $case_unit_str = $parts[2];
         $category_name = $parts[3] ?? '';
 
-        // --- Spec Parser ---
+        // --- Spec Parser (Retained) ---
         $case_to_std_qty = 0;
         $std_unit = '个'; // Default
         $extra_name = '';
 
+        // Case 1: Pure number (e.g. 500)
         if (preg_match('/^(\d+)$/', $spec_str, $matches)) {
-            // Case 1: Pure number (e.g. 500)
             $case_to_std_qty = (float)$matches[1];
             $std_unit = '个';
-        } elseif (preg_match('/^(.+)\s*[*xX×]\s*(\d+)(.+)$/u', $spec_str, $matches)) {
-            // Case 3: Multiplication (e.g. 1L*12瓶)
-            // Group 1: content (1L), Group 2: qty (12), Group 3: unit (瓶)
+        }
+        // Case 3: Multiplication (e.g. 1L*12瓶)
+        elseif (preg_match('/^(.+)\s*[*xX×]\s*(\d+)(.+)$/u', $spec_str, $matches)) {
             $case_to_std_qty = (float)$matches[2];
             $std_unit = trim($matches[3]);
-            // Usually we don't append content to name for Case 3 as it's often already in name or irrelevant?
-            // Prompt says: "-> standard_unit = '瓶'" and doesn't mention name change.
-            // So I won't change name unless needed.
-        } elseif (preg_match('/^(.+)\s*[/／]\s*(\d+)(.+)$/u', $spec_str, $matches)) {
-            // Case 2: Standard (e.g. 500g/30包)
-            // Group 1: content (500g), Group 2: qty (30), Group 3: unit (包)
+        }
+        // Case 2: Standard (e.g. 500g/30包)
+        elseif (preg_match('/^(.+)\s*[/／]\s*(\d+)(.+)$/u', $spec_str, $matches)) {
             $extra_name = trim($matches[1]);
             $case_to_std_qty = (float)$matches[2];
             $std_unit = trim($matches[3]);
-        } else {
-            // Fallback: Try to find a number
+        }
+        // Fallback
+        else {
             if (preg_match('/(\d+)/', $spec_str, $matches)) {
                  $case_to_std_qty = (float)$matches[1];
             }
@@ -101,9 +107,6 @@ try {
                 $category_id = $categories[$category_name];
             } else {
                 // Auto create category
-                // First check DB again in case it was created in this transaction?
-                // Actually my array cache won't update. But I am the only one inserting here (in this trans).
-                // Just insert it.
                 $cat_stmt = $pdo->prepare("INSERT INTO mrs_category (category_name, created_at, updated_at) VALUES (:name, NOW(), NOW())");
                 try {
                     $cat_stmt->execute([':name' => $category_name]);
@@ -161,6 +164,6 @@ try {
     if ($pdo->inTransaction()) {
         $pdo->rollBack();
     }
-    mrs_log('Bulk Import Failed: ' . $e->getMessage(), 'ERROR', ['lines' => $lines]);
+    mrs_log('Bulk Import Failed: ' . $e->getMessage(), 'ERROR', ['lines' => $rawRows]);
     json_response(false, null, 'Import failed: ' . $e->getMessage());
 }

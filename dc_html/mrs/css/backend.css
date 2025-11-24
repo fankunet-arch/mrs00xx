@@ -166,6 +166,19 @@ button.danger {
   background: var(--danger);
 }
 
+/* New Button Style for AI Prompt */
+button.light-success {
+  background: #f0fdf4; /* green-50 */
+  color: #15803d;      /* green-700 */
+  border: 1px solid #bbf7d0; /* green-200 */
+  box-shadow: none;
+}
+
+button.light-success:hover {
+  background: #dcfce7; /* green-100 */
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
 button.text {
   background: transparent;
   color: var(--muted);
@@ -280,6 +293,11 @@ th {
   align-items: center;
   justify-content: center;
   z-index: 40;
+}
+
+/* Ensure prompt helper appears above import modal */
+#modal-ai-prompt {
+  z-index: 50;
 }
 
 .modal-backdrop.show {

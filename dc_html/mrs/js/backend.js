@@ -2,6 +2,7 @@
  * MRS 物料收发管理系统 - 后台管理交互逻辑
  * 文件路径: dc_html/mrs/js/backend.js
  * 说明: 后台管理页面的所有交互逻辑
+ * Update: Implemented Batch Import JS Logic + AI Prompt Helper
  */
 
 // 全局状态
@@ -15,14 +16,16 @@ const appState = {
   currentCategory: null
 };
 
+// P1 Task: AI Prompt (Updated for #END# separator)
 const SKU_IMPORT_PROMPT = `
 你是一个WMS数据专员。请识别图片中的物料清单。
-输出格式要求（使用 "|" 分隔）：
-[品名] | [箱规/规格字符串] | [单位] | [品类]
-注意：
-- 箱规列原样输出图片内容（如 "500" 或 "500g/30包"），不要计算结果。
-- 如果没有品类，留空。
-- 不要输出表头和Markdown格式。
+输出格式要求：
+[品名] | [箱规] | [单位] | [品类] #END#
+
+**非常重要：**
+1. **必须**在每一行数据的末尾加上 "#END#" 作为结束标记。
+2. 箱规列请原样输出图片内容（如 "500" 或 "500g/30包"），不要计算。
+3. 不要输出表头，不要使用Markdown代码块，直接输出纯文本。
 `;
 
 // DOM 元素引用
@@ -49,7 +52,8 @@ function initDom() {
     batch: document.getElementById('modal-batch'),
     sku: document.getElementById('modal-sku'),
     category: document.getElementById('modal-category'),
-    importSku: document.getElementById('modal-import-sku')
+    importSku: document.getElementById('modal-import-sku'),
+    aiPrompt: document.getElementById('modal-ai-prompt')
   };
 }
 
@@ -174,7 +178,7 @@ const api = {
   },
 
   /**
-   * 批量导入SKU
+   * 批量导入SKU (P1 Task)
    */
   async importSkusText(text) {
     return await this.call('api.php?route=backend_import_skus_text', {
@@ -548,7 +552,6 @@ const modal = {
 
 // ================================================================
 // 全局函数供 HTML onclick 调用
-// 这些函数从 backend_dashboard.php 迁移而来
 // ================================================================
 
 /**
@@ -581,7 +584,7 @@ function showNewSkuModal() {
 }
 
 /**
- * 显示批量导入SKU模态框
+ * 显示批量导入SKU模态框 (P1 Task)
  */
 function showImportSkuModal() {
   document.getElementById('import-sku-text').value = '';
@@ -591,7 +594,75 @@ function showImportSkuModal() {
 }
 
 /**
- * 执行批量导入
+ * 显示AI提示词助手 (P1 Task)
+ */
+function showAiPromptHelper() {
+  // 填充提示词
+  const textarea = document.getElementById('ai-prompt-text');
+  if (textarea) {
+    textarea.value = SKU_IMPORT_PROMPT;
+  }
+
+  // 显示模态框
+  const modalEl = document.getElementById('modal-ai-prompt');
+  if (modalEl) {
+    modalEl.classList.add('show');
+  }
+}
+
+/**
+ * 关闭AI提示词助手 (P1 Task)
+ */
+function closeAiPromptHelper() {
+  const modalEl = document.getElementById('modal-ai-prompt');
+  if (modalEl) {
+    modalEl.classList.remove('show');
+  }
+}
+
+/**
+ * 复制AI提示词 (P1 Task)
+ */
+function copyAiPrompt() {
+  const textarea = document.getElementById('ai-prompt-text');
+  if (!textarea) return;
+
+  // 选中文本
+  textarea.select();
+  textarea.setSelectionRange(0, 99999); // 适配移动端
+
+  // 尝试使用现代 Clipboard API
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(textarea.value).then(() => {
+      showAlert('success', '复制成功');
+    }).catch(err => {
+      console.error('Clipboard API failed', err);
+      fallbackCopy(textarea);
+    });
+  } else {
+    fallbackCopy(textarea);
+  }
+}
+
+/**
+ * 降级复制策略
+ */
+function fallbackCopy(textarea) {
+  try {
+    const successful = document.execCommand('copy');
+    if (successful) {
+      showAlert('success', '复制成功');
+    } else {
+      showAlert('warning', '复制失败，请手动复制');
+    }
+  } catch (err) {
+    console.error('Fallback copy failed', err);
+    showAlert('danger', '浏览器不支持自动复制');
+  }
+}
+
+/**
+ * 执行批量导入 (P1 Task)
  */
 async function importSkus() {
   const textarea = document.getElementById('import-sku-text');
