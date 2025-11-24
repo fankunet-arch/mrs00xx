@@ -15,6 +15,18 @@ const appState = {
   currentCategory: null
 };
 
+const SKU_IMPORT_PROMPT = `
+你是一个WMS数据专员。请识别图片中的物料清单。
+输出格式要求（使用 "|" 分隔）：
+[品名] | [箱规/规格字符串] | [单位] | [品类]
+
+注意：
+1. 箱规列请原样输出图片中的内容（例如 "500"、"1000"、"500g/30包"、"1L*12瓶"），**绝对不要**进行任何计算或拆解。
+2. 单位列请输出大单位（如“箱”）。
+3. 如果图片中没有品类列，该列请留空。
+4. 不要输出表头、Markdown 格式或任何多余的解释文字，直接输出每一行的数据。
+`;
+
 // DOM 元素引用
 const dom = {};
 
@@ -38,7 +50,8 @@ function initDom() {
   dom.modals = {
     batch: document.getElementById('modal-batch'),
     sku: document.getElementById('modal-sku'),
-    category: document.getElementById('modal-category')
+    category: document.getElementById('modal-category'),
+    importSku: document.getElementById('modal-import-sku')
   };
 }
 
@@ -159,6 +172,16 @@ const api = {
     return await this.call('api.php?route=backend_save_category', {
       method: 'POST',
       body: JSON.stringify(data)
+    });
+  },
+
+  /**
+   * 批量导入SKU
+   */
+  async importSkusText(text) {
+    return await this.call('api.php?route=backend_import_skus_text', {
+      method: 'POST',
+      body: JSON.stringify({ text })
     });
   },
 
@@ -557,6 +580,38 @@ function showNewSkuModal() {
   // 加载品类选项
   loadCategoryOptions();
   modal.show('modal-sku');
+}
+
+/**
+ * 显示批量导入SKU模态框
+ */
+function showImportSkuModal() {
+  document.getElementById('import-sku-text').value = '';
+  // 可以在这里打印Prompt供开发者调试，或在UI显示复制按钮
+  console.log('Use this prompt for AI:', SKU_IMPORT_PROMPT);
+  modal.show('modal-import-sku');
+}
+
+/**
+ * 执行批量导入
+ */
+async function importSkus() {
+  const textarea = document.getElementById('import-sku-text');
+  const text = textarea.value.trim();
+
+  if (!text) {
+    showAlert('warning', '请粘贴内容');
+    return;
+  }
+
+  const result = await api.importSkusText(text);
+  if (result.success) {
+    showAlert('success', result.message);
+    modal.hide('modal-import-sku');
+    loadSkus();
+  } else {
+    showAlert('danger', '导入失败: ' + result.message);
+  }
 }
 
 /**
