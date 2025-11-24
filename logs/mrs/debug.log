@@ -1,0 +1,3 @@
+[2025-11-24 16:02:28] [ERROR] 获取批次列表失败: SQLSTATE[HY000] [2002] php_network_getaddresses: getaddrinfo for mhdlmskp2kpxguj.mysql.db failed: Name or service not known
+[2025-11-24 16:02:28] [ERROR] 获取SKU列表失败: SQLSTATE[HY000] [2002] php_network_getaddresses: getaddrinfo for mhdlmskp2kpxguj.mysql.db failed: Name or service not known
+[2025-11-24 16:02:28] [ERROR] 获取SKU列表失败: SQLSTATE[HY000] [2002] php_network_getaddresses: getaddrinfo for mhdlmskp2kpxguj.mysql.db failed: Name or service not known

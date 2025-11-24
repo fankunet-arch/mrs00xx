@@ -141,7 +141,10 @@ $current_user = '管理员';
               </select>
               <button class="secondary" onclick="loadSkus()">搜索</button>
             </div>
-            <button onclick="showNewSkuModal()">新增SKU</button>
+            <div>
+              <button class="secondary" onclick="showImportSkuModal()">📋 批量导入</button>
+              <button onclick="showNewSkuModal()">新增SKU</button>
+            </div>
           </div>
           <div class="table-responsive mt-10">
             <table>
@@ -264,6 +267,24 @@ $current_user = '管理员';
           <button type="submit">保存</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- 模态框: 批量导入 SKU -->
+  <div class="modal-backdrop" id="modal-import-sku">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>批量导入 SKU</h3>
+        <button class="text" onclick="modal.hide('modal-import-sku')">×</button>
+      </div>
+      <div class="modal-body">
+        <p class="muted small mb-2">请粘贴AI识别后的文本。格式：[品名] | [箱规] | [单位] | [品类]</p>
+        <textarea id="import-sku-text" rows="10" placeholder="90-700注塑细磨砂杯 | 500 | 箱 | 包材&#10;茉莉银毫 | 500g/30包 | 箱 | 茶叶" style="width: 100%; font-family: monospace;"></textarea>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="text" onclick="modal.hide('modal-import-sku')">取消</button>
+        <button class="primary" onclick="importSkus()">开始导入</button>
+      </div>
     </div>
   </div>
 
