@@ -8,6 +8,7 @@
 const appState = {
   batches: [],
   materials: [],
+  // [FIX] 默认通用单位，当未选择SKU时使用
   units: ['瓶', '箱', '包', '件', '袋', 'kg', 'g'],
   currentBatch: null,
   selectedUnit: '瓶',
@@ -210,6 +211,13 @@ function renderUnits() {
 async function renderCandidates(keyword = '') {
   const lower = keyword.trim().toLowerCase();
 
+  // [FIX] 当用户手动修改输入时，重置SKU选择，防止使用上一次选择的SKU ID提交不匹配的名称
+  // 注意：这会导致单位重置为默认列表，这是符合预期的（因为没有确定的SKU约束）
+  if (appState.selectedMaterial && appState.selectedMaterial.sku_name !== keyword) {
+    appState.selectedMaterial = null;
+    resetUnitsToDefault();
+  }
+
   if (!lower) {
     dom.candidateList.innerHTML = '';
     dom.candidateList.style.display = 'none';
@@ -244,7 +252,10 @@ async function renderCandidates(keyword = '') {
     `;
 
     row.onclick = () => {
+      // [FIX] 选中物料时，动态更新可用单位列表
       appState.selectedMaterial = material;
+      updateUnitsForSku(material);
+
       dom.materialInput.value = material.sku_name;
       dom.candidateList.innerHTML = '';
       dom.candidateList.style.display = 'none';
@@ -255,6 +266,38 @@ async function renderCandidates(keyword = '') {
   });
 
   dom.candidateList.style.display = 'block';
+}
+
+/**
+ * [FIX] 根据SKU更新可用单位
+ */
+function updateUnitsForSku(sku) {
+    const validUnits = [];
+    if (sku.standard_unit) validUnits.push(sku.standard_unit);
+    if (sku.case_unit_name) validUnits.push(sku.case_unit_name);
+
+    // 如果没有配置单位（理论上不应发生），回退到默认
+    if (validUnits.length > 0) {
+        appState.units = validUnits;
+        // 默认选中标准单位
+        appState.selectedUnit = sku.standard_unit;
+    } else {
+        resetUnitsToDefault();
+    }
+
+    renderUnits();
+}
+
+/**
+ * [FIX] 重置单位为默认列表
+ */
+function resetUnitsToDefault() {
+    appState.units = ['瓶', '箱', '包', '件', '袋', 'kg', 'g'];
+    // 尽量保持当前选择，如果不在默认列表中则重置
+    if (!appState.units.includes(appState.selectedUnit)) {
+        appState.selectedUnit = appState.units[0];
+    }
+    renderUnits();
 }
 
 /**
@@ -370,6 +413,9 @@ async function handleAddRecord() {
     dom.materialInput.value = '';
     dom.qtyInput.value = '';
     appState.selectedMaterial = null;
+
+    // [FIX] 保存成功后，重置单位选择，等待下一次输入
+    resetUnitsToDefault();
 
     // 重新加载记录
     await loadBatchRecords();

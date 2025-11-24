@@ -536,9 +536,14 @@ const modal = {
 function showNewBatchModal() {
   document.getElementById('form-batch').reset();
   document.getElementById('modal-batch-title').textContent = '新建批次';
-  // 生成批次编号
+  // [SECURITY FIX] 移除前端生成批次编号逻辑，改为后端生成
   const today = new Date().toISOString().split('T')[0];
-  document.getElementById('batch-code').value = 'IN-' + today + '-001';
+  const batchCodeInput = document.getElementById('batch-code');
+
+  // 清空值并设置占位符，由后端生成
+  batchCodeInput.value = '';
+  batchCodeInput.placeholder = '系统自动生成';
+
   document.getElementById('batch-date').value = today;
   modal.show('modal-batch');
 }

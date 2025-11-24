@@ -20,8 +20,9 @@ try {
         json_response(false, null, '无效的请求数据');
     }
 
-    // 验证必填字段
-    $required = ['batch_code', 'batch_date', 'location_name'];
+    // [FIX] 验证必填字段
+    // batch_code 不再是必须由前端提供的
+    $required = ['batch_date', 'location_name'];
     foreach ($required as $field) {
         if (empty($input[$field])) {
             json_response(false, null, "缺少必填字段: {$field}");
@@ -35,6 +36,11 @@ try {
     $batchId = $input['batch_id'] ?? null;
 
     if ($batchId) {
+        // 更新现有批次时，batch_code 仍然是必须的（通常不允许修改为空）
+        if (empty($input['batch_code'])) {
+             json_response(false, null, "缺少必填字段: batch_code");
+        }
+
         // 更新现有批次
         $sql = "UPDATE mrs_batch SET
                     batch_code = :batch_code,
@@ -59,14 +65,24 @@ try {
         json_response(true, ['batch_id' => $batchId], '批次更新成功');
 
     } else {
-        // 检查批次编号是否已存在
+        // [SECURITY FIX] 创建新批次逻辑重构
+
+        $batchCode = $input['batch_code'] ?? '';
+
+        // 如果前端未提供批次号（或为空），则由后端自动生成
+        if (empty($batchCode)) {
+             $batchCode = generate_batch_code($input['batch_date']);
+        }
+
+        // 检查批次编号是否已存在 (防御性检查)
         $checkSql = "SELECT batch_id FROM mrs_batch WHERE batch_code = :batch_code";
         $checkStmt = $pdo->prepare($checkSql);
-        $checkStmt->bindValue(':batch_code', $input['batch_code']);
+        $checkStmt->bindValue(':batch_code', $batchCode);
         $checkStmt->execute();
 
         if ($checkStmt->fetch()) {
-            json_response(false, null, '批次编号已存在');
+            // 如果自动生成的也冲突（极低概率，因为generate_batch_code有序列号），或者用户输入的冲突
+            json_response(false, null, '批次编号已存在，请重试');
         }
 
         // 创建新批次
@@ -89,7 +105,7 @@ try {
                 )";
 
         $stmt = $pdo->prepare($sql);
-        $stmt->bindValue(':batch_code', $input['batch_code']);
+        $stmt->bindValue(':batch_code', $batchCode);
         $stmt->bindValue(':batch_date', $input['batch_date']);
         $stmt->bindValue(':location_name', $input['location_name']);
         $stmt->bindValue(':remark', $input['remark'] ?? '');
@@ -98,9 +114,9 @@ try {
 
         $newBatchId = $pdo->lastInsertId();
 
-        mrs_log("新批次创建成功: batch_id={$newBatchId}", 'INFO', $input);
+        mrs_log("新批次创建成功: batch_id={$newBatchId}, code={$batchCode}", 'INFO', $input);
 
-        json_response(true, ['batch_id' => $newBatchId], '批次创建成功');
+        json_response(true, ['batch_id' => $newBatchId, 'batch_code' => $batchCode], '批次创建成功');
     }
 
 } catch (PDOException $e) {
