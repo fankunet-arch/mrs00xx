@@ -346,3 +346,249 @@ function is_batch_editable($status) {
     $editable_statuses = ['draft', 'receiving'];
     return in_array($status, $editable_statuses);
 }
+
+// ============================================
+// 用户认证和会话管理函数
+// ============================================
+
+/**
+ * 启动安全会话
+ */
+function start_secure_session() {
+    if (session_status() === PHP_SESSION_NONE) {
+        // 设置安全的会话配置
+        ini_set('session.cookie_httponly', 1);
+        ini_set('session.cookie_secure', isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 1 : 0);
+        ini_set('session.use_strict_mode', 1);
+        ini_set('session.cookie_samesite', 'Strict');
+
+        session_start();
+
+        // 防止会话固定攻击:为新会话重新生成ID
+        if (!isset($_SESSION['initiated'])) {
+            session_regenerate_id(true);
+            $_SESSION['initiated'] = true;
+        }
+    }
+}
+
+/**
+ * 验证用户登录
+ * @param string $username 用户名
+ * @param string $password 密码
+ * @return array|false 成功返回用户信息,失败返回false
+ */
+function authenticate_user($username, $password) {
+    try {
+        $pdo = get_db_connection();
+
+        $sql = "SELECT
+                    user_id,
+                    user_login,
+                    user_secret_hash,
+                    user_email,
+                    user_display_name,
+                    user_status
+                FROM sys_users
+                WHERE user_login = :username
+                LIMIT 1";
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->bindValue(':username', $username);
+        $stmt->execute();
+
+        $user = $stmt->fetch();
+
+        if (!$user) {
+            mrs_log("登录失败: 用户不存在 - {$username}", 'WARNING');
+            return false;
+        }
+
+        // 检查账户状态
+        if ($user['user_status'] !== 'active') {
+            mrs_log("登录失败: 账户未激活 - {$username}", 'WARNING');
+            return false;
+        }
+
+        // 验证密码
+        if (password_verify($password, $user['user_secret_hash'])) {
+            // 更新最后登录时间
+            $updateSql = "UPDATE sys_users SET user_last_login_at = NOW(6) WHERE user_id = :user_id";
+            $updateStmt = $pdo->prepare($updateSql);
+            $updateStmt->bindValue(':user_id', $user['user_id'], PDO::PARAM_INT);
+            $updateStmt->execute();
+
+            mrs_log("登录成功: {$username}", 'INFO');
+
+            // 移除敏感信息
+            unset($user['user_secret_hash']);
+
+            return $user;
+        } else {
+            mrs_log("登录失败: 密码错误 - {$username}", 'WARNING');
+            return false;
+        }
+
+    } catch (PDOException $e) {
+        mrs_log('用户认证失败: ' . $e->getMessage(), 'ERROR');
+        return false;
+    }
+}
+
+/**
+ * 创建用户会话
+ * @param array $user 用户信息
+ */
+function create_user_session($user) {
+    start_secure_session();
+
+    $_SESSION['user_id'] = $user['user_id'];
+    $_SESSION['user_login'] = $user['user_login'];
+    $_SESSION['user_display_name'] = $user['user_display_name'];
+    $_SESSION['user_email'] = $user['user_email'];
+    $_SESSION['logged_in'] = true;
+    $_SESSION['login_time'] = time();
+    $_SESSION['last_activity'] = time();
+}
+
+/**
+ * 检查用户是否已登录
+ * @return bool
+ */
+function is_user_logged_in() {
+    start_secure_session();
+
+    if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
+        return false;
+    }
+
+    // 检查会话超时(30分钟无活动)
+    $timeout = 1800; // 30分钟
+    if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity']) > $timeout) {
+        destroy_user_session();
+        return false;
+    }
+
+    // 更新最后活动时间
+    $_SESSION['last_activity'] = time();
+
+    return true;
+}
+
+/**
+ * 获取当前登录用户信息
+ * @return array|null
+ */
+function get_current_user() {
+    if (!is_user_logged_in()) {
+        return null;
+    }
+
+    return [
+        'user_id' => $_SESSION['user_id'] ?? null,
+        'user_login' => $_SESSION['user_login'] ?? null,
+        'user_display_name' => $_SESSION['user_display_name'] ?? null,
+        'user_email' => $_SESSION['user_email'] ?? null,
+    ];
+}
+
+/**
+ * 销毁用户会话
+ */
+function destroy_user_session() {
+    start_secure_session();
+
+    $_SESSION = [];
+
+    if (ini_get('session.use_cookies')) {
+        $params = session_get_cookie_params();
+        setcookie(
+            session_name(),
+            '',
+            time() - 42000,
+            $params['path'],
+            $params['domain'],
+            $params['secure'],
+            $params['httponly']
+        );
+    }
+
+    session_destroy();
+}
+
+/**
+ * 创建新用户(仅供管理员使用)
+ * @param string $username 用户名
+ * @param string $password 密码
+ * @param string $email 邮箱
+ * @param string $display_name 显示名称
+ * @return int|false 成功返回用户ID,失败返回false
+ */
+function create_user($username, $password, $email, $display_name) {
+    try {
+        $pdo = get_db_connection();
+
+        // 检查用户名是否已存在
+        $checkSql = "SELECT user_id FROM sys_users WHERE user_login = :username";
+        $checkStmt = $pdo->prepare($checkSql);
+        $checkStmt->bindValue(':username', $username);
+        $checkStmt->execute();
+
+        if ($checkStmt->fetch()) {
+            mrs_log("创建用户失败: 用户名已存在 - {$username}", 'ERROR');
+            return false;
+        }
+
+        // 哈希密码
+        $passwordHash = password_hash($password, PASSWORD_ARGON2ID, [
+            'memory_cost' => 65536,
+            'time_cost' => 4,
+            'threads' => 3
+        ]);
+
+        // 插入新用户
+        $sql = "INSERT INTO sys_users (
+                    user_login,
+                    user_secret_hash,
+                    user_email,
+                    user_display_name,
+                    user_status,
+                    user_registered_at
+                ) VALUES (
+                    :username,
+                    :password_hash,
+                    :email,
+                    :display_name,
+                    'active',
+                    NOW(6)
+                )";
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->bindValue(':username', $username);
+        $stmt->bindValue(':password_hash', $passwordHash);
+        $stmt->bindValue(':email', $email);
+        $stmt->bindValue(':display_name', $display_name);
+        $stmt->execute();
+
+        $userId = $pdo->lastInsertId();
+
+        mrs_log("新用户创建成功: {$username} (ID: {$userId})", 'INFO');
+
+        return $userId;
+
+    } catch (PDOException $e) {
+        mrs_log('创建用户失败: ' . $e->getMessage(), 'ERROR');
+        return false;
+    }
+}
+
+/**
+ * 要求用户登录,未登录则跳转到登录页
+ */
+function require_login() {
+    if (!is_user_logged_in()) {
+        header('Location: /backend/login_view.php');
+        exit;
+    }
+}
+
