@@ -70,21 +70,21 @@ const api = {
    */
   async getBatches(filters = {}) {
     const params = new URLSearchParams(filters);
-    return await this.call(`../app/mrs/api/backend_batches.php?${params}`);
+    return await this.call(`api.php?route=backend_batches&${params}`);
   },
 
   /**
    * 获取批次详情
    */
   async getBatchDetail(batchId) {
-    return await this.call(`../app/mrs/api/backend_batch_detail.php?batch_id=${batchId}`);
+    return await this.call(`api.php?route=backend_batch_detail&batch_id=${batchId}`);
   },
 
   /**
    * 保存批次
    */
   async saveBatch(data) {
-    return await this.call('../app/mrs/api/backend_save_batch.php', {
+    return await this.call('api.php?route=backend_save_batch', {
       method: 'POST',
       body: JSON.stringify(data)
     });
@@ -94,7 +94,7 @@ const api = {
    * 删除批次
    */
   async deleteBatch(batchId) {
-    return await this.call('../app/mrs/api/backend_delete_batch.php', {
+    return await this.call('api.php?route=backend_delete_batch', {
       method: 'POST',
       body: JSON.stringify({ batch_id: batchId })
     });
@@ -104,14 +104,14 @@ const api = {
    * 获取批次合并数据
    */
   async getMergeData(batchId) {
-    return await this.call(`../app/mrs/api/backend_merge_data.php?batch_id=${batchId}`);
+    return await this.call(`api.php?route=backend_merge_data&batch_id=${batchId}`);
   },
 
   /**
    * 确认批次合并
    */
   async confirmMerge(batchId, items) {
-    return await this.call('../app/mrs/api/backend_confirm_merge.php', {
+    return await this.call('api.php?route=backend_confirm_merge', {
       method: 'POST',
       body: JSON.stringify({ batch_id: batchId, items })
     });
@@ -122,14 +122,14 @@ const api = {
    */
   async getSkus(filters = {}) {
     const params = new URLSearchParams(filters);
-    return await this.call(`../app/mrs/api/backend_skus.php?${params}`);
+    return await this.call(`api.php?route=backend_skus&${params}`);
   },
 
   /**
    * 保存SKU
    */
   async saveSku(data) {
-    return await this.call('../app/mrs/api/backend_save_sku.php', {
+    return await this.call('api.php?route=backend_save_sku', {
       method: 'POST',
       body: JSON.stringify(data)
     });
@@ -139,7 +139,7 @@ const api = {
    * 删除SKU
    */
   async deleteSku(skuId) {
-    return await this.call('../app/mrs/api/backend_delete_sku.php', {
+    return await this.call('api.php?route=backend_delete_sku', {
       method: 'POST',
       body: JSON.stringify({ sku_id: skuId })
     });
@@ -149,14 +149,14 @@ const api = {
    * 获取品类列表
    */
   async getCategories() {
-    return await this.call('../app/mrs/api/backend_categories.php');
+    return await this.call('api.php?route=backend_categories');
   },
 
   /**
    * 保存品类
    */
   async saveCategory(data) {
-    return await this.call('../app/mrs/api/backend_save_category.php', {
+    return await this.call('api.php?route=backend_save_category', {
       method: 'POST',
       body: JSON.stringify(data)
     });
@@ -166,7 +166,7 @@ const api = {
    * 删除品类
    */
   async deleteCategory(categoryId) {
-    return await this.call('../app/mrs/api/backend_delete_category.php', {
+    return await this.call('api.php?route=backend_delete_category', {
       method: 'POST',
       body: JSON.stringify({ category_id: categoryId })
     });
@@ -177,7 +177,7 @@ const api = {
    */
   async getReports(type, filters = {}) {
     const params = new URLSearchParams({ type, ...filters });
-    return await this.call(`../app/mrs/api/backend_reports.php?${params}`);
+    return await this.call(`api.php?route=backend_reports&${params}`);
   }
 };
 
