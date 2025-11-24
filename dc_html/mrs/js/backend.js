@@ -66,7 +66,11 @@ const api = {
    */
   async call(url, options = {}) {
     try {
-      const response = await fetch(url, {
+      // Add cache busting timestamp
+      const separator = url.includes('?') ? '&' : '?';
+      const finalUrl = `${url}${separator}_t=${Date.now()}`;
+
+      const response = await fetch(finalUrl, {
         ...options,
         headers: {
           'Content-Type': 'application/json',
