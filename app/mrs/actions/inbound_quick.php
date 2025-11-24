@@ -36,7 +36,7 @@ if (!defined('MRS_ENTRY')) {
     <input id="material-input" type="text" placeholder="输入物料名称或编码" autocomplete="off" />
     <div class="candidate-list" id="candidate-list"></div>
 
-    <div style="margin-top: 12px;" class="label">数量 + 单位</div>
+    <div class="label mt-12">数量 + 单位</div>
     <input id="qty-input" type="number" inputmode="decimal" placeholder="输入数量" />
     <div class="unit-row" id="unit-row"></div>
     <button class="primary-btn" id="btn-add">记录本次收货</button>

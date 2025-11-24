@@ -196,6 +196,11 @@ input:focus {
   margin-top: 10px;
 }
 
+/* 工具类 (Utility Classes) */
+.mt-12 {
+  margin-top: 12px;
+}
+
 @media (max-width: 640px) {
   body {
     padding: 10px;

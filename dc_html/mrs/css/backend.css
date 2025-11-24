@@ -456,6 +456,19 @@ th {
   }
 }
 
+/* 工具类 (Utility Classes) */
+.table-responsive {
+  overflow-x: auto;
+}
+
+.mt-10 {
+  margin-top: 10px;
+}
+
+.mb-12 {
+  margin-bottom: 12px;
+}
+
 @media (max-width: 640px) {
   .content {
     padding: 12px;
