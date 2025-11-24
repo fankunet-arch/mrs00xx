@@ -53,7 +53,7 @@ const api = {
    */
   async getBatches() {
     try {
-      const response = await fetch('../app/mrs/api/batch_list.php');
+      const response = await fetch('api.php?route=batch_list');
       const data = await response.json();
       if (data.success) {
         return data.data;
@@ -72,7 +72,7 @@ const api = {
    */
   async searchSku(keyword) {
     try {
-      const response = await fetch(`../app/mrs/api/sku_search.php?keyword=${encodeURIComponent(keyword)}`);
+      const response = await fetch(`api.php?route=sku_search&keyword=${encodeURIComponent(keyword)}`);
       const data = await response.json();
       if (data.success) {
         return data.data;
@@ -91,7 +91,7 @@ const api = {
    */
   async saveRecord(recordData) {
     try {
-      const response = await fetch('../app/mrs/api/save_record.php', {
+      const response = await fetch('api.php?route=save_record', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -111,7 +111,7 @@ const api = {
    */
   async getBatchRecords(batchId) {
     try {
-      const response = await fetch(`../app/mrs/api/batch_records.php?batch_id=${batchId}`);
+      const response = await fetch(`api.php?route=batch_records&batch_id=${batchId}`);
       const data = await response.json();
       if (data.success) {
         return data.data;
