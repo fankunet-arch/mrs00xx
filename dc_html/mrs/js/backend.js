@@ -135,8 +135,18 @@ const api = {
    * 获取SKU列表
    */
   async getSkus(filters = {}) {
-    const params = new URLSearchParams(filters);
-    return await this.call(`api.php?route=backend_skus&${params}`);
+    // [FIX] 过滤空值参数，避免发送 ?search=&category_id= 这样的无效参数
+    const cleanFilters = {};
+    for (const [key, value] of Object.entries(filters)) {
+      if (value !== '' && value !== null && value !== undefined) {
+        cleanFilters[key] = value;
+      }
+    }
+
+    const params = new URLSearchParams(cleanFilters);
+    const queryString = params.toString();
+    const url = `api.php?route=backend_skus${queryString ? '&' + queryString : ''}`;
+    return await this.call(url);
   },
 
   /**
@@ -299,9 +309,19 @@ function renderBatches() {
 
 /**
  * 加载SKU列表
+ * [FIX] 修复搜索功能：读取筛选条件并传递给API
  */
 async function loadSkus() {
-  const result = await api.getSkus();
+  // [FIX] 读取搜索输入框的值
+  const filters = {
+    search: document.getElementById('catalog-filter-search')?.value.trim() || '',
+    category_id: document.getElementById('catalog-filter-category')?.value || '',
+    is_precise_item: document.getElementById('catalog-filter-type')?.value || ''
+  };
+
+  // [FIX] 传递筛选参数给API
+  const result = await api.getSkus(filters);
+
   if (result.success) {
     appState.skus = result.data;
     renderSkus();
