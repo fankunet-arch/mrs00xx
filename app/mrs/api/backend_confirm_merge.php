@@ -38,6 +38,10 @@ try {
         $batch = $checkStmt->fetch();
 
         if (!$batch) {
+            // [安全修复] 在提前退出前显式回滚事务，防止事务泄漏
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
             json_response(false, null, '批次不存在');
         }
 
@@ -82,6 +86,12 @@ try {
 
             $totalStandard = ($caseQty * $caseToStandard) + $singleQty;
 
+            // [业务规则强制执行] 库存必须为整数 - 符合需求文档
+            // "total_base_units（折算后的总基础单位数）必须为整数"
+            // 使用 round() 四舍五入避免浮点精度问题，然后强制转为整型
+            $totalStandard = round($totalStandard);
+            $totalStandard = intval($totalStandard);
+
             // 计算差异
             $expectedQty = floatval($item['expected_qty'] ?? 0);
             $diff = $totalStandard - $expectedQty;
@@ -93,7 +103,7 @@ try {
             // 插入记录
             $insertStmt->bindValue(':batch_id', $batchId, PDO::PARAM_INT);
             $insertStmt->bindValue(':sku_id', intval($item['sku_id']), PDO::PARAM_INT);
-            $insertStmt->bindValue(':total_standard_qty', $totalStandard);
+            $insertStmt->bindValue(':total_standard_qty', $totalStandard, PDO::PARAM_INT);
             $insertStmt->bindValue(':confirmed_case_qty', $caseQty);
             $insertStmt->bindValue(':confirmed_single_qty', $singleQty);
             $insertStmt->bindValue(':diff_against_expected', $diff);
