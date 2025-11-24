@@ -1,0 +1,598 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>物流入库后台</title>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --primary: #1f7aec;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --card: #ffffff;
+      --border: #e5e7eb;
+      --sidebar: #0f172a;
+      --sidebar-text: #e5e7eb;
+      --accent: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "PingFang SC", "Segoe UI", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    header {
+      height: 60px;
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+    header .title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--primary);
+    }
+    header .user {
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: 230px 1fr;
+      min-height: calc(100vh - 60px);
+    }
+    aside {
+      background: var(--sidebar);
+      color: var(--sidebar-text);
+      padding: 18px 14px;
+    }
+    .menu-item {
+      padding: 12px 14px;
+      border-radius: 10px;
+      cursor: pointer;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      font-weight: 600;
+      transition: background 0.2s ease;
+    }
+    .menu-item:hover { background: rgba(255,255,255,0.07); }
+    .menu-item.active {
+      background: rgba(31, 122, 236, 0.18);
+      color: #fff;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    .content {
+      padding: 18px;
+    }
+    .page { display: none; }
+    .page.active { display: block; }
+    h2 { margin: 0 0 12px; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    }
+    .filters { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+    input[type="text"], select, input[type="number"] {
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 14px;
+      min-width: 120px;
+    }
+    button {
+      border: none;
+      border-radius: 10px;
+      padding: 10px 14px;
+      background: var(--primary);
+      color: #fff;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 14px;
+      transition: transform 0.08s ease, box-shadow 0.12s ease;
+    }
+    button:hover { box-shadow: 0 6px 14px rgba(31, 122, 236, 0.18); transform: translateY(-1px); }
+    button.secondary { background: #0ea5e9; }
+    button.text { background: transparent; color: var(--muted); box-shadow: none; }
+    button.text:hover { background: rgba(0,0,0,0.04); transform: none; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    th, td {
+      padding: 12px 10px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+    th { color: var(--muted); font-weight: 600; font-size: 13px; }
+    .badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .badge.info { background: var(--primary); }
+    .badge.success { background: var(--accent); }
+    .badge.warning { background: var(--warning); }
+    .badge.danger { background: var(--danger); }
+    .tag-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .flex-between { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .flex { display: flex; gap: 10px; align-items: center; }
+    .pill {
+      padding: 6px 10px;
+      background: #eef2ff;
+      color: #4338ca;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .status-label { font-weight: 700; color: var(--muted); }
+    .table-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .columns { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+    .muted { color: var(--muted); font-size: 13px; }
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.35);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 40;
+    }
+    .modal {
+      width: min(520px, 92vw);
+      background: var(--card);
+      border-radius: 14px;
+      padding: 18px;
+      box-shadow: 0 18px 40px rgba(0,0,0,0.14);
+      border: 1px solid var(--border);
+    }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 12px; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .form-grid label { font-size: 13px; color: var(--muted); }
+    .section-title { font-size: 16px; font-weight: 700; margin-bottom: 10px; }
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px;
+    }
+    .summary .item {
+      background: #0ea5e910;
+      border: 1px solid #bae6fd;
+      border-radius: 10px;
+      padding: 10px;
+    }
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; }
+      aside { display: flex; gap: 10px; flex-wrap: wrap; }
+      .menu-item { flex: 1 1 150px; justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="title">物流入库后台</div>
+    <div class="user">当前用户：张管理员</div>
+  </header>
+  <div class="layout">
+    <aside>
+      <div class="menu-item active" data-target="batches">收货批次管理</div>
+      <div class="menu-item" data-target="merge">收货批次合并</div>
+      <div class="menu-item" data-target="catalog">物料档案</div>
+    </aside>
+    <div class="content">
+      <!-- Page A: batch list -->
+      <div class="page active" id="page-batches">
+        <h2>收货批次列表</h2>
+        <div class="card">
+          <div class="flex-between">
+            <div class="filters">
+              <input type="text" placeholder="搜索批次/地点/备注" />
+              <select>
+                <option>全部状态</option>
+                <option>草稿</option>
+                <option>收货中</option>
+                <option>待合并</option>
+                <option>已确认</option>
+              </select>
+            </div>
+            <button id="btn-new-batch">新建批次</button>
+          </div>
+          <div style="overflow-x:auto; margin-top: 10px;">
+            <table>
+              <thead>
+                <tr>
+                  <th>批次编号</th>
+                  <th>收货日期</th>
+                  <th>地点/门店</th>
+                  <th>状态</th>
+                  <th>备注</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>IN-2025-11-23-001</td>
+                  <td>2025-11-23</td>
+                  <td>广州·珠江新城店</td>
+                  <td><span class="badge info">收货中</span></td>
+                  <td>晚班收货，含冷链</td>
+                  <td class="table-actions">
+                    <button class="secondary" data-target="merge">查看 / 合并</button>
+                  </td>
+                </tr>
+                <tr>
+                  <td>IN-2025-11-24-001</td>
+                  <td>2025-11-24</td>
+                  <td>广州·万胜围店</td>
+                  <td><span class="badge warning">待合并</span></td>
+                  <td>供应商 A 送货</td>
+                  <td class="table-actions">
+                    <button class="secondary" data-target="merge">查看 / 合并</button>
+                  </td>
+                </tr>
+                <tr>
+                  <td>IN-2025-11-25-001</td>
+                  <td>2025-11-25</td>
+                  <td>佛山·南海中心</td>
+                  <td><span class="badge success">已确认</span></td>
+                  <td>批次合并完毕</td>
+                  <td class="table-actions">
+                    <button class="secondary" data-target="merge">查看 / 合并</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Page B: merge confirmation -->
+      <div class="page" id="page-merge">
+        <h2>收货批次合并确认</h2>
+        <div class="card">
+          <div class="columns">
+            <div>
+              <div class="muted">批次编号</div>
+              <div class="status-label">IN-2025-11-24-001</div>
+            </div>
+            <div>
+              <div class="muted">收货日期</div>
+              <div class="status-label">2025-11-24</div>
+            </div>
+            <div>
+              <div class="muted">地点</div>
+              <div class="status-label">广州·万胜围店</div>
+            </div>
+            <div>
+              <div class="muted">状态</div>
+              <div class="status-label"><span class="badge warning">待合并</span></div>
+            </div>
+            <div>
+              <div class="muted">备注</div>
+              <div class="status-label">夜班收货，部分冷藏物料。</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="flex-between">
+            <div class="section-title">汇总（按品牌SKU）</div>
+            <div class="muted">展示假数据，模拟未来合并界面</div>
+          </div>
+          <div style="overflow-x:auto;">
+            <table>
+              <thead>
+                <tr>
+                  <th>品牌SKU名称</th>
+                  <th>品类</th>
+                  <th>类型</th>
+                  <th>单位规则</th>
+                  <th>预计数量</th>
+                  <th>原始记录汇总</th>
+                  <th>系统建议入库</th>
+                  <th>状态</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>糖浆 A 1L</td>
+                  <td>糖浆</td>
+                  <td>精计</td>
+                  <td>1 箱 = 10 瓶</td>
+                  <td>20 瓶</td>
+                  <td>5 瓶 + 7 瓶 + 1 箱</td>
+                  <td><span class="pill">1 箱 + 2 瓶</span></td>
+                  <td><span class="badge success">正常</span></td>
+                  <td>
+                    <div class="table-actions">
+                      <button class="text">查看明细</button>
+                      <input type="number" value="1" style="width: 70px;" />
+                      <input type="number" value="2" style="width: 70px;" />
+                      <button class="secondary">确认本行</button>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td>糖浆 B 1L</td>
+                  <td>糖浆</td>
+                  <td>精计</td>
+                  <td>1 箱 = 12 瓶</td>
+                  <td>3 箱</td>
+                  <td>1 箱 + 8 瓶 + 1 箱</td>
+                  <td><span class="pill">2 箱</span></td>
+                  <td><span class="badge danger">少收</span></td>
+                  <td>
+                    <div class="table-actions">
+                      <button class="text">查看明细</button>
+                      <input type="number" value="2" style="width: 70px;" />
+                      <input type="number" value="0" style="width: 70px;" />
+                      <button class="secondary">确认本行</button>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td>包装袋 A</td>
+                  <td>包装物</td>
+                  <td>粗计</td>
+                  <td>—</td>
+                  <td>120 包</td>
+                  <td>40 + 30 + 50</td>
+                  <td><span class="pill">120 包</span></td>
+                  <td><span class="badge warning">超收</span></td>
+                  <td>
+                    <div class="table-actions">
+                      <button class="text">查看明细</button>
+                      <input type="number" value="120" style="width: 90px;" />
+                      <button class="secondary">确认本行</button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Page C: catalog -->
+      <div class="page" id="page-catalog">
+        <h2>物料档案</h2>
+        <div class="card">
+          <div class="flex-between">
+            <div class="filters">
+              <input type="text" placeholder="搜索品牌/品类/规格" />
+              <select>
+                <option>全部状态</option>
+                <option>启用</option>
+                <option>停用</option>
+              </select>
+            </div>
+            <button id="btn-new-sku">新增品牌SKU</button>
+          </div>
+          <div style="overflow-x:auto; margin-top: 10px;">
+            <table>
+              <thead>
+                <tr>
+                  <th>品牌SKU名称</th>
+                  <th>品类</th>
+                  <th>品牌</th>
+                  <th>类型</th>
+                  <th>标准单位</th>
+                  <th>单位规则</th>
+                  <th>状态</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>糖浆 A 1L</td>
+                  <td>糖浆</td>
+                  <td>品牌 A</td>
+                  <td>精计</td>
+                  <td>瓶</td>
+                  <td>1 箱 = 10 瓶</td>
+                  <td><span class="badge success">启用</span></td>
+                  <td class="table-actions">
+                    <button class="text edit-btn">编辑</button>
+                    <button class="text">停用</button>
+                  </td>
+                </tr>
+                <tr>
+                  <td>糖浆 B 1L</td>
+                  <td>糖浆</td>
+                  <td>品牌 B</td>
+                  <td>精计</td>
+                  <td>瓶</td>
+                  <td>1 箱 = 12 瓶</td>
+                  <td><span class="badge warning">停用</span></td>
+                  <td class="table-actions">
+                    <button class="text edit-btn">编辑</button>
+                    <button class="text">启用</button>
+                  </td>
+                </tr>
+                <tr>
+                  <td>包装袋 A</td>
+                  <td>包装物</td>
+                  <td>品牌 C</td>
+                  <td>粗计</td>
+                  <td>包</td>
+                  <td>—</td>
+                  <td><span class="badge success">启用</span></td>
+                  <td class="table-actions">
+                    <button class="text edit-btn">编辑</button>
+                    <button class="text">停用</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="modal-backdrop">
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal-header">
+        <div id="modal-title">新建批次</div>
+        <button class="text" id="modal-close">关闭</button>
+      </div>
+      <div class="form-grid">
+        <div>
+          <label>批次编号</label>
+          <input type="text" value="IN-2025-11-26-001" />
+        </div>
+        <div>
+          <label>收货日期</label>
+          <input type="text" value="2025-11-26" />
+        </div>
+        <div>
+          <label>地点</label>
+          <input type="text" value="广州·科学城店" />
+        </div>
+        <div>
+          <label>备注</label>
+          <input type="text" value="新供应商试投" />
+        </div>
+        <div>
+          <label>类型</label>
+          <select>
+            <option>精计</option>
+            <option>粗计</option>
+          </select>
+        </div>
+        <div>
+          <label>状态</label>
+          <select>
+            <option>草稿</option>
+            <option>收货中</option>
+            <option>待合并</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="text" id="modal-cancel">取消</button>
+        <button>保存（演示）</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="edit-backdrop">
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal-header">
+        <div id="edit-title">编辑品牌SKU</div>
+        <button class="text" id="edit-close">关闭</button>
+      </div>
+      <div class="form-grid">
+        <div>
+          <label>品类</label>
+          <input type="text" value="糖浆" />
+        </div>
+        <div>
+          <label>品牌名</label>
+          <input type="text" value="品牌 A" />
+        </div>
+        <div>
+          <label>规格描述</label>
+          <input type="text" value="1L" />
+        </div>
+        <div>
+          <label>类型</label>
+          <select>
+            <option selected>精计</option>
+            <option>粗计</option>
+          </select>
+        </div>
+        <div>
+          <label>标准单位</label>
+          <select>
+            <option>瓶</option>
+            <option>箱</option>
+            <option>包</option>
+          </select>
+        </div>
+        <div>
+          <label>允许单位</label>
+          <input type="text" value="瓶 / 箱" />
+        </div>
+        <div>
+          <label>换算规则</label>
+          <input type="text" value="1 箱 = 10 瓶" />
+        </div>
+        <div>
+          <label>启用状态</label>
+          <select>
+            <option>启用</option>
+            <option>停用</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="text" id="edit-cancel">取消</button>
+        <button>保存（演示）</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const menuItems = document.querySelectorAll('.menu-item');
+    const pages = {
+      batches: document.getElementById('page-batches'),
+      merge: document.getElementById('page-merge'),
+      catalog: document.getElementById('page-catalog'),
+    };
+
+    function showPage(key) {
+      Object.values(pages).forEach((p) => p.classList.remove('active'));
+      pages[key].classList.add('active');
+      menuItems.forEach((item) => item.classList.toggle('active', item.dataset.target === key));
+    }
+
+    menuItems.forEach((item) => {
+      item.addEventListener('click', () => showPage(item.dataset.target));
+    });
+
+    document.querySelectorAll('button[data-target]').forEach((btn) => {
+      btn.addEventListener('click', () => showPage(btn.dataset.target));
+    });
+
+    const modalBackdrop = document.getElementById('modal-backdrop');
+    const btnNewBatch = document.getElementById('btn-new-batch');
+    const modalClose = document.getElementById('modal-close');
+    const modalCancel = document.getElementById('modal-cancel');
+
+    [btnNewBatch, modalClose, modalCancel].forEach((el) => {
+      if (!el) return;
+      const toggle = el === btnNewBatch ? () => modalBackdrop.style.display = 'flex' : () => modalBackdrop.style.display = 'none';
+      el.addEventListener('click', toggle);
+    });
+
+    const editBackdrop = document.getElementById('edit-backdrop');
+    const editClose = document.getElementById('edit-close');
+    const editCancel = document.getElementById('edit-cancel');
+    const editButtons = document.querySelectorAll('.edit-btn');
+    editButtons.forEach((btn) => btn.addEventListener('click', () => editBackdrop.style.display = 'flex'));
+    [editClose, editCancel].forEach((el) => el.addEventListener('click', () => editBackdrop.style.display = 'none'));
+  </script>
+</body>
+</html>
