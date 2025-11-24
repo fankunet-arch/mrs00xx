@@ -317,6 +317,7 @@ $current_user = '管理员';
         <button class="text" onclick="modal.hide('modal-sku')">×</button>
       </div>
       <form id="form-sku" onsubmit="saveSku(event)">
+        <input type="hidden" name="sku_id" id="sku-id" value="">
         <div class="form-grid">
           <div class="form-group">
             <label>SKU名称 *</label>

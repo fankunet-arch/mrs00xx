@@ -151,6 +151,13 @@ const api = {
   },
 
   /**
+   * 获取SKU详情
+   */
+  async getSkuDetail(skuId) {
+    return await this.call(`api.php?route=backend_sku_detail&sku_id=${skuId}`);
+  },
+
+  /**
    * 删除SKU
    */
   async deleteSku(skuId) {
@@ -577,6 +584,7 @@ function showNewBatchModal() {
  */
 function showNewSkuModal() {
   document.getElementById('form-sku').reset();
+  document.getElementById('sku-id').value = '';
   document.getElementById('modal-sku-title').textContent = '新增SKU';
   // 加载品类选项
   loadCategoryOptions();
@@ -793,7 +801,31 @@ async function deleteBatch(batchId) {
  * 编辑SKU
  */
 async function editSku(skuId) {
-  showAlert('info', '编辑SKU功能开发中...');
+  const result = await api.getSkuDetail(skuId);
+  if (result.success) {
+    const sku = result.data;
+
+    // 填充表单
+    document.getElementById('form-sku').reset();
+    document.getElementById('sku-id').value = sku.sku_id;
+    document.getElementById('sku-name').value = sku.sku_name;
+    document.getElementById('sku-brand').value = sku.brand_name;
+    document.getElementById('sku-code').value = sku.sku_code;
+    document.getElementById('sku-type').value = sku.is_precise_item;
+    document.getElementById('sku-unit').value = sku.standard_unit;
+    document.getElementById('sku-case-unit').value = sku.case_unit_name || '';
+    document.getElementById('sku-case-qty').value = sku.case_to_standard_qty || '';
+    document.getElementById('sku-note').value = sku.note || ''; // Assuming note field exists or will be added if not present in return
+
+    // 延迟设置品类，确保选项已加载
+    await loadCategoryOptions();
+    document.getElementById('sku-category').value = sku.category_id;
+
+    document.getElementById('modal-sku-title').textContent = '编辑SKU';
+    modal.show('modal-sku');
+  } else {
+    showAlert('danger', '获取SKU详情失败: ' + result.message);
+  }
 }
 
 /**
