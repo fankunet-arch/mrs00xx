@@ -1,0 +1,4 @@
+[24-Nov-2025 16:02:28 UTC] PHP Warning:  Constant MRS_ENTRY already defined in /app/app/mrs/api/backend_skus.php on line 9
+[24-Nov-2025 16:02:28 UTC] Database connection failed: SQLSTATE[HY000] [2002] php_network_getaddresses: getaddrinfo for mhdlmskp2kpxguj.mysql.db failed: Name or service not known
+[24-Nov-2025 16:02:28 UTC] PHP Warning:  Constant MRS_ENTRY already defined in /app/app/mrs/api/backend_skus.php on line 9
+[24-Nov-2025 16:02:28 UTC] Database connection failed: SQLSTATE[HY000] [2002] php_network_getaddresses: getaddrinfo for mhdlmskp2kpxguj.mysql.db failed: Name or service not known
