@@ -1,6 +1,12 @@
 <?php
 if (!defined('MRS_ENTRY')) die('Access denied');
 
+/**
+ * Backend API: Import SKUs from text
+ * Implements parsing logic for Batch Import feature.
+ * Update: Added pure number parsing and auto-category creation logic.
+ */
+
 // Get raw text
 $input = get_json_input();
 $text = $input['text'] ?? '';
@@ -50,6 +56,8 @@ try {
         $std_unit = '个'; // Default
         $extra_name = '';
 
+        // P1 Task: Support "Pure Number" Case (e.g. 500)
+        // Also support standard and multiplication formats
         if (preg_match('/^(\d+)$/', $spec_str, $matches)) {
             // Case 1: Pure number (e.g. 500)
             $case_to_std_qty = (float)$matches[1];
@@ -59,9 +67,6 @@ try {
             // Group 1: content (1L), Group 2: qty (12), Group 3: unit (瓶)
             $case_to_std_qty = (float)$matches[2];
             $std_unit = trim($matches[3]);
-            // Usually we don't append content to name for Case 3 as it's often already in name or irrelevant?
-            // Prompt says: "-> standard_unit = '瓶'" and doesn't mention name change.
-            // So I won't change name unless needed.
         } elseif (preg_match('/^(.+)\s*[/／]\s*(\d+)(.+)$/u', $spec_str, $matches)) {
             // Case 2: Standard (e.g. 500g/30包)
             // Group 1: content (500g), Group 2: qty (30), Group 3: unit (包)
@@ -69,7 +74,7 @@ try {
             $case_to_std_qty = (float)$matches[2];
             $std_unit = trim($matches[3]);
         } else {
-            // Fallback: Try to find a number
+            // Fallback: Try to find a number if regexes failed
             if (preg_match('/(\d+)/', $spec_str, $matches)) {
                  $case_to_std_qty = (float)$matches[1];
             }
@@ -101,9 +106,6 @@ try {
                 $category_id = $categories[$category_name];
             } else {
                 // Auto create category
-                // First check DB again in case it was created in this transaction?
-                // Actually my array cache won't update. But I am the only one inserting here (in this trans).
-                // Just insert it.
                 $cat_stmt = $pdo->prepare("INSERT INTO mrs_category (category_name, created_at, updated_at) VALUES (:name, NOW(), NOW())");
                 try {
                     $cat_stmt->execute([':name' => $category_name]);

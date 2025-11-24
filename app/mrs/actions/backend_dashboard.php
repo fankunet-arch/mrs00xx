@@ -3,6 +3,7 @@
  * MRS 物料收发管理系统 - 后台管理主控制台
  * 文件路径: app/mrs/actions/backend_dashboard.php
  * 说明: 后台管理主页面
+ * Implements P1 Task: Batch Import Button and Modal
  */
 
 // 防止直接访问
@@ -142,7 +143,8 @@ $current_user = '管理员';
               <button class="secondary" onclick="loadSkus()">搜索</button>
             </div>
             <div>
-              <button class="secondary" onclick="showImportSkuModal()">📋 批量导入</button>
+              <!-- P1 Task: Added Batch Import Button -->
+              <button class="secondary batch-import-btn" onclick="showImportSkuModal()">📋 批量导入</button>
               <button onclick="showNewSkuModal()">新增SKU</button>
             </div>
           </div>
@@ -270,7 +272,7 @@ $current_user = '管理员';
     </div>
   </div>
 
-  <!-- 模态框: 批量导入 SKU -->
+  <!-- 模态框: 批量导入 SKU (P1 Task) -->
   <div class="modal-backdrop" id="modal-import-sku">
     <div class="modal">
       <div class="modal-header">
@@ -278,7 +280,7 @@ $current_user = '管理员';
         <button class="text" onclick="modal.hide('modal-import-sku')">×</button>
       </div>
       <div class="modal-body">
-        <p class="muted small mb-2">请粘贴AI识别后的文本。格式：[品名] | [箱规] | [单位] | [品类]</p>
+        <p class="muted small mb-2">请粘贴 AI 识别后的文本。格式：[品名] | [箱规] | [单位] | [品类]</p>
         <textarea id="import-sku-text" rows="10" placeholder="90-700注塑细磨砂杯 | 500 | 箱 | 包材&#10;茉莉银毫 | 500g/30包 | 箱 | 茶叶" style="width: 100%; font-family: monospace;"></textarea>
       </div>
       <div class="modal-actions">
