@@ -22,6 +22,25 @@ try {
         json_response(false, null, '无效的请求数据');
     }
 
+    // 获取数据库连接
+    $pdo = get_db_connection();
+
+    // 判断是新建还是更新
+    $skuId = $input['sku_id'] ?? null;
+
+    // 如果是仅更新状态
+    if ($skuId && isset($input['status']) && count($input) === 2) {
+        $updateStatusSql = "UPDATE mrs_sku SET status = :status, updated_at = NOW(6) WHERE sku_id = :sku_id";
+        $updateStatusStmt = $pdo->prepare($updateStatusSql);
+        $updateStatusStmt->bindValue(':status', $input['status']);
+        $updateStatusStmt->bindValue(':sku_id', $skuId, PDO::PARAM_INT);
+        $updateStatusStmt->execute();
+
+        mrs_log("SKU状态更新成功: sku_id={$skuId}, status={$input['status']}", 'INFO');
+        json_response(true, ['sku_id' => $skuId], 'SKU状态更新成功');
+        exit;
+    }
+
     // 验证必填字段
     $required = ['sku_name', 'category_id', 'brand_name', 'sku_code', 'standard_unit'];
     foreach ($required as $field) {
@@ -36,12 +55,6 @@ try {
             json_response(false, null, '箱规换算数量必须为大于0的数字');
         }
     }
-
-    // 获取数据库连接
-    $pdo = get_db_connection();
-
-    // 判断是新建还是更新
-    $skuId = $input['sku_id'] ?? null;
 
     if ($skuId) {
         // [FIX] 更新时检查SKU编码是否与其他记录重复
