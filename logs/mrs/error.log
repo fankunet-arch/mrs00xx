@@ -2,3 +2,52 @@
 [24-Nov-2025 16:02:28 UTC] Database connection failed: SQLSTATE[HY000] [2002] php_network_getaddresses: getaddrinfo for mhdlmskp2kpxguj.mysql.db failed: Name or service not known
 [24-Nov-2025 16:02:28 UTC] PHP Warning:  Constant MRS_ENTRY already defined in /app/app/mrs/api/backend_skus.php on line 9
 [24-Nov-2025 16:02:28 UTC] Database connection failed: SQLSTATE[HY000] [2002] php_network_getaddresses: getaddrinfo for mhdlmskp2kpxguj.mysql.db failed: Name or service not known
+[25-Nov-2025 01:47:22 UTC] Database connection failed: SQLSTATE[HY000] [2002] Connection refused
+[25-Nov-2025 01:47:22 UTC] PHP Fatal error:  Uncaught PDOException: SQLSTATE[HY000] [2002] Connection refused in /app/app/mrs/config_mrs/env_mrs.php:100
+Stack trace:
+#0 /app/app/mrs/config_mrs/env_mrs.php(100): PDO->__construct()
+#1 /app/app/mrs/tests/test_backend_confirm_simulation.php(25): get_db_connection()
+#2 /app/app/mrs/tests/test_backend_confirm_simulation.php(103): create_test_category()
+#3 {main}
+  thrown in /app/app/mrs/config_mrs/env_mrs.php on line 100
+[25-Nov-2025 01:47:32 UTC] Database connection failed: SQLSTATE[HY000] [2002] Connection refused
+[25-Nov-2025 01:47:32 UTC] PHP Fatal error:  Uncaught PDOException: SQLSTATE[HY000] [2002] Connection refused in /app/app/mrs/config_mrs/env_mrs.php:100
+Stack trace:
+#0 /app/app/mrs/config_mrs/env_mrs.php(100): PDO->__construct()
+#1 /app/app/mrs/tests/test_backend_confirm_simulation.php(25): get_db_connection()
+#2 /app/app/mrs/tests/test_backend_confirm_simulation.php(103): create_test_category()
+#3 {main}
+  thrown in /app/app/mrs/config_mrs/env_mrs.php on line 100
+[25-Nov-2025 01:47:36 UTC] Database connection failed: SQLSTATE[HY000] [2002] Connection refused
+[25-Nov-2025 01:47:36 UTC] PHP Fatal error:  Uncaught PDOException: SQLSTATE[HY000] [2002] Connection refused in /app/app/mrs/config_mrs/env_mrs.php:100
+Stack trace:
+#0 /app/app/mrs/config_mrs/env_mrs.php(100): PDO->__construct()
+#1 /app/app/mrs/tests/test_backend_confirm_simulation.php(25): get_db_connection()
+#2 /app/app/mrs/tests/test_backend_confirm_simulation.php(103): create_test_category()
+#3 {main}
+  thrown in /app/app/mrs/config_mrs/env_mrs.php on line 100
+[25-Nov-2025 01:47:40 UTC] Database connection failed: SQLSTATE[HY000] [2002] Connection refused
+[25-Nov-2025 01:47:40 UTC] PHP Fatal error:  Uncaught PDOException: SQLSTATE[HY000] [2002] Connection refused in /app/app/mrs/config_mrs/env_mrs.php:100
+Stack trace:
+#0 /app/app/mrs/config_mrs/env_mrs.php(100): PDO->__construct()
+#1 /app/app/mrs/tests/test_backend_confirm_simulation.php(25): get_db_connection()
+#2 /app/app/mrs/tests/test_backend_confirm_simulation.php(103): create_test_category()
+#3 {main}
+  thrown in /app/app/mrs/config_mrs/env_mrs.php on line 100
+[25-Nov-2025 01:47:48 UTC] Database connection failed: SQLSTATE[HY000] [2002] Connection refused
+[25-Nov-2025 01:47:48 UTC] PHP Fatal error:  Uncaught PDOException: SQLSTATE[HY000] [2002] Connection refused in /app/app/mrs/config_mrs/env_mrs.php:100
+Stack trace:
+#0 /app/app/mrs/config_mrs/env_mrs.php(100): PDO->__construct()
+#1 /app/app/mrs/tests/test_backend_confirm_simulation.php(25): get_db_connection()
+#2 /app/app/mrs/tests/test_backend_confirm_simulation.php(103): create_test_category()
+#3 {main}
+  thrown in /app/app/mrs/config_mrs/env_mrs.php on line 100
+[25-Nov-2025 01:47:52 UTC] Database connection failed: SQLSTATE[HY000] [2002] Connection refused
+[25-Nov-2025 01:47:52 UTC] PHP Fatal error:  Uncaught PDOException: SQLSTATE[HY000] [2002] Connection refused in /app/app/mrs/config_mrs/env_mrs.php:100
+Stack trace:
+#0 /app/app/mrs/config_mrs/env_mrs.php(100): PDO->__construct()
+#1 /app/app/mrs/tests/test_backend_confirm_simulation.php(25): get_db_connection()
+#2 /app/app/mrs/tests/test_backend_confirm_simulation.php(103): create_test_category()
+#3 {main}
+  thrown in /app/app/mrs/config_mrs/env_mrs.php on line 100
+[25-Nov-2025 01:48:25 UTC] Database connection failed: SQLSTATE[HY000] [2002] Connection refused
