@@ -35,7 +35,7 @@ $current_user = '管理员';
       <div class="menu-item active" data-target="batches">收货批次管理</div>
       <div class="menu-item" data-target="catalog">物料档案(SKU)</div>
       <div class="menu-item" data-target="categories">品类管理</div>
-      <div class="menu-item" data-target="outbound">出库管理</div>
+      <div class="menu-item" data-target="outbound">出库记录(只读)</div>
       <div class="menu-item" data-target="reports">统计报表</div>
       <div class="menu-item" data-target="system">系统维护</div>
     </aside>
@@ -205,10 +205,11 @@ $current_user = '管理员';
         </div>
       </div>
 
-      <!-- 页面: 出库管理 -->
+      <!-- 页面: 出库记录(只读) -->
       <div class="page" id="page-outbound">
-        <h2>出库管理</h2>
+        <h2>出库记录（只读查询）</h2>
         <div class="card">
+          <p class="muted mb-2">💡 提示：出库操作已简化，请前往"物料档案(SKU)"页面，点击对应SKU的"出库"按钮进行快速出库。</p>
           <div class="flex-between">
             <div class="filters">
               <select id="filter-outbound-status">
@@ -225,7 +226,6 @@ $current_user = '管理员';
               </select>
               <button class="secondary" onclick="loadOutboundList()">搜索</button>
             </div>
-            <button onclick="showNewOutboundModal()">新建出库单</button>
           </div>
           <div class="table-responsive mt-10">
             <table>
@@ -527,6 +527,127 @@ $current_user = '管理员';
         <div class="modal-actions">
           <button type="button" class="text" onclick="modal.hide('modal-outbound')">取消</button>
           <button type="submit">保存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 模态框: SKU履历追溯 -->
+  <div class="modal-backdrop" id="modal-sku-history">
+    <div class="modal modal-large">
+      <div class="modal-header">
+        <h3>SKU 履历追溯</h3>
+        <button class="text" onclick="modal.hide('modal-sku-history')">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>SKU名称</label>
+          <div id="history-sku-name" class="form-value"></div>
+        </div>
+        <div class="table-responsive mt-10">
+          <table>
+            <thead>
+              <tr>
+                <th>时间</th>
+                <th>类型</th>
+                <th>单号/来源</th>
+                <th>数量变动</th>
+                <th>详情/备注</th>
+              </tr>
+            </thead>
+            <tbody id="history-tbody">
+              <tr>
+                <td colspan="5" class="loading">加载中...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="text" onclick="modal.hide('modal-sku-history')">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 模态框: 极速出库 -->
+  <div class="modal-backdrop" id="modal-quick-outbound">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>极速出库</h3>
+        <button class="text" onclick="modal.hide('modal-quick-outbound')">×</button>
+      </div>
+      <form id="form-quick-outbound" onsubmit="saveQuickOutbound(event)">
+        <input type="hidden" name="sku_id" id="quick-outbound-sku-id" />
+        <div class="modal-body">
+          <div class="form-group">
+            <label>SKU名称</label>
+            <div id="quick-outbound-sku-name" class="form-value"></div>
+          </div>
+          <div class="form-group">
+            <label>当前库存</label>
+            <div id="quick-outbound-inventory" class="form-value"></div>
+          </div>
+          <div class="form-group">
+            <label>出库数量(标准单位) *</label>
+            <input type="number" name="qty" id="quick-outbound-qty" required min="1" step="1" />
+            <small class="muted">请输入标准单位的数量</small>
+          </div>
+          <div class="form-group">
+            <label>去向/门店 *</label>
+            <input type="text" name="location_name" id="quick-outbound-location" required placeholder="例如：XX门店" value="门店出库" />
+          </div>
+          <div class="form-group">
+            <label>出库日期 *</label>
+            <input type="date" name="outbound_date" id="quick-outbound-date" required />
+          </div>
+          <div class="form-group">
+            <label>备注</label>
+            <textarea name="remark" id="quick-outbound-remark" rows="2" placeholder="选填"></textarea>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="text" onclick="modal.hide('modal-quick-outbound')">取消</button>
+          <button type="submit" class="primary">确认出库</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 模态框: 库存盘点/调整 -->
+  <div class="modal-backdrop" id="modal-inventory-adjust">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>库存盘点/调整</h3>
+        <button class="text" onclick="modal.hide('modal-inventory-adjust')">×</button>
+      </div>
+      <form id="form-inventory-adjust" onsubmit="saveInventoryAdjustment(event)">
+        <input type="hidden" name="sku_id" id="adjust-sku-id" />
+        <div class="modal-body">
+          <div class="form-group">
+            <label>SKU名称</label>
+            <div id="adjust-sku-name" class="form-value"></div>
+          </div>
+          <div class="form-group">
+            <label>系统库存</label>
+            <div id="adjust-system-inventory" class="form-value"></div>
+          </div>
+          <div class="form-group">
+            <label>实际盘点数量(标准单位) *</label>
+            <input type="number" name="current_qty" id="adjust-current-qty" required min="0" step="0.01" />
+            <small class="muted">请输入盘点后的实际库存数量</small>
+          </div>
+          <div class="form-group">
+            <label>调整差异</label>
+            <div id="adjust-delta" class="form-value">-</div>
+          </div>
+          <div class="form-group">
+            <label>调整原因 *</label>
+            <textarea name="reason" id="adjust-reason" rows="3" required placeholder="请说明盘点调整的原因"></textarea>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="text" onclick="modal.hide('modal-inventory-adjust')">取消</button>
+          <button type="submit" class="primary">确认调整</button>
         </div>
       </form>
     </div>

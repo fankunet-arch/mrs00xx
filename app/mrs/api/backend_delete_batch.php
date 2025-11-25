@@ -44,10 +44,11 @@ try {
             json_response(false, null, '批次不存在');
         }
 
+        // [LOCK] 强化入库锁定：已确认或过账的批次绝对禁止删除
         if (in_array($batch['batch_status'], ['confirmed', 'posted'])) {
             // [FIX] 显式回滚事务，防止连接未释放
             $pdo->rollBack();
-            json_response(false, null, '已确认或已过账的批次不能删除');
+            json_response(false, null, '批次已锁定，禁止删除');
         }
 
         // 删除批次的原始记录

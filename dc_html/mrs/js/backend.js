@@ -270,6 +270,33 @@ const api = {
   async getReports(type, filters = {}) {
     const params = new URLSearchParams({ type, ...filters });
     return await this.call(`api.php?route=backend_reports&${params}`);
+  },
+
+  /**
+   * 极速出库
+   */
+  async quickOutbound(data) {
+    return await this.call('api.php?route=backend_quick_outbound', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+
+  /**
+   * 库存调整/盘点
+   */
+  async adjustInventory(data) {
+    return await this.call('api.php?route=backend_adjust_inventory', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+
+  /**
+   * 获取SKU履历
+   */
+  async getSkuHistory(skuId) {
+    return await this.call(`api.php?route=backend_sku_history&sku_id=${skuId}`);
   }
 };
 
@@ -500,6 +527,9 @@ function renderSkus() {
         <td>${escapeHtml(unitRule)}</td>
         <td><span class="badge success">启用</span></td>
         <td class="table-actions">
+          <button class="text info" onclick="viewSkuHistory(${sku.sku_id})" title="查看履历">📜 履历</button>
+          <button class="text primary" onclick="showQuickOutboundModal(${sku.sku_id})" title="极速出库">🔴 出库</button>
+          <button class="text success" onclick="showInventoryAdjustModal(${sku.sku_id})" title="库存盘点">⚖️ 盘点</button>
           <button class="text" onclick="editSku(${sku.sku_id})">编辑</button>
           <button class="text danger" onclick="deleteSku(${sku.sku_id})">删除</button>
         </td>
@@ -1560,6 +1590,264 @@ async function initApp() {
 
   // 加载初始页面
   showPage('batches');
+}
+
+// ============================================
+// 极速出库与库存调整功能
+// ============================================
+
+/**
+ * 显示极速出库模态框
+ */
+async function showQuickOutboundModal(skuId) {
+  try {
+    // 获取SKU信息
+    const sku = appState.skus.find(s => s.sku_id === skuId);
+    if (!sku) {
+      showAlert('danger', 'SKU不存在');
+      return;
+    }
+
+    // 查询当前库存
+    const inventoryResult = await api.queryInventory(skuId);
+    if (!inventoryResult.success) {
+      showAlert('danger', '查询库存失败: ' + inventoryResult.message);
+      return;
+    }
+
+    // 填充表单
+    document.getElementById('quick-outbound-sku-id').value = skuId;
+    document.getElementById('quick-outbound-sku-name').textContent = sku.sku_name;
+    document.getElementById('quick-outbound-inventory').textContent = inventoryResult.data.display_text || '0';
+    document.getElementById('quick-outbound-qty').value = '';
+    document.getElementById('quick-outbound-location').value = '门店出库';
+    document.getElementById('quick-outbound-date').value = new Date().toISOString().split('T')[0];
+    document.getElementById('quick-outbound-remark').value = '';
+
+    // 显示模态框
+    modal.show('modal-quick-outbound');
+  } catch (error) {
+    console.error('显示出库模态框失败:', error);
+    showAlert('danger', '系统错误');
+  }
+}
+
+/**
+ * 保存极速出库
+ */
+async function saveQuickOutbound(event) {
+  event.preventDefault();
+
+  const form = event.target;
+  const formData = new FormData(form);
+
+  const data = {
+    sku_id: parseInt(formData.get('sku_id')),
+    qty: parseFloat(formData.get('qty')),
+    location_name: formData.get('location_name'),
+    outbound_date: formData.get('outbound_date'),
+    remark: formData.get('remark') || '极速出库'
+  };
+
+  // 验证
+  if (!data.sku_id || !data.qty || !data.location_name || !data.outbound_date) {
+    showAlert('danger', '请填写所有必填项');
+    return;
+  }
+
+  if (data.qty <= 0) {
+    showAlert('danger', '出库数量必须大于0');
+    return;
+  }
+
+  try {
+    const result = await api.quickOutbound(data);
+
+    if (result.success) {
+      showAlert('success', '出库成功');
+      modal.hide('modal-quick-outbound');
+      // 刷新SKU列表
+      await loadSkus();
+    } else {
+      showAlert('danger', '出库失败: ' + result.message);
+    }
+  } catch (error) {
+    console.error('出库失败:', error);
+    showAlert('danger', '系统错误');
+  }
+}
+
+/**
+ * 显示库存盘点/调整模态框
+ */
+async function showInventoryAdjustModal(skuId) {
+  try {
+    // 获取SKU信息
+    const sku = appState.skus.find(s => s.sku_id === skuId);
+    if (!sku) {
+      showAlert('danger', 'SKU不存在');
+      return;
+    }
+
+    // 查询当前库存
+    const inventoryResult = await api.queryInventory(skuId);
+    if (!inventoryResult.success) {
+      showAlert('danger', '查询库存失败: ' + inventoryResult.message);
+      return;
+    }
+
+    const currentInventory = inventoryResult.data.current_inventory || 0;
+
+    // 填充表单
+    document.getElementById('adjust-sku-id').value = skuId;
+    document.getElementById('adjust-sku-name').textContent = sku.sku_name;
+    document.getElementById('adjust-system-inventory').textContent = inventoryResult.data.display_text || '0';
+    document.getElementById('adjust-current-qty').value = currentInventory;
+    document.getElementById('adjust-delta').textContent = '-';
+    document.getElementById('adjust-reason').value = '';
+
+    // 监听数量变化，实时计算差异
+    const qtyInput = document.getElementById('adjust-current-qty');
+    const deltaDisplay = document.getElementById('adjust-delta');
+
+    qtyInput.oninput = function() {
+      const newQty = parseFloat(this.value) || 0;
+      const delta = newQty - currentInventory;
+
+      if (delta === 0) {
+        deltaDisplay.textContent = '无差异';
+        deltaDisplay.style.color = '#666';
+      } else if (delta > 0) {
+        deltaDisplay.textContent = `+${delta} (盘盈)`;
+        deltaDisplay.style.color = 'green';
+      } else {
+        deltaDisplay.textContent = `${delta} (盘亏)`;
+        deltaDisplay.style.color = 'red';
+      }
+    };
+
+    // 显示模态框
+    modal.show('modal-inventory-adjust');
+  } catch (error) {
+    console.error('显示盘点模态框失败:', error);
+    showAlert('danger', '系统错误');
+  }
+}
+
+/**
+ * 保存库存调整
+ */
+async function saveInventoryAdjustment(event) {
+  event.preventDefault();
+
+  const form = event.target;
+  const formData = new FormData(form);
+
+  const data = {
+    sku_id: parseInt(formData.get('sku_id')),
+    current_qty: parseFloat(formData.get('current_qty')),
+    reason: formData.get('reason')
+  };
+
+  // 验证
+  if (!data.sku_id || data.current_qty === undefined || !data.reason) {
+    showAlert('danger', '请填写所有必填项');
+    return;
+  }
+
+  if (data.current_qty < 0) {
+    showAlert('danger', '库存数量不能为负数');
+    return;
+  }
+
+  try {
+    const result = await api.adjustInventory(data);
+
+    if (result.success) {
+      if (result.data.delta === 0) {
+        showAlert('info', result.message || '库存数量一致，无需调整');
+      } else {
+        showAlert('success', `库存调整成功，差异: ${result.data.delta > 0 ? '+' : ''}${result.data.delta}`);
+      }
+      modal.hide('modal-inventory-adjust');
+      // 刷新SKU列表
+      await loadSkus();
+    } else {
+      showAlert('danger', '库存调整失败: ' + result.message);
+    }
+  } catch (error) {
+    console.error('库存调整失败:', error);
+    showAlert('danger', '系统错误');
+  }
+}
+
+// ============================================
+// SKU 履历追溯功能
+// ============================================
+
+/**
+ * 查看SKU履历
+ */
+async function viewSkuHistory(skuId) {
+  try {
+    // 获取SKU信息
+    const sku = appState.skus.find(s => s.sku_id === skuId);
+    if (!sku) {
+      showAlert('danger', 'SKU不存在');
+      return;
+    }
+
+    // 显示模态框并显示加载状态
+    document.getElementById('history-sku-name').textContent = sku.sku_name;
+    document.getElementById('history-tbody').innerHTML = '<tr><td colspan="5" class="loading">加载中...</td></tr>';
+    modal.show('modal-sku-history');
+
+    // 查询履历
+    const result = await api.getSkuHistory(skuId);
+
+    if (!result.success) {
+      document.getElementById('history-tbody').innerHTML =
+        `<tr><td colspan="5" class="empty">加载失败: ${result.message}</td></tr>`;
+      return;
+    }
+
+    // 渲染履历列表
+    const history = result.data.history || [];
+
+    if (history.length === 0) {
+      document.getElementById('history-tbody').innerHTML =
+        '<tr><td colspan="5" class="empty">暂无历史记录</td></tr>';
+      return;
+    }
+
+    // 渲染历史记录
+    const tbody = document.getElementById('history-tbody');
+    tbody.innerHTML = history.map(record => {
+      // 根据类型设置颜色
+      let qtyClass = '';
+      if (record.type === '入库') {
+        qtyClass = 'text-success'; // 绿色
+      } else if (record.type === '出库') {
+        qtyClass = 'text-danger'; // 红色
+      } else if (record.type === '盘点调整') {
+        qtyClass = record.qty > 0 ? 'text-success' : 'text-danger';
+      }
+
+      return `
+        <tr>
+          <td>${escapeHtml(record.date)}</td>
+          <td><span class="badge ${record.type === '入库' ? 'success' : record.type === '出库' ? 'danger' : 'info'}">${escapeHtml(record.type)}</span></td>
+          <td>${escapeHtml(record.code)}</td>
+          <td class="${qtyClass}" style="font-weight: bold;">${escapeHtml(record.qty_display)}</td>
+          <td>${escapeHtml(record.location)} ${record.remark !== '-' ? '/ ' + escapeHtml(record.remark) : ''}</td>
+        </tr>
+      `;
+    }).join('');
+
+  } catch (error) {
+    console.error('查看SKU履历失败:', error);
+    showAlert('danger', '系统错误');
+  }
 }
 
 // 页面加载完成后初始化

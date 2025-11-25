@@ -44,10 +44,10 @@ try {
             json_response(false, null, '批次不存在');
         }
 
-        // [FIX] 检查状态，防止对已完成的批次进行操作
+        // [LOCK] 强化入库锁定：已确认或过账的批次绝对禁止修改
         if ($batch['batch_status'] === 'confirmed' || $batch['batch_status'] === 'posted') {
             $pdo->rollBack();
-            json_response(false, null, '该批次已确认或过账，不可再次合并');
+            json_response(false, null, '批次已锁定，禁止修改');
         }
 
         // [FIX] 不再删除所有旧记录，而是针对本次提交的Items进行Upsert操作（先删后增）
