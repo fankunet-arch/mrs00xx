@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- 主机： mhdlmskp2kpxguj.mysql.db
--- 生成日期： 2025-11-25 05:06:01
+-- 生成日期： 2025-11-25 21:44:26
 -- 服务器版本： 8.4.6-6
 -- PHP 版本： 8.1.33
 
@@ -195,9 +195,10 @@ CREATE TABLE `mrs_sku` (
   `pack_unit_name` varchar(32) DEFAULT NULL COMMENT '包/捆单位名称，如 pack',
   `pack_to_standard_qty` decimal(10,4) DEFAULT NULL COMMENT '1包/捆 = X标准单位',
   `note` text COMMENT '备注',
+  `status` enum('active','inactive') NOT NULL DEFAULT 'active' COMMENT 'SKU Status: active=上架, inactive=下架',
   `created_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间 (UTC)',
   `updated_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间 (UTC)'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='品牌 SKU 主数据';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='品牌 SKU 主数据 (含状态管理)';
 
 -- --------------------------------------------------------
 
@@ -295,7 +296,8 @@ ALTER TABLE `mrs_outbound_order_item`
 ALTER TABLE `mrs_sku`
   ADD PRIMARY KEY (`sku_id`),
   ADD UNIQUE KEY `uk_sku_code` (`sku_code`),
-  ADD KEY `idx_category_id` (`category_id`);
+  ADD KEY `idx_category_id` (`category_id`),
+  ADD KEY `idx_status` (`status`);
 
 --
 -- 表的索引 `sys_users`
