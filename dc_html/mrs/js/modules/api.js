@@ -65,6 +65,10 @@ export const batchAPI = {
       method: 'POST',
       body: JSON.stringify({ batch_id: batchId, items, close_batch: closeBatch })
     });
+  },
+
+  async getRawRecords(batchId, skuId) {
+    return await call(`api.php?route=backend_raw_records&batch_id=${batchId}&sku_id=${skuId}`);
   }
 };
 
