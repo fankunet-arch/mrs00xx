@@ -43,7 +43,17 @@ try {
     $outStmt->execute();
     $totalOutbound = (int)$outStmt->fetchColumn();
 
-    $currentInventory = $totalInbound - $totalOutbound;
+    // 3. Calculate Total Adjustment (from mrs_inventory_adjustment)
+    $adjustmentSql = "SELECT COALESCE(SUM(delta_qty), 0) as total
+                      FROM mrs_inventory_adjustment
+                      WHERE sku_id = :sku_id";
+    $adjStmt = $pdo->prepare($adjustmentSql);
+    $adjStmt->bindValue(':sku_id', $skuId, PDO::PARAM_INT);
+    $adjStmt->execute();
+    $totalAdjustment = floatval($adjStmt->fetchColumn());
+
+    // Updated Formula: Inventory = Inbound - Outbound + Adjustment
+    $currentInventory = $totalInbound - $totalOutbound + $totalAdjustment;
 
     // Fetch SKU info for unit display
     $sku = get_sku_by_id($skuId);
@@ -66,6 +76,7 @@ try {
         'sku_id' => $skuId,
         'total_inbound' => $totalInbound,
         'total_outbound' => $totalOutbound,
+        'total_adjustment' => $totalAdjustment,
         'current_inventory' => $currentInventory,
         'display_text' => $display
     ]);
