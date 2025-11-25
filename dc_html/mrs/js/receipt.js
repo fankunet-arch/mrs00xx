@@ -2,7 +2,38 @@
  * MRS 物料收发管理系统 - 极速收货前台交互逻辑
  * 文件路径: dc_html/mrs/js/receipt.js
  * 说明: 前台收货页面的所有交互逻辑
+ * 重构: 使用 showAlert 统一通知，移除 inline onclick 处理器
  */
+
+/**
+ * 显示通知消息（与 backend 保持一致）
+ */
+function showAlert(type, message) {
+  const alertContainer = document.getElementById('alert-container') || createAlertContainer();
+
+  const alert = document.createElement('div');
+  alert.className = `alert alert-${type}`;
+  alert.textContent = message;
+
+  alertContainer.appendChild(alert);
+
+  setTimeout(() => {
+    alert.classList.add('show');
+  }, 10);
+
+  setTimeout(() => {
+    alert.classList.remove('show');
+    setTimeout(() => alert.remove(), 300);
+  }, 3000);
+}
+
+function createAlertContainer() {
+  const container = document.createElement('div');
+  container.id = 'alert-container';
+  container.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 10000;';
+  document.body.appendChild(container);
+  return container;
+}
 
 // 全局状态
 const appState = {
@@ -135,14 +166,22 @@ function renderBatches() {
     const btn = document.createElement('button');
     btn.className = 'batch-btn' + (batch.batch_id === appState.currentBatch?.batch_id ? ' active' : '');
     btn.textContent = batch.batch_code;
-    btn.onclick = async () => {
-      appState.currentBatch = batch;
-      renderBatches();
-      renderBatchInfo();
-      await loadBatchRecords();
-    };
+    btn.dataset.batchId = batch.batch_id;
     dom.batchButtons.appendChild(btn);
   });
+}
+
+/**
+ * 处理批次选择
+ */
+async function handleBatchSelect(batchId) {
+  const batch = appState.batches.find(b => b.batch_id === parseInt(batchId));
+  if (batch) {
+    appState.currentBatch = batch;
+    renderBatches();
+    renderBatchInfo();
+    await loadBatchRecords();
+  }
 }
 
 /**
@@ -215,12 +254,17 @@ function renderUnits() {
     const btn = document.createElement('div');
     btn.className = 'unit-btn' + (unit === appState.selectedUnit ? ' active' : '');
     btn.textContent = unit;
-    btn.onclick = () => {
-      appState.selectedUnit = unit;
-      renderUnits();
-    };
+    btn.dataset.unit = unit;
     dom.unitRow.appendChild(btn);
   });
+}
+
+/**
+ * 处理单位选择
+ */
+function handleUnitSelect(unit) {
+  appState.selectedUnit = unit;
+  renderUnits();
 }
 
 /**
@@ -245,6 +289,9 @@ async function renderCandidates(keyword = '') {
   // 从 API 获取搜索结果
   const results = await api.searchSku(lower);
 
+  // 存储搜索结果供事件处理器使用
+  appState.materials = results;
+
   dom.candidateList.innerHTML = '';
 
   if (results.length === 0) {
@@ -256,6 +303,7 @@ async function renderCandidates(keyword = '') {
   results.forEach((material) => {
     const row = document.createElement('div');
     row.className = 'candidate';
+    row.dataset.skuId = material.sku_id;
 
     const unitInfo = material.case_unit_name
       ? `${material.case_to_standard_qty} ${material.standard_unit}/${material.case_unit_name}`
@@ -269,21 +317,27 @@ async function renderCandidates(keyword = '') {
       <div class="tag">${material.category_name || '物料'}</div>
     `;
 
-    row.onclick = () => {
-      // [FIX] 选中物料时，动态更新可用单位列表
-      appState.selectedMaterial = material;
-      updateUnitsForSku(material);
-
-      dom.materialInput.value = material.sku_name;
-      dom.candidateList.innerHTML = '';
-      dom.candidateList.style.display = 'none';
-      dom.qtyInput.focus();
-    };
-
     dom.candidateList.appendChild(row);
   });
 
   dom.candidateList.style.display = 'block';
+}
+
+/**
+ * 处理候选物料选择
+ */
+function handleCandidateSelect(skuId) {
+  const material = appState.materials.find(m => m.sku_id === parseInt(skuId));
+  if (material) {
+    // [FIX] 选中物料时，动态更新可用单位列表
+    appState.selectedMaterial = material;
+    updateUnitsForSku(material);
+
+    dom.materialInput.value = material.sku_name;
+    dom.candidateList.innerHTML = '';
+    dom.candidateList.style.display = 'none';
+    dom.qtyInput.focus();
+  }
 }
 
 /**
@@ -396,18 +450,18 @@ async function handleAddRecord() {
   const qty = dom.qtyInput.value.trim();
 
   if (!appState.currentBatch) {
-    alert('请先选择批次');
+    showAlert('warning', '请先选择批次');
     return;
   }
 
   if (!materialName) {
-    alert('请输入物料名称');
+    showAlert('warning', '请输入物料名称');
     dom.materialInput.focus();
     return;
   }
 
   if (!qty || parseFloat(qty) <= 0) {
-    alert('请输入有效的数量');
+    showAlert('warning', '请输入有效的数量');
     dom.qtyInput.focus();
     return;
   }
@@ -427,6 +481,8 @@ async function handleAddRecord() {
   const result = await api.saveRecord(recordData);
 
   if (result.success) {
+    showAlert('success', '保存成功');
+
     // 清空输入
     dom.materialInput.value = '';
     dom.qtyInput.value = '';
@@ -441,7 +497,7 @@ async function handleAddRecord() {
     // 聚焦到物料输入框
     dom.materialInput.focus();
   } else {
-    alert('保存失败: ' + result.message);
+    showAlert('error', '保存失败: ' + result.message);
   }
 }
 
@@ -478,6 +534,30 @@ async function initApp() {
   dom.qtyInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {
       handleAddRecord();
+    }
+  });
+
+  // 事件委托：批次选择
+  dom.batchButtons.addEventListener('click', (e) => {
+    const btn = e.target.closest('.batch-btn');
+    if (btn && btn.dataset.batchId) {
+      handleBatchSelect(btn.dataset.batchId);
+    }
+  });
+
+  // 事件委托：单位选择
+  dom.unitRow.addEventListener('click', (e) => {
+    const btn = e.target.closest('.unit-btn');
+    if (btn && btn.dataset.unit) {
+      handleUnitSelect(btn.dataset.unit);
+    }
+  });
+
+  // 事件委托：候选物料选择
+  dom.candidateList.addEventListener('click', (e) => {
+    const row = e.target.closest('.candidate');
+    if (row && row.dataset.skuId) {
+      handleCandidateSelect(row.dataset.skuId);
     }
   });
 

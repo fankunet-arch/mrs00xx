@@ -35,7 +35,7 @@ $current_user = '管理员';
       <div class="menu-item active" data-target="batches">收货批次管理</div>
       <div class="menu-item" data-target="catalog">物料档案(SKU)</div>
       <div class="menu-item" data-target="categories">品类管理</div>
-      <div class="menu-item" data-target="outbound">出库记录(只读)</div>
+      <div class="menu-item" data-target="inventory">库存管理</div>
       <div class="menu-item" data-target="reports">统计报表</div>
       <div class="menu-item" data-target="system">系统维护</div>
     </aside>
@@ -58,9 +58,9 @@ $current_user = '管理员';
                 <option value="confirmed">已确认</option>
                 <option value="posted">已过账</option>
               </select>
-              <button class="secondary" onclick="loadBatches()">搜索</button>
+              <button class="secondary" data-action="loadBatches">搜索</button>
             </div>
-            <button onclick="showNewBatchModal()">新建批次</button>
+            <button data-action="showNewBatchModal">新建批次</button>
           </div>
           <div class="table-responsive mt-10">
             <table>
@@ -88,7 +88,7 @@ $current_user = '管理员';
       <div class="page" id="page-merge">
         <div class="flex-between mb-12">
           <h2>收货批次合并确认</h2>
-          <button onclick="showPage('batches')">返回列表</button>
+          <button data-action="showBatchesPage">返回列表</button>
         </div>
 
         <div class="card">
@@ -100,7 +100,7 @@ $current_user = '管理员';
         <div class="card">
           <div class="flex-between">
             <div class="section-title">原始记录汇总（按品牌SKU）</div>
-            <button class="success" onclick="confirmAllMerge()">确认全部并入库</button>
+            <button class="success" data-action="confirmAllMerge">确认全部并入库</button>
           </div>
           <div class="table-responsive mt-10">
             <table>
@@ -142,12 +142,12 @@ $current_user = '管理员';
                 <option value="1">精计</option>
                 <option value="0">粗计</option>
               </select>
-              <button class="secondary" onclick="loadSkus()">搜索</button>
+              <button class="secondary" data-action="loadSkus">搜索</button>
             </div>
             <div>
               <!-- P1 Task: Added Batch Import Button -->
-              <button class="secondary batch-import-btn" onclick="showImportSkuModal()">📋 批量导入</button>
-              <button onclick="showNewSkuModal()">新增SKU</button>
+              <button class="secondary batch-import-btn" data-action="showImportSkuModal">📋 批量导入</button>
+              <button data-action="showNewSkuModal">新增SKU</button>
             </div>
           </div>
           <div class="table-responsive mt-10">
@@ -181,9 +181,9 @@ $current_user = '管理员';
           <div class="flex-between">
             <div class="filters">
               <input type="text" id="category-filter-search" placeholder="搜索品类名称" />
-              <button class="secondary" onclick="loadCategories()">搜索</button>
+              <button class="secondary" data-action="loadCategories">搜索</button>
             </div>
-            <button onclick="showNewCategoryModal()">新增品类</button>
+            <button data-action="showNewCategoryModal">新增品类</button>
           </div>
           <div class="table-responsive mt-10">
             <table>
@@ -205,44 +205,38 @@ $current_user = '管理员';
         </div>
       </div>
 
-      <!-- 页面: 出库记录(只读) -->
-      <div class="page" id="page-outbound">
-        <h2>出库记录（只读查询）</h2>
+      <!-- 页面: 库存管理 -->
+      <div class="page" id="page-inventory">
+        <h2>库存管理</h2>
         <div class="card">
-          <p class="muted mb-2">💡 提示：出库操作已简化，请前往"物料档案(SKU)"页面，点击对应SKU的"出库"按钮进行快速出库。</p>
           <div class="flex-between">
             <div class="filters">
-              <select id="filter-outbound-status">
-                <option value="">全部状态</option>
-                <option value="draft">草稿</option>
-                <option value="confirmed">已确认</option>
+              <input type="text" id="inventory-filter-search" placeholder="搜索SKU名称" />
+              <select id="inventory-filter-category">
+                <option value="">全部品类</option>
               </select>
-              <select id="filter-outbound-type">
-                <option value="">全部类型</option>
-                <option value="1">领料</option>
-                <option value="2">调拨</option>
-                <option value="3">退货</option>
-                <option value="4">报废</option>
-              </select>
-              <button class="secondary" onclick="loadOutboundList()">搜索</button>
+              <button class="secondary" data-action="searchInventory">搜索</button>
             </div>
+            <button class="secondary" data-action="refreshInventory">🔄 刷新库存</button>
           </div>
           <div class="table-responsive mt-10">
             <table>
               <thead>
                 <tr>
-                  <th>出库单号</th>
-                  <th>类型</th>
-                  <th>日期</th>
-                  <th>去向/门店</th>
-                  <th>状态</th>
-                  <th>数量</th>
+                  <th>SKU名称</th>
+                  <th>品类</th>
+                  <th>品牌</th>
+                  <th>单位</th>
+                  <th>当前库存</th>
+                  <th>入库总量</th>
+                  <th>出库总量</th>
+                  <th>调整总量</th>
                   <th>操作</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td colspan="7" class="loading">加载中...</td>
+                  <td colspan="9" class="loading">加载中...</td>
                 </tr>
               </tbody>
             </table>
@@ -264,8 +258,8 @@ $current_user = '管理员';
             </select>
             <input type="date" id="report-date-start" />
             <input type="date" id="report-date-end" />
-            <button class="secondary" onclick="loadReports()">生成报表</button>
-            <button class="success" onclick="exportReport()">导出Excel</button>
+            <button class="secondary" data-action="loadReports">生成报表</button>
+            <button class="success" data-action="exportReport">导出Excel</button>
           </div>
         </div>
         <div class="card">
@@ -293,9 +287,9 @@ $current_user = '管理员';
     <div class="modal">
       <div class="modal-header">
         <h3 id="modal-batch-title">新建批次</h3>
-        <button class="text" onclick="modal.hide('modal-batch')">×</button>
+        <button class="text" data-action="closeModal" data-modal-id="modal-batch">×</button>
       </div>
-      <form id="form-batch" onsubmit="saveBatch(event)">
+      <form id="form-batch">
         <input type="hidden" name="batch_id" id="batch-id" />
         <div class="form-grid">
           <div class="form-group">
@@ -324,8 +318,8 @@ $current_user = '管理员';
           </div>
         </div>
         <div class="modal-actions">
-          <button type="button" class="text" onclick="modal.hide('modal-batch')">取消</button>
-          <button type="submit">保存</button>
+          <button type="button" class="text" data-action="closeModal" data-modal-id="modal-batch">取消</button>
+          <button type="submit" data-action="saveBatch">保存</button>
         </div>
       </form>
     </div>
@@ -336,7 +330,7 @@ $current_user = '管理员';
     <div class="modal">
       <div class="modal-header">
         <h3>批量导入 SKU</h3>
-        <button class="text" onclick="modal.hide('modal-import-sku')">×</button>
+        <button class="text" data-action="closeModal" data-modal-id="modal-import-sku">×</button>
       </div>
       <div class="modal-body">
         <p class="muted small mb-2">请粘贴 AI 识别后的文本。格式：[品名] | [箱规] | [单位] | [品类]</p>
@@ -344,9 +338,9 @@ $current_user = '管理员';
       </div>
       <div class="modal-actions">
         <!-- AI Prompt Helper Button (Updated Class) -->
-        <button type="button" class="light-success" style="margin-right: auto;" onclick="showAiPromptHelper()">💡 获取 AI 提示词</button>
-        <button type="button" class="text" onclick="modal.hide('modal-import-sku')">取消</button>
-        <button class="primary" onclick="importSkus()">开始导入</button>
+        <button type="button" class="light-success" style="margin-right: auto;" data-action="showAiPromptHelper">💡 获取 AI 提示词</button>
+        <button type="button" class="text" data-action="closeModal" data-modal-id="modal-import-sku">取消</button>
+        <button class="primary" data-action="importSkus">开始导入</button>
       </div>
     </div>
   </div>
@@ -356,14 +350,14 @@ $current_user = '管理员';
     <div class="modal">
       <div class="modal-header">
         <h3>AI 提示词模板</h3>
-        <button class="text" onclick="closeAiPromptHelper()">×</button>
+        <button class="text" data-action="closeAiPromptHelper">×</button>
       </div>
       <div class="modal-body">
         <textarea id="ai-prompt-text" rows="10" readonly style="width: 100%; font-family: monospace; background: #f9fafb;"></textarea>
       </div>
       <div class="modal-actions">
-        <button type="button" class="text" onclick="closeAiPromptHelper()">返回</button>
-        <button type="button" class="success" onclick="copyAiPrompt()">复制提示词</button>
+        <button type="button" class="text" data-action="closeAiPromptHelper">返回</button>
+        <button type="button" class="success" data-action="copyAiPrompt">复制提示词</button>
       </div>
     </div>
   </div>
@@ -373,9 +367,9 @@ $current_user = '管理员';
     <div class="modal">
       <div class="modal-header">
         <h3 id="modal-sku-title">新增SKU</h3>
-        <button class="text" onclick="modal.hide('modal-sku')">×</button>
+        <button class="text" data-action="closeModal" data-modal-id="modal-sku">×</button>
       </div>
-      <form id="form-sku" onsubmit="saveSku(event)">
+      <form id="form-sku">
         <input type="hidden" name="sku_id" id="sku-id" />
         <div class="form-grid">
           <div class="form-group">
@@ -421,8 +415,8 @@ $current_user = '管理员';
           </div>
         </div>
         <div class="modal-actions">
-          <button type="button" class="text" onclick="modal.hide('modal-sku')">取消</button>
-          <button type="submit">保存</button>
+          <button type="button" class="text" data-action="closeModal" data-modal-id="modal-sku">取消</button>
+          <button type="submit" data-action="saveSku">保存</button>
         </div>
       </form>
     </div>
@@ -433,9 +427,9 @@ $current_user = '管理员';
     <div class="modal">
       <div class="modal-header">
         <h3 id="modal-category-title">新增品类</h3>
-        <button class="text" onclick="modal.hide('modal-category')">×</button>
+        <button class="text" data-action="closeModal" data-modal-id="modal-category">×</button>
       </div>
-      <form id="form-category" onsubmit="saveCategory(event)">
+      <form id="form-category">
         <input type="hidden" name="category_id" id="category-id" />
         <div class="form-grid">
           <div class="form-group">
@@ -448,8 +442,8 @@ $current_user = '管理员';
           </div>
         </div>
         <div class="modal-actions">
-          <button type="button" class="text" onclick="modal.hide('modal-category')">取消</button>
-          <button type="submit">保存</button>
+          <button type="button" class="text" data-action="closeModal" data-modal-id="modal-category">取消</button>
+          <button type="submit" data-action="saveCategory">保存</button>
         </div>
       </form>
     </div>
@@ -460,13 +454,13 @@ $current_user = '管理员';
     <div class="modal">
       <div class="modal-header">
         <h3>批次详情</h3>
-        <button class="text" onclick="modal.hide('modal-batch-detail')">×</button>
+        <button class="text" data-action="closeModal" data-modal-id="modal-batch-detail">×</button>
       </div>
       <div class="modal-body" id="batch-detail-content">
         <!-- 动态加载内容 -->
       </div>
       <div class="modal-actions">
-        <button type="button" class="primary" onclick="modal.hide('modal-batch-detail')">关闭</button>
+        <button type="button" class="primary" data-action="closeModal" data-modal-id="modal-batch-detail">关闭</button>
       </div>
     </div>
   </div>
@@ -476,9 +470,9 @@ $current_user = '管理员';
     <div class="modal modal-lg">
       <div class="modal-header">
         <h3 id="modal-outbound-title">新建出库单</h3>
-        <button class="text" onclick="modal.hide('modal-outbound')">×</button>
+        <button class="text" data-action="closeModal" data-modal-id="modal-outbound">×</button>
       </div>
-      <form id="form-outbound" onsubmit="saveOutbound(event)">
+      <form id="form-outbound">
         <input type="hidden" name="outbound_order_id" id="outbound-id" />
         <div class="modal-body" style="padding-bottom: 0;">
           <div class="form-grid">
@@ -521,12 +515,12 @@ $current_user = '管理员';
                 <!-- 动态行 -->
               </tbody>
             </table>
-            <button type="button" class="button small secondary mt-2" onclick="addOutboundItemRow()">+ 添加一行</button>
+            <button type="button" class="button small secondary mt-2" data-action="addOutboundItemRow">+ 添加一行</button>
           </div>
         </div>
         <div class="modal-actions">
-          <button type="button" class="text" onclick="modal.hide('modal-outbound')">取消</button>
-          <button type="submit">保存</button>
+          <button type="button" class="text" data-action="closeModal" data-modal-id="modal-outbound">取消</button>
+          <button type="submit" data-action="saveOutbound">保存</button>
         </div>
       </form>
     </div>
@@ -537,7 +531,7 @@ $current_user = '管理员';
     <div class="modal modal-large">
       <div class="modal-header">
         <h3>SKU 履历追溯</h3>
-        <button class="text" onclick="modal.hide('modal-sku-history')">×</button>
+        <button class="text" data-action="closeModal" data-modal-id="modal-sku-history">×</button>
       </div>
       <div class="modal-body">
         <div class="form-group">
@@ -564,7 +558,7 @@ $current_user = '管理员';
         </div>
       </div>
       <div class="modal-actions">
-        <button type="button" class="text" onclick="modal.hide('modal-sku-history')">关闭</button>
+        <button type="button" class="text" data-action="closeModal" data-modal-id="modal-sku-history">关闭</button>
       </div>
     </div>
   </div>
@@ -574,9 +568,9 @@ $current_user = '管理员';
     <div class="modal">
       <div class="modal-header">
         <h3>极速出库</h3>
-        <button class="text" onclick="modal.hide('modal-quick-outbound')">×</button>
+        <button class="text" data-action="closeModal" data-modal-id="modal-quick-outbound">×</button>
       </div>
-      <form id="form-quick-outbound" onsubmit="saveQuickOutbound(event)">
+      <form id="form-quick-outbound">
         <input type="hidden" name="sku_id" id="quick-outbound-sku-id" />
         <div class="modal-body">
           <div class="form-group">
@@ -606,7 +600,7 @@ $current_user = '管理员';
           </div>
         </div>
         <div class="modal-actions">
-          <button type="button" class="text" onclick="modal.hide('modal-quick-outbound')">取消</button>
+          <button type="button" class="text" data-action="closeModal" data-modal-id="modal-quick-outbound">取消</button>
           <button type="submit" class="primary">确认出库</button>
         </div>
       </form>
@@ -618,9 +612,9 @@ $current_user = '管理员';
     <div class="modal">
       <div class="modal-header">
         <h3>库存盘点/调整</h3>
-        <button class="text" onclick="modal.hide('modal-inventory-adjust')">×</button>
+        <button class="text" data-action="closeModal" data-modal-id="modal-inventory-adjust">×</button>
       </div>
-      <form id="form-inventory-adjust" onsubmit="saveInventoryAdjustment(event)">
+      <form id="form-inventory-adjust">
         <input type="hidden" name="sku_id" id="adjust-sku-id" />
         <div class="modal-body">
           <div class="form-group">
@@ -646,13 +640,13 @@ $current_user = '管理员';
           </div>
         </div>
         <div class="modal-actions">
-          <button type="button" class="text" onclick="modal.hide('modal-inventory-adjust')">取消</button>
+          <button type="button" class="text" data-action="closeModal" data-modal-id="modal-inventory-adjust">取消</button>
           <button type="submit" class="primary">确认调整</button>
         </div>
       </form>
     </div>
   </div>
 
-  <script src="js/backend.js?v=<?php echo time() + 3; ?>"></script>
+  <script type="module" src="js/modules/main.js?v=<?php echo time() + 3; ?>"></script>
 </body>
 </html>
