@@ -6,10 +6,68 @@
 import { initDom, showPage, modal, showAlert, appState } from './core.js';
 import { batchAPI, skuAPI, categoryAPI } from './api.js';
 import * as Inventory from './inventory.js';
-import './compat.js'; // 导入兼容层，将函数暴露到全局
+import * as Batch from './batch.js';
+import * as SKU from './sku.js';
+import * as Category from './category.js';
+import * as System from './system.js';
+import * as Reports from './reports.js';
 
 // 导出全局函数供 HTML 使用（过渡期）
 window.MRS = window.MRS || {};
+
+// 暴露模块函数到全局，使 HTML onclick 处理器可以访问
+window.showPage = showPage;
+window.modal = modal;
+window.showAlert = showAlert;
+
+// 批次管理
+window.loadBatches = Batch.loadBatches;
+window.showNewBatchModal = Batch.showNewBatchModal;
+window.saveBatch = Batch.saveBatch;
+window.editBatch = Batch.editBatch;
+window.deleteBatch = Batch.deleteBatch;
+window.viewBatch = Batch.viewBatch;
+window.showMergePage = Batch.showMergePage;
+window.confirmItem = Batch.confirmItem;
+window.confirmAllMerge = Batch.confirmAllMerge;
+window.viewRawRecords = Batch.viewRawRecords;
+
+// SKU 管理
+window.loadSkus = SKU.loadSkus;
+window.showNewSkuModal = SKU.showNewSkuModal;
+window.saveSku = SKU.saveSku;
+window.editSku = SKU.editSku;
+window.deleteSku = SKU.deleteSku;
+window.toggleSkuStatus = SKU.toggleSkuStatus;
+window.showImportSkuModal = SKU.showImportSkuModal;
+window.showAiPromptHelper = SKU.showAiPromptHelper;
+window.closeAiPromptHelper = SKU.closeAiPromptHelper;
+window.copyAiPrompt = SKU.copyAiPrompt;
+window.importSkus = SKU.importSkus;
+
+// 品类管理
+window.loadCategories = Category.loadCategories;
+window.showNewCategoryModal = Category.showNewCategoryModal;
+window.saveCategory = Category.saveCategory;
+window.editCategory = Category.editCategory;
+window.deleteCategory = Category.deleteCategory;
+
+// 库存管理
+window.loadInventoryList = Inventory.loadInventoryList;
+window.refreshInventory = Inventory.refreshInventory;
+window.viewSkuHistory = Inventory.viewSkuHistory;
+window.showQuickOutboundModal = Inventory.showQuickOutboundModal;
+window.saveQuickOutbound = Inventory.saveQuickOutbound;
+window.showInventoryAdjustModal = Inventory.showInventoryAdjustModal;
+window.saveInventoryAdjustment = Inventory.saveInventoryAdjustment;
+
+// 报表
+window.loadReports = Reports.loadReports;
+window.exportReport = Reports.exportReport;
+
+// 系统维护
+window.loadSystemStatus = System.loadSystemStatus;
+window.fixSystem = System.fixSystem;
 
 /**
  * 应用初始化
@@ -107,24 +165,24 @@ function setupEventDelegation() {
 async function loadPageData(pageName) {
   switch (pageName) {
     case 'batches':
-      await window.loadBatches();
+      await Batch.loadBatches();
       break;
     case 'catalog':
       await loadCategoryFilterOptions();
-      await window.loadSkus();
+      await SKU.loadSkus();
       break;
     case 'categories':
-      await window.loadCategories();
+      await Category.loadCategories();
       break;
     case 'inventory':
       await loadCategoryFilterOptions();
       await Inventory.loadInventoryList();
       break;
     case 'reports':
-      await window.loadReports();
+      await Reports.loadReports();
       break;
     case 'system':
-      await window.loadSystemStatus();
+      await System.loadSystemStatus();
       break;
     // merge 页面通过 showMergePage 函数单独加载
   }
