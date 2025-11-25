@@ -99,7 +99,7 @@ export async function saveBatch(event) {
 export async function editBatch(batchId) {
   const result = await batchAPI.getBatchDetail(batchId);
   if (result.success) {
-    const batch = result.data;
+    const batch = result.data.batch;
     document.getElementById('batch-id').value = batch.batch_id;
     document.getElementById('batch-code').value = batch.batch_code;
     document.getElementById('batch-date').value = batch.batch_date;
@@ -135,7 +135,7 @@ export async function deleteBatch(batchId) {
 export async function viewBatch(batchId) {
   const result = await batchAPI.getBatchDetail(batchId);
   if (result.success) {
-    const batch = result.data;
+    const batch = result.data.batch;
     const content = document.getElementById('batch-detail-content');
     content.innerHTML = `
       <div class="info-grid">

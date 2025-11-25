@@ -37,7 +37,7 @@ try {
     $pdo = get_db_connection();
 
     // 1. 查询入库记录
-    $inboundSql = "SELECT
+    $inboundSql = "(SELECT
                     b.batch_date as date,
                     b.batch_code as code,
                     '入库' as type,
@@ -49,8 +49,22 @@ try {
                 FROM mrs_batch_confirmed_item ci
                 JOIN mrs_batch b ON ci.batch_id = b.batch_id
                 WHERE ci.sku_id = :sku_id
-                AND b.batch_status IN ('confirmed', 'posted')
-                ORDER BY b.batch_date DESC, b.created_at DESC";
+                AND b.batch_status IN ('confirmed', 'posted'))
+                UNION ALL
+                (SELECT
+                    b.batch_date as date,
+                    b.batch_code as code,
+                    '入库' as type,
+                    rr.qty as qty,
+                    CONCAT('+', rr.qty) as qty_display,
+                    b.location_name as location,
+                    b.remark as remark,
+                    b.created_at as created_at
+                FROM mrs_batch_raw_record rr
+                JOIN mrs_batch b ON rr.batch_id = b.batch_id
+                WHERE rr.sku_id = :sku_id
+                AND b.batch_status NOT IN ('confirmed', 'posted'))
+                ORDER BY date DESC, created_at DESC";
 
     $inStmt = $pdo->prepare($inboundSql);
     $inStmt->bindValue(':sku_id', $skuId, PDO::PARAM_INT);
