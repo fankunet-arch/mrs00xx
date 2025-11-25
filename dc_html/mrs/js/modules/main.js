@@ -225,6 +225,43 @@ function setupEventDelegation() {
     const { pageName } = e.detail;
     await loadPageData(pageName);
   });
+
+  // 搜索框回车键监听
+  document.addEventListener('keypress', async (e) => {
+    if (e.key === 'Enter') {
+      const target = e.target;
+
+      // 批次搜索
+      if (target.id === 'filter-search' ||
+          target.id === 'filter-date-start' ||
+          target.id === 'filter-date-end' ||
+          target.id === 'filter-status') {
+        e.preventDefault();
+        await Batch.loadBatches();
+      }
+
+      // SKU搜索
+      if (target.id === 'catalog-filter-search' ||
+          target.id === 'catalog-filter-category' ||
+          target.id === 'catalog-filter-type') {
+        e.preventDefault();
+        await SKU.loadSkus();
+      }
+
+      // 品类搜索
+      if (target.id === 'category-filter-search') {
+        e.preventDefault();
+        await Category.loadCategories();
+      }
+
+      // 库存搜索
+      if (target.id === 'inventory-filter-search' ||
+          target.id === 'inventory-filter-category') {
+        e.preventDefault();
+        await Inventory.loadInventoryList();
+      }
+    }
+  });
 }
 
 /**
