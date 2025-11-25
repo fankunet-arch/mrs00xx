@@ -31,11 +31,32 @@ try {
     $outboundDate = $input['outbound_date'] ?? date('Y-m-d');
     $outboundType = $input['outbound_type'] ?? 1; // Default to Picking
     $locationName = $input['location_name'] ?? ''; // Source/Dest
-    $status = $input['status'] ?? 'draft';
     $remark = $input['remark'] ?? '';
     $items = $input['items'] ?? [];
 
+    // [FIX SECURITY] 检查并限制状态流转
+    // Save 接口只能保存草稿状态，确认操作必须通过 backend_confirm_outbound.php
     if ($orderId) {
+        // 检查当前订单状态
+        $checkSql = "SELECT status FROM mrs_outbound_order WHERE outbound_order_id = :order_id";
+        $checkStmt = $pdo->prepare($checkSql);
+        $checkStmt->bindValue(':order_id', $orderId, PDO::PARAM_INT);
+        $checkStmt->execute();
+        $currentOrder = $checkStmt->fetch();
+
+        if (!$currentOrder) {
+            json_response(false, null, '出库单不存在');
+        }
+
+        // [FIX] 只有草稿状态的单据才能通过此接口修改
+        // 已确认或已取消的单据不允许修改
+        if ($currentOrder['status'] !== 'draft') {
+            json_response(false, null, '只能修改草稿状态的出库单，当前状态: ' . $currentOrder['status']);
+        }
+
+        // [FIX] 强制保持草稿状态，状态变更必须通过确认接口
+        $status = 'draft';
+
         // Update Order
         $sql = "UPDATE mrs_outbound_order SET
                     outbound_date = :outbound_date,
@@ -59,6 +80,9 @@ try {
         if (empty($outboundCode)) {
             $outboundCode = generate_outbound_code($outboundDate);
         }
+
+        // [FIX] 新建订单强制为草稿状态
+        $status = 'draft';
 
         $sql = "INSERT INTO mrs_outbound_order (
                     outbound_code,

@@ -68,6 +68,22 @@ try {
             json_response(false, null, 'SKU编码已被其他记录使用');
         }
 
+        // [FIX] 检查SKU名称是否与其他记录重复（同品牌下）
+        // 这可能导致批量导入时匹配歧义
+        $checkNameSql = "SELECT sku_id, brand_name FROM mrs_sku
+                         WHERE sku_name = :sku_name
+                         AND brand_name = :brand_name
+                         AND sku_id != :sku_id";
+        $checkNameStmt = $pdo->prepare($checkNameSql);
+        $checkNameStmt->bindValue(':sku_name', $input['sku_name']);
+        $checkNameStmt->bindValue(':brand_name', $input['brand_name']);
+        $checkNameStmt->bindValue(':sku_id', $skuId, PDO::PARAM_INT);
+        $checkNameStmt->execute();
+
+        if ($checkNameStmt->fetch()) {
+            json_response(false, null, '同品牌下已存在相同名称的SKU，这可能导致批量导入时出现匹配歧义');
+        }
+
         // 更新现有SKU
         $sql = "UPDATE mrs_sku SET
                     category_id = :category_id,
@@ -112,6 +128,20 @@ try {
 
         if ($checkStmt->fetch()) {
             json_response(false, null, 'SKU编码已存在');
+        }
+
+        // [FIX] 检查SKU名称是否已存在（同品牌下）
+        // 防止批量导入时出现匹配歧义
+        $checkNameSql = "SELECT sku_id, brand_name FROM mrs_sku
+                         WHERE sku_name = :sku_name
+                         AND brand_name = :brand_name";
+        $checkNameStmt = $pdo->prepare($checkNameSql);
+        $checkNameStmt->bindValue(':sku_name', $input['sku_name']);
+        $checkNameStmt->bindValue(':brand_name', $input['brand_name']);
+        $checkNameStmt->execute();
+
+        if ($checkNameStmt->fetch()) {
+            json_response(false, null, '同品牌下已存在相同名称的SKU，这可能导致批量导入时出现匹配歧义');
         }
 
         // 创建新SKU
