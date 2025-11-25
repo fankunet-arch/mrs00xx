@@ -582,7 +582,7 @@ function renderMergePage(data) {
         <td>${escapeHtml(item.sku_name)}</td>
         <td>${escapeHtml(item.category_name || '-')}</td>
         <td>${item.is_precise_item ? '精计' : '粗计'}</td>
-        <td>${item.case_unit_name ? `1 ${item.case_unit_name} = ${item.case_to_standard_qty} ${item.standard_unit}` : '—'}</td>
+        <td>${item.case_unit_name ? `1 ${item.case_unit_name} = ${parseFloat(item.case_to_standard_qty)} ${item.standard_unit}` : '—'}</td>
         <td>${item.expected_qty || '-'}</td>
         <td>${escapeHtml(item.raw_summary || '-')}</td>
         <td><span class="pill">${escapeHtml(item.suggested_qty || '-')}</span></td>
