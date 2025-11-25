@@ -637,9 +637,9 @@ function renderMergePage(data) {
         <td>
           <div class="table-actions">
             <button class="text" onclick="viewRawRecords(${item.sku_id})">查看明细</button>
-            <input type="number" id="case-${index}" value="${item.confirmed_case || 0}" style="width: 70px;" placeholder="箱数" />
-            <input type="number" id="single-${index}" value="${item.confirmed_single || 0}" style="width: 70px;" placeholder="散件" />
-            <button class="secondary" onclick="confirmItem(${index})">确认</button>
+            <input type="number" id="case-${item.sku_id}" value="${item.confirmed_case || 0}" style="width: 70px;" placeholder="箱数" />
+            <input type="number" id="single-${item.sku_id}" value="${item.confirmed_single || 0}" style="width: 70px;" placeholder="散件" />
+            <button class="secondary" onclick="confirmItem(${item.sku_id})">确认</button>
           </div>
         </td>
       </tr>
@@ -1126,27 +1126,20 @@ async function deleteCategory(categoryId) {
 /**
  * 确认单个合并项
  */
-async function confirmItem(index) {
+async function confirmItem(skuId) {
   if (!appState.currentBatch) return;
 
-  const row = document.querySelector(`#page-merge tbody tr:nth-child(${index + 1})`);
-  if (!row) return;
+  // Find item by SKU ID instead of index
+  const item = appState.mergeItems.find(i => i.sku_id === skuId);
 
-  // Gather data from the specific row
-  // Note: The structure of rows in renderMergePage doesn't store SKU ID easily accessible via index unless we look at the data source.
-  // We need to re-fetch the merge data or store it in appState.mergeData
-  // Wait, renderMergePage uses `data.items.map`. Let's store items in appState.
-
-  if (!appState.mergeItems || !appState.mergeItems[index]) {
+  if (!item) {
       showAlert('danger', '数据同步错误，请刷新页面');
       return;
   }
 
-  const item = appState.mergeItems[index];
-
-  // Get inputs
-  const caseInput = document.getElementById(`case-${index}`);
-  const singleInput = document.getElementById(`single-${index}`);
+  // Get inputs by SKU ID
+  const caseInput = document.getElementById(`case-${skuId}`);
+  const singleInput = document.getElementById(`single-${skuId}`);
 
   const payload = {
       batch_id: appState.currentBatch.batch_id,
@@ -1186,9 +1179,9 @@ async function confirmAllMerge() {
   // Gather all items
   const items = [];
   if (appState.mergeItems) {
-      appState.mergeItems.forEach((item, index) => {
-          const caseInput = document.getElementById(`case-${index}`);
-          const singleInput = document.getElementById(`single-${index}`);
+      appState.mergeItems.forEach((item) => {
+          const caseInput = document.getElementById(`case-${item.sku_id}`);
+          const singleInput = document.getElementById(`single-${item.sku_id}`);
 
           // Only include if inputs exist (sanity check)
           if (caseInput && singleInput) {

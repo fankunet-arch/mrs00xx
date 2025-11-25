@@ -78,6 +78,19 @@ try {
     $rawStmt->execute();
     $rawRecords = $rawStmt->fetchAll(PDO::FETCH_ASSOC);
 
+    // [FIX] 获取已确认的记录 (用于回显已保存的调整值)
+    $confirmedSql = "SELECT * FROM mrs_batch_confirmed_item WHERE batch_id = :batch_id";
+    $confirmedStmt = $pdo->prepare($confirmedSql);
+    $confirmedStmt->bindValue(':batch_id', $batchId, PDO::PARAM_INT);
+    $confirmedStmt->execute();
+    $confirmedItems = $confirmedStmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // 转为 sku_id 索引的 map
+    $confirmedMap = [];
+    foreach ($confirmedItems as $c) {
+        $confirmedMap[$c['sku_id']] = $c;
+    }
+
     // 按SKU聚合数据
     $skuMap = [];
 
@@ -157,6 +170,16 @@ try {
             $singleQty = $totalStandard;
         }
 
+        // [FIX] 如果存在已确认记录，优先使用已确认的值
+        $isConfirmed = false;
+        if (isset($confirmedMap[$skuId])) {
+            $c = $confirmedMap[$skuId];
+            $caseQty = floatval($c['confirmed_case_qty']); // 使用已保存的箱数
+            $singleQty = floatval($c['confirmed_single_qty']); // 使用已保存的散数
+            $totalStandard = floatval($c['total_standard_qty']); // 使用已保存的总数来计算状态
+            $isConfirmed = true;
+        }
+
         // 判断状态
         $status = 'normal';
         $statusText = '正常';
@@ -192,6 +215,7 @@ try {
             'suggested_qty' => $caseQty . ' ' . ($data['case_unit_name'] ?: '箱') . ' + ' . $singleQty . ' ' . $data['standard_unit'],
             'confirmed_case' => $caseQty,
             'confirmed_single' => $singleQty,
+            'is_confirmed' => $isConfirmed,
             'status' => $status,
             'status_text' => $statusText
         ];
