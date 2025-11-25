@@ -107,6 +107,51 @@ function setupEventDelegation() {
 
     // 根据 action 执行对应操作
     switch (action) {
+      // 批次管理
+      case 'loadBatches':
+        await Batch.loadBatches();
+        break;
+      case 'showNewBatchModal':
+        Batch.showNewBatchModal();
+        break;
+      case 'confirmAllMerge':
+        await Batch.confirmAllMerge();
+        break;
+      case 'showBatchesPage':
+        showPage('batches');
+        break;
+
+      // SKU 管理
+      case 'loadSkus':
+        await SKU.loadSkus();
+        break;
+      case 'showNewSkuModal':
+        SKU.showNewSkuModal();
+        break;
+      case 'showImportSkuModal':
+        SKU.showImportSkuModal();
+        break;
+      case 'importSkus':
+        await SKU.importSkus();
+        break;
+      case 'showAiPromptHelper':
+        SKU.showAiPromptHelper();
+        break;
+      case 'closeAiPromptHelper':
+        SKU.closeAiPromptHelper();
+        break;
+      case 'copyAiPrompt':
+        SKU.copyAiPrompt();
+        break;
+
+      // 品类管理
+      case 'loadCategories':
+        await Category.loadCategories();
+        break;
+      case 'showNewCategoryModal':
+        Category.showNewCategoryModal();
+        break;
+
       // 库存相关操作
       case 'viewHistory':
         if (skuId) await Inventory.viewSkuHistory(skuId);
@@ -122,6 +167,14 @@ function setupEventDelegation() {
         break;
       case 'searchInventory':
         await Inventory.loadInventoryList();
+        break;
+
+      // 报表
+      case 'loadReports':
+        await Reports.loadReports();
+        break;
+      case 'exportReport':
+        await Reports.exportReport();
         break;
 
       // 模态框操作
@@ -140,15 +193,30 @@ function setupEventDelegation() {
     const form = e.target;
     const formId = form.id;
 
-    // 处理库存相关表单
-    if (formId === 'form-quick-outbound') {
-      e.preventDefault();
-      const formData = new FormData(form);
-      await Inventory.saveQuickOutbound(formData);
-    } else if (formId === 'form-inventory-adjust') {
-      e.preventDefault();
-      const formData = new FormData(form);
-      await Inventory.saveInventoryAdjustment(formData);
+    // 阻止默认提交行为
+    e.preventDefault();
+
+    // 处理不同表单
+    switch (formId) {
+      case 'form-batch':
+        await Batch.saveBatch(e);
+        break;
+      case 'form-sku':
+        await SKU.saveSku(e);
+        break;
+      case 'form-category':
+        await Category.saveCategory(e);
+        break;
+      case 'form-quick-outbound':
+        const quickOutboundData = new FormData(form);
+        await Inventory.saveQuickOutbound(quickOutboundData);
+        break;
+      case 'form-inventory-adjust':
+        const adjustData = new FormData(form);
+        await Inventory.saveInventoryAdjustment(adjustData);
+        break;
+      default:
+        console.warn('未知表单:', formId);
     }
   });
 
