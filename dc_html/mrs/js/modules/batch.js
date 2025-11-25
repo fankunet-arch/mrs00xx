@@ -47,10 +47,10 @@ function renderBatches() {
       <td><span class="badge ${getStatusBadgeClass(batch.batch_status)}">${getStatusText(batch.batch_status)}</span></td>
       <td>${escapeHtml(batch.remark || '-')}</td>
       <td class="table-actions">
-        <button class="text" onclick="viewBatch(${batch.batch_id})">查看</button>
-        <button class="secondary" onclick="showMergePage(${batch.batch_id})">合并</button>
-        <button class="text" onclick="editBatch(${batch.batch_id})">编辑</button>
-        <button class="text danger" onclick="deleteBatch(${batch.batch_id})">删除</button>
+        <button class="text" data-action="viewBatch" data-batch-id="${batch.batch_id}">查看</button>
+        <button class="secondary" data-action="showMergePage" data-batch-id="${batch.batch_id}">合并</button>
+        <button class="text" data-action="editBatch" data-batch-id="${batch.batch_id}">编辑</button>
+        <button class="text danger" data-action="deleteBatch" data-batch-id="${batch.batch_id}">删除</button>
       </td>
     </tr>
   `).join('');
@@ -197,10 +197,10 @@ function renderMergePage(data) {
       ? '<span class="badge success">✓ 已确认</span>'
       : `
         <div style="display: flex; gap: 4px; align-items: center; flex-wrap: wrap;">
-          <button class="text" onclick="viewRawRecords(${item.sku_id})">查看明细</button>
+          <button class="text" data-action="viewRawRecords" data-sku-id="${item.sku_id}">查看明细</button>
           <input type="number" id="case-${item.sku_id}" value="${item.confirmed_case || 0}" style="width: 70px;" placeholder="箱数" min="0" step="1" />
           <input type="number" id="single-${item.sku_id}" value="${item.confirmed_single || 0}" style="width: 70px;" placeholder="散件" min="0" step="1" />
-          <button class="secondary" onclick="confirmItem(${item.sku_id})">确认</button>
+          <button class="secondary" data-action="confirmItem" data-sku-id="${item.sku_id}">确认</button>
         </div>
       `;
 
@@ -254,12 +254,7 @@ export async function confirmItem(skuId) {
     }]
   };
 
-  // 使用 api.js 中的 call 函数直接调用 API
-  const call = (await import('./api.js')).call;
-  const result = await call('api.php?route=backend_confirm_merge', {
-    method: 'POST',
-    body: JSON.stringify(payload)
-  });
+  const result = await batchAPI.confirmMerge(payload.batch_id, payload.items, payload.close_batch);
 
   if (result.success) {
     showAlert('success', '已确认');
@@ -307,12 +302,7 @@ export async function confirmAllMerge() {
     items: items
   };
 
-  // 使用 api.js 中的 call 函数直接调用 API
-  const call = (await import('./api.js')).call;
-  const result = await call('api.php?route=backend_confirm_merge', {
-    method: 'POST',
-    body: JSON.stringify(payload)
-  });
+  const result = await batchAPI.confirmMerge(payload.batch_id, payload.items, payload.close_batch);
 
   if (result.success) {
     showAlert('success', '全部确认成功');

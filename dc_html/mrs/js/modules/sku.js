@@ -19,7 +19,7 @@ export async function loadSkus() {
 
   const result = await skuAPI.getSkus(filters);
   if (result.success) {
-    appState.skus = result.data;
+    appState.skus = result.data.skus;
     renderSkus();
   } else {
     showAlert('danger', '加载SKU列表失败: ' + result.message);
@@ -50,8 +50,8 @@ function renderSkus() {
       : '<span class="badge secondary">下架</span>';
 
     const statusAction = status === 'active'
-      ? `<button class="text secondary" onclick="toggleSkuStatus(${sku.sku_id}, 'inactive')">下架</button>`
-      : `<button class="text success" onclick="toggleSkuStatus(${sku.sku_id}, 'active')">上架</button>`;
+      ? `<button class="text secondary" data-action="toggleSkuStatus" data-sku-id="${sku.sku_id}" data-status="inactive">下架</button>`
+      : `<button class="text success" data-action="toggleSkuStatus" data-sku-id="${sku.sku_id}" data-status="active">上架</button>`;
 
     return `
       <tr>
@@ -64,8 +64,8 @@ function renderSkus() {
         <td>${statusBadge}</td>
         <td class="table-actions">
           ${statusAction}
-          <button class="text primary" onclick="editSku(${sku.sku_id})">编辑</button>
-          <button class="text danger" onclick="deleteSku(${sku.sku_id})">删除</button>
+          <button class="text primary" data-action="editSku" data-sku-id="${sku.sku_id}">编辑</button>
+          <button class="text danger" data-action="deleteSku" data-sku-id="${sku.sku_id}">删除</button>
         </td>
       </tr>
     `;
@@ -256,7 +256,7 @@ async function loadCategoryOptions() {
     if (select) {
       const currentVal = select.value;
       select.innerHTML = '<option value="">请选择</option>' +
-        result.data.map(cat => `<option value="${cat.category_id}">${escapeHtml(cat.category_name)}</option>`).join('');
+        result.data.categories.map(cat => `<option value="${cat.category_id}">${escapeHtml(cat.category_name)}</option>`).join('');
       if (currentVal) {
         select.value = currentVal;
       }

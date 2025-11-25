@@ -74,7 +74,7 @@ try {
 
     $skus = $stmt->fetchAll();
 
-    json_response(true, $skus);
+    json_response(true, ['skus' => $skus]);
 
 } catch (PDOException $e) {
     mrs_log('获取SKU列表失败: ' . $e->getMessage(), 'ERROR');

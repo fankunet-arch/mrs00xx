@@ -135,7 +135,7 @@ try {
 
     mrs_log("查询库存列表成功, 记录数: " . count($inventoryList), 'INFO');
 
-    json_response(true, $inventoryList);
+    json_response(true, ['inventory' => $inventoryList]);
 
 } catch (PDOException $e) {
     mrs_log('查询库存列表失败: ' . $e->getMessage(), 'ERROR');

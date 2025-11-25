@@ -58,7 +58,7 @@ export const modal = {
   show(modalId) {
     const modalEl = dom.modals[modalId] || document.getElementById(modalId);
     if (modalEl) {
-      modalEl.classList.add('active');
+      modalEl.classList.add('show');
       document.body.style.overflow = 'hidden';
     }
   },
@@ -66,7 +66,7 @@ export const modal = {
   hide(modalId) {
     const modalEl = dom.modals[modalId] || document.getElementById(modalId);
     if (modalEl) {
-      modalEl.classList.remove('active');
+      modalEl.classList.remove('show');
       document.body.style.overflow = '';
     }
   }
@@ -95,10 +95,12 @@ export function showAlert(type, message) {
 }
 
 function createAlertContainer() {
-  const container = document.createElement('div');
-  container.id = 'alert-container';
-  container.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 10000;';
-  document.body.appendChild(container);
+  let container = document.getElementById('alert-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'alert-container';
+    document.body.appendChild(container);
+  }
   return container;
 }
 

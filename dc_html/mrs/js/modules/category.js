@@ -15,7 +15,7 @@ export async function loadCategories() {
   };
   const result = await categoryAPI.getCategories(filters);
   if (result.success) {
-    appState.categories = result.data;
+    appState.categories = result.data.categories;
     renderCategories();
   } else {
     showAlert('danger', '加载品类列表失败: ' + result.message);
@@ -40,8 +40,8 @@ function renderCategories() {
       <td>${escapeHtml(category.category_code || '-')}</td>
       <td>${new Date(category.created_at).toLocaleString('zh-CN')}</td>
       <td class="table-actions">
-        <button class="text" onclick="editCategory(${category.category_id})">编辑</button>
-        <button class="text danger" onclick="deleteCategory(${category.category_id})">删除</button>
+        <button class="text" data-action="editCategory" data-category-id="${category.category_id}">编辑</button>
+        <button class="text danger" data-action="deleteCategory" data-category-id="${category.category_id}">删除</button>
       </td>
     </tr>
   `).join('');
