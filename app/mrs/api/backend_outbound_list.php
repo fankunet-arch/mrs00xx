@@ -75,8 +75,39 @@ try {
         $stmt->bindValue($k, $v);
     }
 
-    $stmt->execute();
-    $list = $stmt->fetchAll();
+    // [SELF-HEALING] Check if table exists, if not try to migrate
+    try {
+        $stmt->execute();
+        $list = $stmt->fetchAll();
+    } catch (PDOException $e) {
+        // Error 1146: Table doesn't exist
+        if ($e->getCode() == '42S02' || strpos($e->getMessage(), '1146') !== false) {
+            mrs_log('Missing outbound tables detected. Attempting self-healing...', 'WARNING');
+
+            // Try to run migration 002
+            $migrationFile = MRS_APP_PATH . '/../docs/migrations/002_create_outbound_tables.sql';
+            if (file_exists($migrationFile)) {
+                $sqlContent = file_get_contents($migrationFile);
+                $statements = explode(';', $sqlContent);
+                foreach ($statements as $sql) {
+                    $sql = trim($sql);
+                    if (empty($sql) || strpos($sql, '--') === 0) continue;
+                    try {
+                        $pdo->exec($sql);
+                    } catch (Exception $em) {
+                        mrs_log('Self-healing partial error: ' . $em->getMessage(), 'WARNING');
+                    }
+                }
+                // Retry query
+                $stmt->execute();
+                $list = $stmt->fetchAll();
+            } else {
+                throw $e; // Re-throw if migration file missing
+            }
+        } else {
+            throw $e; // Re-throw other errors
+        }
+    }
 
     // Total count for pagination
     $countSql = "SELECT COUNT(*) FROM mrs_outbound_order o WHERE 1=1";

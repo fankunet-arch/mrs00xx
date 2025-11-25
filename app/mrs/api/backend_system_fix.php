@@ -24,33 +24,44 @@ try {
     $pdo = get_db_connection();
     $messages = [];
 
-    // Check 001_add_input_sku_name_to_raw_record
-    $checkSql = "SHOW COLUMNS FROM mrs_batch_raw_record LIKE 'input_sku_name'";
-    $stmt = $pdo->query($checkSql);
+    // Define migrations
+    $migrations = [
+        '001' => [
+            'check' => "SHOW COLUMNS FROM mrs_batch_raw_record LIKE 'input_sku_name'",
+            'file' => '001_add_input_sku_name_to_raw_record.sql'
+        ],
+        '002' => [
+            'check' => "SHOW TABLES LIKE 'mrs_outbound_order'",
+            'file' => '002_create_outbound_tables.sql'
+        ]
+    ];
 
-    if ($stmt->rowCount() === 0) {
-        $migrationFile = MRS_APP_PATH . '/../docs/migrations/001_add_input_sku_name_to_raw_record.sql';
-        if (file_exists($migrationFile)) {
-            $sqlContent = file_get_contents($migrationFile);
-            $statements = explode(';', $sqlContent);
+    foreach ($migrations as $key => $migration) {
+        $checkStmt = $pdo->query($migration['check']);
+        if ($checkStmt->rowCount() === 0) {
+            $migrationFile = MRS_APP_PATH . '/../docs/migrations/' . $migration['file'];
 
-            foreach ($statements as $sql) {
-                $sql = trim($sql);
-                if (empty($sql) || strpos($sql, '--') === 0) continue;
-                try {
-                    $pdo->exec($sql);
-                } catch (Exception $e) {
-                    // Ignore errors if it's just "column exists" or similar safe errors
-                    // But here we rely on the initial check
-                    mrs_log("Migration partial error: " . $e->getMessage(), 'WARNING');
+            if (file_exists($migrationFile)) {
+                $sqlContent = file_get_contents($migrationFile);
+                // Simple splitter, caution with ; in strings
+                $statements = explode(';', $sqlContent);
+
+                foreach ($statements as $sql) {
+                    $sql = trim($sql);
+                    if (empty($sql) || strpos($sql, '--') === 0) continue;
+                    try {
+                        $pdo->exec($sql);
+                    } catch (Exception $e) {
+                        mrs_log("Migration {$key} partial error: " . $e->getMessage(), 'WARNING');
+                    }
                 }
+                $messages[] = "Applied migration: {$key}";
+            } else {
+                $messages[] = "Migration file {$key} missing";
             }
-            $messages[] = "Applied migration: 001_add_input_sku_name_to_raw_record";
         } else {
-            throw new Exception("Migration file 001 missing");
+            $messages[] = "Migration {$key} already applied";
         }
-    } else {
-        $messages[] = "Migration 001 already applied";
     }
 
     json_response(true, ['messages' => $messages], 'System fix applied successfully');
