@@ -37,6 +37,7 @@ try {
     $pdo = get_db_connection();
 
     // 1. 查询入库记录
+    // [FIX] 使用不同的参数名避免 UNION 中参数绑定问题
     $inboundSql = "(SELECT
                     b.batch_date as date,
                     b.batch_code as code,
@@ -48,7 +49,7 @@ try {
                     b.created_at as created_at
                 FROM mrs_batch_confirmed_item ci
                 JOIN mrs_batch b ON ci.batch_id = b.batch_id
-                WHERE ci.sku_id = :sku_id
+                WHERE ci.sku_id = :sku_id1
                 AND b.batch_status IN ('confirmed', 'posted'))
                 UNION ALL
                 (SELECT
@@ -62,12 +63,13 @@ try {
                     b.created_at as created_at
                 FROM mrs_batch_raw_record rr
                 JOIN mrs_batch b ON rr.batch_id = b.batch_id
-                WHERE rr.sku_id = :sku_id
+                WHERE rr.sku_id = :sku_id2
                 AND b.batch_status NOT IN ('confirmed', 'posted'))
                 ORDER BY date DESC, created_at DESC";
 
     $inStmt = $pdo->prepare($inboundSql);
-    $inStmt->bindValue(':sku_id', $skuId, PDO::PARAM_INT);
+    $inStmt->bindValue(':sku_id1', $skuId, PDO::PARAM_INT);
+    $inStmt->bindValue(':sku_id2', $skuId, PDO::PARAM_INT);
     $inStmt->execute();
     $inboundRecords = $inStmt->fetchAll(PDO::FETCH_ASSOC);
 
