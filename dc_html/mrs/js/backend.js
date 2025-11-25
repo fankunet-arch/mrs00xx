@@ -43,6 +43,7 @@ function initDom() {
     merge: document.getElementById('page-merge'),
     catalog: document.getElementById('page-catalog'),
     categories: document.getElementById('page-categories'),
+    outbound: document.getElementById('page-outbound'),
     reports: document.getElementById('page-reports'),
     system: document.getElementById('page-system')
   };
@@ -51,6 +52,7 @@ function initDom() {
   dom.modals = {
     batch: document.getElementById('modal-batch'),
     batchDetail: document.getElementById('modal-batch-detail'),
+    outbound: document.getElementById('modal-outbound'),
     sku: document.getElementById('modal-sku'),
     category: document.getElementById('modal-category'),
     importSku: document.getElementById('modal-import-sku'),
@@ -221,6 +223,48 @@ const api = {
   },
 
   /**
+   * 获取出库单列表
+   */
+  async getOutboundList(filters = {}) {
+    const params = new URLSearchParams(filters);
+    return await this.call(`api.php?route=backend_outbound_list&${params}`);
+  },
+
+  /**
+   * 获取出库单详情
+   */
+  async getOutboundDetail(orderId) {
+    return await this.call(`api.php?route=backend_outbound_detail&order_id=${orderId}`);
+  },
+
+  /**
+   * 保存出库单
+   */
+  async saveOutbound(data) {
+    return await this.call('api.php?route=backend_save_outbound', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+
+  /**
+   * 确认出库单
+   */
+  async confirmOutbound(orderId) {
+    return await this.call('api.php?route=backend_confirm_outbound', {
+      method: 'POST',
+      body: JSON.stringify({ order_id: orderId })
+    });
+  },
+
+  /**
+   * 查询库存
+   */
+  async queryInventory(skuId) {
+    return await this.call(`api.php?route=backend_inventory_query&sku_id=${skuId}`);
+  },
+
+  /**
    * 获取统计报表数据
    */
   async getReports(type, filters = {}) {
@@ -273,6 +317,9 @@ async function loadPageData(pageName) {
       break;
     case 'categories':
       await loadCategories();
+      break;
+    case 'outbound':
+      await loadOutboundList();
       break;
     case 'reports':
       await loadReports();
@@ -1102,6 +1149,294 @@ async function viewRawRecords(skuId) {
  */
 async function exportReport() {
   showAlert('info', '导出报表功能开发中...');
+}
+
+// ================================================================
+// 出库管理逻辑
+// ================================================================
+
+/**
+ * 加载出库单列表
+ */
+async function loadOutboundList() {
+  const filters = {
+    status: document.getElementById('filter-outbound-status')?.value || '',
+    type: document.getElementById('filter-outbound-type')?.value || ''
+  };
+
+  const result = await api.getOutboundList(filters);
+  if (result.success) {
+    appState.outboundOrders = result.data.list || [];
+    renderOutboundList();
+  } else {
+    showAlert('danger', '加载出库单失败: ' + result.message);
+  }
+}
+
+/**
+ * 渲染出库单列表
+ */
+function renderOutboundList() {
+  const tbody = document.querySelector('#page-outbound tbody');
+  if (!tbody) return;
+
+  if (appState.outboundOrders.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" class="empty">暂无出库单数据</td></tr>';
+    return;
+  }
+
+  const typeMap = { 1: '领料', 2: '调拨', 3: '退货', 4: '报废' };
+
+  tbody.innerHTML = appState.outboundOrders.map(order => `
+    <tr>
+      <td>${escapeHtml(order.outbound_code)}</td>
+      <td>${typeMap[order.outbound_type] || order.outbound_type}</td>
+      <td>${escapeHtml(order.outbound_date)}</td>
+      <td>${escapeHtml(order.location_name)}</td>
+      <td><span class="badge ${order.status === 'confirmed' ? 'success' : 'info'}">${order.status === 'confirmed' ? '已确认' : '草稿'}</span></td>
+      <td>${order.item_count} / ${order.total_qty}</td>
+      <td class="table-actions">
+        ${order.status === 'draft' ?
+          `<button class="text" onclick="editOutbound(${order.outbound_order_id})">编辑</button>
+           <button class="text success" onclick="confirmOutbound(${order.outbound_order_id})">确认</button>` :
+          `<button class="text" onclick="viewOutbound(${order.outbound_order_id})">查看</button>`
+        }
+      </td>
+    </tr>
+  `).join('');
+}
+
+/**
+ * 显示新建出库单
+ */
+function showNewOutboundModal() {
+  document.getElementById('form-outbound').reset();
+  document.getElementById('outbound-id').value = '';
+  document.getElementById('outbound-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('outbound-items-body').innerHTML = ''; // Clear items
+  document.getElementById('modal-outbound-title').textContent = '新建出库单';
+
+  // Add initial empty row
+  addOutboundItemRow();
+
+  modal.show('modal-outbound');
+}
+
+/**
+ * 编辑出库单
+ */
+async function editOutbound(orderId) {
+  const result = await api.getOutboundDetail(orderId);
+  if (result.success) {
+    const order = result.data;
+
+    document.getElementById('outbound-id').value = order.outbound_order_id;
+    document.getElementById('outbound-date').value = order.outbound_date;
+    document.getElementById('outbound-type').value = order.outbound_type;
+    document.getElementById('outbound-location').value = order.location_name;
+    document.getElementById('outbound-remark').value = order.remark || '';
+
+    document.getElementById('modal-outbound-title').textContent = '编辑出库单';
+
+    // Render items
+    const tbody = document.getElementById('outbound-items-body');
+    tbody.innerHTML = '';
+
+    if (order.items && order.items.length > 0) {
+      for (const item of order.items) {
+        await addOutboundItemRow(item);
+      }
+    } else {
+      addOutboundItemRow();
+    }
+
+    modal.show('modal-outbound');
+  } else {
+    showAlert('danger', '获取详情失败: ' + result.message);
+  }
+}
+
+/**
+ * 添加出库明细行
+ */
+async function addOutboundItemRow(item = null) {
+  const tbody = document.getElementById('outbound-items-body');
+  const index = tbody.children.length;
+  const rowId = `row-${Date.now()}-${index}`;
+
+  const tr = document.createElement('tr');
+  tr.id = rowId;
+
+  // Load SKUs for select
+  // Ideally this should be cached or loaded once, but for now we do it simple
+  // Using appState.skus if available
+  let skuOptions = '<option value="">选择物料</option>';
+  if (appState.skus.length === 0) {
+      // Trigger load if empty (might happen if catalog page not visited)
+      await loadSkus();
+  }
+
+  appState.skus.forEach(s => {
+      const selected = item && item.sku_id == s.sku_id ? 'selected' : '';
+      skuOptions += `<option value="${s.sku_id}" ${selected} data-unit="${s.standard_unit}" data-case="${s.case_unit_name || ''}" data-spec="${s.case_to_standard_qty || 1}">${s.sku_name}</option>`;
+  });
+
+  const caseQty = item ? parseFloat(item.outbound_case_qty) : '';
+  const singleQty = item ? parseFloat(item.outbound_single_qty) : '';
+  const unit = item ? item.unit_name : '';
+  const caseUnit = item ? item.case_unit_name : '';
+
+  tr.innerHTML = `
+    <td>
+      <select class="form-control" name="items[${index}][sku_id]" onchange="onOutboundSkuChange(this, '${rowId}')" required>
+        ${skuOptions}
+      </select>
+    </td>
+    <td>
+       <span class="inventory-display text-muted small">请选择...</span>
+    </td>
+    <td>
+      <div class="input-group">
+        <input type="number" step="0.01" class="form-control" name="items[${index}][outbound_case_qty]" value="${caseQty}" placeholder="箱数">
+        <span class="input-addon case-unit-display">${caseUnit || '箱'}</span>
+      </div>
+    </td>
+    <td>
+      <div class="input-group">
+        <input type="number" step="0.01" class="form-control" name="items[${index}][outbound_single_qty]" value="${singleQty}" placeholder="散数">
+        <span class="input-addon unit-display">${unit || '个'}</span>
+      </div>
+    </td>
+    <td>
+      <button type="button" class="text danger" onclick="removeOutboundItemRow('${rowId}')">X</button>
+    </td>
+  `;
+
+  tbody.appendChild(tr);
+
+  // Trigger initial inventory check if editing
+  if (item) {
+     const select = tr.querySelector('select');
+     onOutboundSkuChange(select, rowId);
+  }
+}
+
+/**
+ * 移除行
+ */
+function removeOutboundItemRow(rowId) {
+  const row = document.getElementById(rowId);
+  if (row) row.remove();
+}
+
+/**
+ * 当选择SKU变化时
+ */
+async function onOutboundSkuChange(select, rowId) {
+  const row = document.getElementById(rowId);
+  const option = select.options[select.selectedIndex];
+
+  if (!option.value) return;
+
+  const unit = option.dataset.unit;
+  const caseUnit = option.dataset.case || '箱';
+  const skuId = option.value;
+
+  // Update unit labels
+  row.querySelector('.unit-display').textContent = unit;
+  row.querySelector('.case-unit-display').textContent = caseUnit;
+
+  // Fetch Inventory
+  const invDisplay = row.querySelector('.inventory-display');
+  invDisplay.textContent = '查询中...';
+
+  const result = await api.queryInventory(skuId);
+  if (result.success) {
+      invDisplay.textContent = `库存: ${result.data.display_text}`;
+      // Could verify sufficiency here
+  } else {
+      invDisplay.textContent = '查询失败';
+  }
+}
+
+/**
+ * 保存出库单
+ */
+async function saveOutbound(event) {
+  event.preventDefault();
+
+  // Transform form data to JSON structure expected by PHP
+  // Since we use name="items[0][sku_id]", standard FormData might need manual parsing or PHP handles it automatically?
+  // PHP $_POST handles items[0][sku_id] automatically.
+  // But our api.saveOutbound sends JSON body using Object.fromEntries which flattens nested arrays poorly.
+  // We need to construct the object manually.
+
+  const form = event.target;
+  const formData = new FormData(form);
+  const data = {
+      outbound_order_id: formData.get('outbound_order_id'),
+      outbound_date: formData.get('outbound_date'),
+      outbound_type: formData.get('outbound_type'),
+      location_name: formData.get('location_name'),
+      remark: formData.get('remark'),
+      items: []
+  };
+
+  // Parse items
+  // Simple hack: iterate rows
+  const rows = document.querySelectorAll('#outbound-items-body tr');
+  rows.forEach((row, index) => {
+      const skuId = row.querySelector(`select[name*="[sku_id]"]`).value;
+      if (skuId) {
+          data.items.push({
+              sku_id: skuId,
+              outbound_case_qty: row.querySelector(`input[name*="[outbound_case_qty]"]`).value || 0,
+              outbound_single_qty: row.querySelector(`input[name*="[outbound_single_qty]"]`).value || 0
+          });
+      }
+  });
+
+  if (data.items.length === 0) {
+      showAlert('warning', '请至少添加一个物料');
+      return;
+  }
+
+  const result = await api.saveOutbound(data);
+  if (result.success) {
+    showAlert('success', '出库单保存成功');
+    modal.hide('modal-outbound');
+    loadOutboundList();
+  } else {
+    showAlert('danger', '保存失败: ' + result.message);
+  }
+}
+
+/**
+ * 确认出库单
+ */
+async function confirmOutbound(orderId) {
+    if (!confirm('确认后将扣减库存，且不可修改，确定吗？')) return;
+
+    const result = await api.confirmOutbound(orderId);
+    if (result.success) {
+        showAlert('success', '出库单已确认');
+        loadOutboundList();
+    } else {
+        showAlert('danger', '确认失败: ' + result.message);
+    }
+}
+
+/**
+ * 查看出库单 (Reuse Edit Modal in Readonly mode or similar)
+ */
+async function viewOutbound(orderId) {
+    // For simplicity, reuse edit but disable fields
+    await editOutbound(orderId);
+    document.getElementById('modal-outbound-title').textContent = '查看出库单';
+    // Disable all inputs
+    const modalEl = document.getElementById('modal-outbound');
+    const inputs = modalEl.querySelectorAll('input, select, textarea, button');
+    // Note: We should probably keep Close button enabled
 }
 
 /**
