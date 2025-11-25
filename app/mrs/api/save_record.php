@@ -74,6 +74,20 @@ try {
         json_response(false, null, '批次状态不允许添加记录');
     }
 
+    // [FIX] 状态流转：如果是 Draft，自动转为 Receiving
+    if ($batch['batch_status'] === 'draft') {
+        try {
+            $pdo = get_db_connection();
+            $upSql = "UPDATE mrs_batch SET batch_status = 'receiving', updated_at = NOW(6) WHERE batch_id = :bid";
+            $upStmt = $pdo->prepare($upSql);
+            $upStmt->bindValue(':bid', $input['batch_id'], PDO::PARAM_INT);
+            $upStmt->execute();
+        } catch (Exception $e) {
+            // Ignore status update error, just log
+            mrs_log('Auto status update failed: ' . $e->getMessage(), 'WARNING');
+        }
+    }
+
     // 准备数据
     $record_data = [
         'batch_id' => $input['batch_id'],

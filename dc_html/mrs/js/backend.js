@@ -637,9 +637,9 @@ function renderMergePage(data) {
         <td>
           <div class="table-actions">
             <button class="text" onclick="viewRawRecords(${item.sku_id})">查看明细</button>
-            <input type="number" id="case-${index}" value="${item.confirmed_case || 0}" style="width: 70px;" placeholder="箱数" />
-            <input type="number" id="single-${index}" value="${item.confirmed_single || 0}" style="width: 70px;" placeholder="散件" />
-            <button class="secondary" onclick="confirmItem(${index})">确认</button>
+            <input type="number" id="case-${item.sku_id}" value="${item.confirmed_case || 0}" style="width: 70px;" placeholder="箱数" />
+            <input type="number" id="single-${item.sku_id}" value="${item.confirmed_single || 0}" style="width: 70px;" placeholder="散件" />
+            <button class="secondary" onclick="confirmItem(${item.sku_id})">确认</button>
           </div>
         </td>
       </tr>
@@ -1126,15 +1126,102 @@ async function deleteCategory(categoryId) {
 /**
  * 确认单个合并项
  */
-async function confirmItem(index) {
-  showAlert('info', '确认单项功能开发中...');
+async function confirmItem(skuId) {
+  if (!appState.currentBatch) return;
+
+  // Find item by SKU ID instead of index
+  const item = appState.mergeItems.find(i => i.sku_id === skuId);
+
+  if (!item) {
+      showAlert('danger', '数据同步错误，请刷新页面');
+      return;
+  }
+
+  // Get inputs by SKU ID
+  const caseInput = document.getElementById(`case-${skuId}`);
+  const singleInput = document.getElementById(`single-${skuId}`);
+
+  const payload = {
+      batch_id: appState.currentBatch.batch_id,
+      close_batch: false, // Single item confirm does not close batch
+      items: [{
+          sku_id: item.sku_id,
+          case_qty: caseInput.value || 0,
+          single_qty: singleInput.value || 0,
+          expected_qty: item.expected_qty || 0 // pass expected for diff calc
+      }]
+  };
+
+  // Update api call to accept extra data or pass single object
+  // Current api.confirmMerge takes (batchId, items). I need to update it or call api.call directly.
+  // Let's update api.confirmMerge in this file first.
+
+  const result = await api.call('api.php?route=backend_confirm_merge', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+  });
+  if (result.success) {
+      showAlert('success', '已确认');
+      // Refresh to update status badges
+      showMergePage(appState.currentBatch.batch_id);
+  } else {
+      showAlert('danger', '确认失败: ' + result.message);
+  }
 }
 
 /**
  * 确认全部合并
  */
 async function confirmAllMerge() {
-  showAlert('info', '确认全部合并功能开发中...');
+  if (!appState.currentBatch) return;
+  if (!confirm('确定要根据当前的输入值确认所有条目吗？')) return;
+
+  // Gather all items
+  const items = [];
+  if (appState.mergeItems) {
+      appState.mergeItems.forEach((item) => {
+          const caseInput = document.getElementById(`case-${item.sku_id}`);
+          const singleInput = document.getElementById(`single-${item.sku_id}`);
+
+          // Only include if inputs exist (sanity check)
+          if (caseInput && singleInput) {
+              items.push({
+                  sku_id: item.sku_id,
+                  case_qty: caseInput.value || 0,
+                  single_qty: singleInput.value || 0,
+                  expected_qty: item.expected_qty || 0
+              });
+          }
+      });
+  }
+
+  if (items.length === 0) {
+      showAlert('warning', '没有可确认的条目');
+      return;
+  }
+
+  // Close batch when confirming all?
+  // Maybe user wants to confirm all but NOT close?
+  // Usually "Confirm All" implies finishing the task.
+  // I will assume close_batch = true for "Confirm All".
+
+  const payload = {
+      batch_id: appState.currentBatch.batch_id,
+      close_batch: true,
+      items: items
+  };
+
+  const result = await api.call('api.php?route=backend_confirm_merge', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+  });
+
+  if (result.success) {
+      showAlert('success', '全部确认成功');
+      showMergePage(appState.currentBatch.batch_id);
+  } else {
+      showAlert('danger', '批量确认失败: ' + result.message);
+  }
 }
 
 /**

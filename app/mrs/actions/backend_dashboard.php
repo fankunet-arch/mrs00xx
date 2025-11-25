@@ -35,6 +35,7 @@ $current_user = '管理员';
       <div class="menu-item active" data-target="batches">收货批次管理</div>
       <div class="menu-item" data-target="catalog">物料档案(SKU)</div>
       <div class="menu-item" data-target="categories">品类管理</div>
+      <div class="menu-item" data-target="outbound">出库管理</div>
       <div class="menu-item" data-target="reports">统计报表</div>
       <div class="menu-item" data-target="system">系统维护</div>
     </aside>
@@ -197,6 +198,51 @@ $current_user = '管理员';
               <tbody>
                 <tr>
                   <td colspan="4" class="loading">加载中...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- 页面: 出库管理 -->
+      <div class="page" id="page-outbound">
+        <h2>出库管理</h2>
+        <div class="card">
+          <div class="flex-between">
+            <div class="filters">
+              <select id="filter-outbound-status">
+                <option value="">全部状态</option>
+                <option value="draft">草稿</option>
+                <option value="confirmed">已确认</option>
+              </select>
+              <select id="filter-outbound-type">
+                <option value="">全部类型</option>
+                <option value="1">领料</option>
+                <option value="2">调拨</option>
+                <option value="3">退货</option>
+                <option value="4">报废</option>
+              </select>
+              <button class="secondary" onclick="loadOutboundList()">搜索</button>
+            </div>
+            <button onclick="showNewOutboundModal()">新建出库单</button>
+          </div>
+          <div class="table-responsive mt-10">
+            <table>
+              <thead>
+                <tr>
+                  <th>出库单号</th>
+                  <th>类型</th>
+                  <th>日期</th>
+                  <th>去向/门店</th>
+                  <th>状态</th>
+                  <th>数量</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td colspan="7" class="loading">加载中...</td>
                 </tr>
               </tbody>
             </table>
@@ -422,6 +468,67 @@ $current_user = '管理员';
       <div class="modal-actions">
         <button type="button" class="primary" onclick="modal.hide('modal-batch-detail')">关闭</button>
       </div>
+    </div>
+  </div>
+
+  <!-- 模态框: 新建/编辑出库单 -->
+  <div class="modal-backdrop" id="modal-outbound">
+    <div class="modal modal-lg">
+      <div class="modal-header">
+        <h3 id="modal-outbound-title">新建出库单</h3>
+        <button class="text" onclick="modal.hide('modal-outbound')">×</button>
+      </div>
+      <form id="form-outbound" onsubmit="saveOutbound(event)">
+        <input type="hidden" name="outbound_order_id" id="outbound-id" />
+        <div class="modal-body" style="padding-bottom: 0;">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>出库日期 *</label>
+              <input type="date" name="outbound_date" id="outbound-date" required />
+            </div>
+            <div class="form-group">
+              <label>出库类型 *</label>
+              <select name="outbound_type" id="outbound-type" required>
+                <option value="1">领料</option>
+                <option value="2">调拨</option>
+                <option value="3">退货</option>
+                <option value="4">报废</option>
+              </select>
+            </div>
+            <div class="form-group full">
+              <label>去向 (门店/仓库/供应商) *</label>
+              <input type="text" name="location_name" id="outbound-location" required />
+            </div>
+            <div class="form-group full">
+              <label>备注</label>
+              <textarea name="remark" id="outbound-remark" rows="2"></textarea>
+            </div>
+          </div>
+
+          <div class="section-title mt-4 mb-2">出库明细</div>
+          <div class="table-responsive">
+            <table id="outbound-items-table">
+              <thead>
+                <tr>
+                  <th style="width: 30%">物料</th>
+                  <th style="width: 20%">库存参考</th>
+                  <th style="width: 20%">箱数</th>
+                  <th style="width: 20%">散数</th>
+                  <th style="width: 10%">操作</th>
+                </tr>
+              </thead>
+              <tbody id="outbound-items-body">
+                <!-- 动态行 -->
+              </tbody>
+            </table>
+            <button type="button" class="button small secondary mt-2" onclick="addOutboundItemRow()">+ 添加一行</button>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="text" onclick="modal.hide('modal-outbound')">取消</button>
+          <button type="submit">保存</button>
+        </div>
+      </form>
     </div>
   </div>
 

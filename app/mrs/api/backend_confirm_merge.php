@@ -2,7 +2,7 @@
 /**
  * MRS 物料收发管理系统 - 后台API: 确认批次合并
  * 文件路径: app/mrs/api/backend_confirm_merge.php
- * 说明: 确认批次合并并生成确认入库记录
+ * 说明: 确认批次合并并生成确认入库记录 (支持单项和批量)
  */
 
 // 防止直接访问 (适配 Gateway 模式)
@@ -50,11 +50,9 @@ try {
             json_response(false, null, '该批次已确认或过账，不可再次合并');
         }
 
-        // 删除旧的确认记录(如果有)
-        $deleteOldSql = "DELETE FROM mrs_batch_confirmed_item WHERE batch_id = :batch_id";
+        // [FIX] 不再删除所有旧记录，而是针对本次提交的Items进行Upsert操作（先删后增）
+        $deleteOldSql = "DELETE FROM mrs_batch_confirmed_item WHERE batch_id = :batch_id AND sku_id = :sku_id";
         $deleteOldStmt = $pdo->prepare($deleteOldSql);
-        $deleteOldStmt->bindValue(':batch_id', $batchId, PDO::PARAM_INT);
-        $deleteOldStmt->execute();
 
         // 插入新的确认记录
         $insertSql = "INSERT INTO mrs_batch_confirmed_item (
@@ -84,8 +82,14 @@ try {
         $insertStmt = $pdo->prepare($insertSql);
 
         foreach ($items as $item) {
-            // [SECURITY FIX] 绝不信任前端传入的换算率，必须反查数据库
             $skuId = intval($item['sku_id']);
+
+            // 1. 删除该SKU的旧记录 (防止重复)
+            $deleteOldStmt->bindValue(':batch_id', $batchId, PDO::PARAM_INT);
+            $deleteOldStmt->bindValue(':sku_id', $skuId, PDO::PARAM_INT);
+            $deleteOldStmt->execute();
+
+            // [SECURITY FIX] 绝不信任前端传入的换算率，必须反查数据库
             $skuInfo = get_sku_by_id($skuId);
 
             if (!$skuInfo) {
@@ -109,6 +113,7 @@ try {
             $totalStandard = round($rawTotal, 0);
 
             // [PATCH] 归一化逻辑：仅当箱规为整数并且 >0 时做归一化
+            // 利用 mrs_lib 中的逻辑，或者直接这里实现 (为了减少依赖，这里直接保留逻辑，但需保证正确)
             if ($caseToStandard > 0 && fmod($caseToStandard, 1.0) == 0.0) {
                 $caseSize = (int)$caseToStandard;
                 $total    = (int)$totalStandard;
@@ -140,21 +145,51 @@ try {
             $insertStmt->execute();
         }
 
-        // 更新批次状态为已确认
-        $updateBatchSql = "UPDATE mrs_batch SET
-                            batch_status = 'confirmed',
-                            updated_at = NOW(6)
-                        WHERE batch_id = :batch_id";
-        $updateBatchStmt = $pdo->prepare($updateBatchSql);
-        $updateBatchStmt->bindValue(':batch_id', $batchId, PDO::PARAM_INT);
-        $updateBatchStmt->execute();
+        // 批次状态流转逻辑
+        // 如果是"Confirm All"（怎么判断？可能是通过业务逻辑），通常全部确认后批次应标记为 confirmed
+        // 但这里支持Partial Update。
+        // 我们只在明确需要结束批次时才 Update Batch Status。
+        // 目前前端行为：Confirm All 调用此接口。Confirm Single 也调用此接口。
+        // 如果是 Confirm Single，不应该结束批次。
+        // 如何区分？
+        // 简单逻辑：如果确认的 Item 数量 == 预计的 Item 数量？ 不可靠。
+        // 保持 `receiving` 状态，除非显式调用 "Finish Batch"？
+        // 原始代码是直接 Update Status to Confirmed。这会导致 Confirm Single 后批次变成 Confirmed，无法再编辑。
+        // Issue 1 asks for Draft -> Receiving.
+        // Issue 2/3 asks for Confirm functionality.
+        // If I confirm an item, it should NOT close the batch yet, allowing adjustments.
+        // The user says "Adjusting confirmed items... shows dev". Meaning they want to be able to adjust.
+        // So, `backend_confirm_merge.php` should NOT automatically close the batch to `confirmed` unless explicitly requested.
+        // BUT, the original code DID close it.
+        // I will removing the automatic batch status update to `confirmed` here,
+        // OR only do it if a flag `close_batch` is passed.
+        // Since I control frontend, I can pass `close_batch: true` for "Confirm All".
+        // For "Confirm Single", `close_batch: false`.
+
+        $closeBatch = $input['close_batch'] ?? false;
+
+        if ($closeBatch) {
+            // 更新批次状态为已确认
+            $updateBatchSql = "UPDATE mrs_batch SET
+                                batch_status = 'confirmed',
+                                updated_at = NOW(6)
+                            WHERE batch_id = :batch_id";
+            $updateBatchStmt = $pdo->prepare($updateBatchSql);
+            $updateBatchStmt->bindValue(':batch_id', $batchId, PDO::PARAM_INT);
+            $updateBatchStmt->execute();
+        } else {
+             // 确保状态至少是 receiving (或者是 pending_merge?)
+             // 如果还在 draft, 已经在 save_record 变为 receiving 了。
+             // 这里不需要强制变更状态，除非我们想引入 `pending_merge` 状态。
+             // 保持现状即可。
+        }
 
         // 提交事务
         $pdo->commit();
 
         mrs_log("批次合并确认成功: batch_id={$batchId}, items_count=" . count($items), 'INFO');
 
-        json_response(true, null, '批次合并确认成功');
+        json_response(true, null, '确认成功');
 
     } catch (Exception $e) {
         // 回滚事务
