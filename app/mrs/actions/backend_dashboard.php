@@ -36,6 +36,7 @@ $current_user = '管理员';
       <div class="menu-item" data-target="catalog">物料档案(SKU)</div>
       <div class="menu-item" data-target="categories">品类管理</div>
       <div class="menu-item" data-target="reports">统计报表</div>
+      <div class="menu-item" data-target="system">系统维护</div>
     </aside>
 
     <div class="content">
@@ -224,6 +225,17 @@ $current_user = '管理员';
         <div class="card">
           <div id="report-content">
             <div class="empty">请选择报表类型并点击生成报表</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 页面F: 系统维护 -->
+      <div class="page" id="page-system">
+        <h2>系统维护</h2>
+        <div class="card">
+          <div class="section-title">系统健康检查</div>
+          <div id="system-status-container">
+            <p>正在检查系统状态...</p>
           </div>
         </div>
       </div>

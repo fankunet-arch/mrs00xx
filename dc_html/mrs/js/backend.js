@@ -43,7 +43,8 @@ function initDom() {
     merge: document.getElementById('page-merge'),
     catalog: document.getElementById('page-catalog'),
     categories: document.getElementById('page-categories'),
-    reports: document.getElementById('page-reports')
+    reports: document.getElementById('page-reports'),
+    system: document.getElementById('page-system')
   };
 
   // 模态框
@@ -276,6 +277,75 @@ async function loadPageData(pageName) {
     case 'reports':
       await loadReports();
       break;
+    case 'system':
+      await loadSystemStatus();
+      break;
+  }
+}
+
+/**
+ * 加载系统状态
+ */
+async function loadSystemStatus() {
+  const container = document.getElementById('system-status-container');
+  if (!container) return;
+
+  container.innerHTML = '<p class="text-muted">正在检查系统健康状态...</p>';
+
+  const result = await api.call('api.php?route=backend_system_status');
+
+  if (result.success) {
+    if (result.data.healthy) {
+      container.innerHTML = `
+        <div class="alert success">
+          <strong>系统状态良好</strong>
+          <p>数据库结构已是最新。</p>
+        </div>
+      `;
+    } else {
+      let issuesHtml = result.data.issues.map(issue => `<li>${escapeHtml(issue)}</li>`).join('');
+      let actionsHtml = '';
+
+      if (result.data.migration_needed) {
+        actionsHtml = `
+          <div class="mt-4">
+            <button class="warning" onclick="fixSystem()">🛠 修复数据库 (自动迁移)</button>
+          </div>
+        `;
+      }
+
+      container.innerHTML = `
+        <div class="alert danger">
+          <strong>检测到系统问题:</strong>
+          <ul class="mt-2">${issuesHtml}</ul>
+        </div>
+        ${actionsHtml}
+      `;
+    }
+  } else {
+    container.innerHTML = `<div class="alert danger">检查失败: ${escapeHtml(result.message)}</div>`;
+  }
+}
+
+/**
+ * 修复系统问题
+ */
+async function fixSystem() {
+  if (!confirm('确定要执行系统修复操作吗？建议先备份数据库。')) {
+    return;
+  }
+
+  const result = await api.call('api.php?route=backend_system_fix', { method: 'POST' });
+
+  if (result.success) {
+    showAlert('success', '修复成功！');
+    let messages = result.data.messages || [];
+    if (messages.length > 0) {
+      alert('修复详情:\n' + messages.join('\n'));
+    }
+    loadSystemStatus();
+  } else {
+    showAlert('danger', '修复失败: ' + result.message);
   }
 }
 
