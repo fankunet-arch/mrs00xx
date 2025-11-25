@@ -6,6 +6,7 @@
 import { initDom, showPage, modal, showAlert, appState } from './core.js';
 import { batchAPI, skuAPI, categoryAPI } from './api.js';
 import * as Inventory from './inventory.js';
+import './compat.js'; // 导入兼容层，将函数暴露到全局
 
 // 导出全局函数供 HTML 使用（过渡期）
 window.MRS = window.MRS || {};
@@ -28,6 +29,15 @@ async function initApp() {
  * 设置事件委托系统
  */
 function setupEventDelegation() {
+  // 菜单切换事件委托
+  document.addEventListener('click', async (e) => {
+    const menuItem = e.target.closest('.menu-item');
+    if (menuItem && menuItem.dataset.target) {
+      showPage(menuItem.dataset.target);
+      return;
+    }
+  });
+
   // 委托所有按钮点击事件
   document.addEventListener('click', async (e) => {
     const target = e.target.closest('[data-action]');
@@ -96,11 +106,27 @@ function setupEventDelegation() {
  */
 async function loadPageData(pageName) {
   switch (pageName) {
+    case 'batches':
+      await window.loadBatches();
+      break;
+    case 'catalog':
+      await loadCategoryFilterOptions();
+      await window.loadSkus();
+      break;
+    case 'categories':
+      await window.loadCategories();
+      break;
     case 'inventory':
       await loadCategoryFilterOptions();
       await Inventory.loadInventoryList();
       break;
-    // 其他页面的加载逻辑...
+    case 'reports':
+      await window.loadReports();
+      break;
+    case 'system':
+      await window.loadSystemStatus();
+      break;
+    // merge 页面通过 showMergePage 函数单独加载
   }
 }
 
