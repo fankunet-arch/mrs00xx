@@ -215,9 +215,9 @@ $current_user = '管理员';
               <select id="inventory-filter-category">
                 <option value="">全部品类</option>
               </select>
-              <button class="secondary" onclick="loadInventoryList()">搜索</button>
+              <button class="secondary" data-action="searchInventory">搜索</button>
             </div>
-            <button class="secondary" onclick="refreshInventory()">🔄 刷新库存</button>
+            <button class="secondary" data-action="refreshInventory">🔄 刷新库存</button>
           </div>
           <div class="table-responsive mt-10">
             <table>
@@ -531,7 +531,7 @@ $current_user = '管理员';
     <div class="modal modal-large">
       <div class="modal-header">
         <h3>SKU 履历追溯</h3>
-        <button class="text" onclick="modal.hide('modal-sku-history')">×</button>
+        <button class="text" data-action="closeModal" data-modal-id="modal-sku-history">×</button>
       </div>
       <div class="modal-body">
         <div class="form-group">
@@ -558,7 +558,7 @@ $current_user = '管理员';
         </div>
       </div>
       <div class="modal-actions">
-        <button type="button" class="text" onclick="modal.hide('modal-sku-history')">关闭</button>
+        <button type="button" class="text" data-action="closeModal" data-modal-id="modal-sku-history">关闭</button>
       </div>
     </div>
   </div>
@@ -568,9 +568,9 @@ $current_user = '管理员';
     <div class="modal">
       <div class="modal-header">
         <h3>极速出库</h3>
-        <button class="text" onclick="modal.hide('modal-quick-outbound')">×</button>
+        <button class="text" data-action="closeModal" data-modal-id="modal-quick-outbound">×</button>
       </div>
-      <form id="form-quick-outbound" onsubmit="saveQuickOutbound(event)">
+      <form id="form-quick-outbound">
         <input type="hidden" name="sku_id" id="quick-outbound-sku-id" />
         <div class="modal-body">
           <div class="form-group">
@@ -600,7 +600,7 @@ $current_user = '管理员';
           </div>
         </div>
         <div class="modal-actions">
-          <button type="button" class="text" onclick="modal.hide('modal-quick-outbound')">取消</button>
+          <button type="button" class="text" data-action="closeModal" data-modal-id="modal-quick-outbound">取消</button>
           <button type="submit" class="primary">确认出库</button>
         </div>
       </form>
@@ -612,9 +612,9 @@ $current_user = '管理员';
     <div class="modal">
       <div class="modal-header">
         <h3>库存盘点/调整</h3>
-        <button class="text" onclick="modal.hide('modal-inventory-adjust')">×</button>
+        <button class="text" data-action="closeModal" data-modal-id="modal-inventory-adjust">×</button>
       </div>
-      <form id="form-inventory-adjust" onsubmit="saveInventoryAdjustment(event)">
+      <form id="form-inventory-adjust">
         <input type="hidden" name="sku_id" id="adjust-sku-id" />
         <div class="modal-body">
           <div class="form-group">
@@ -640,13 +640,13 @@ $current_user = '管理员';
           </div>
         </div>
         <div class="modal-actions">
-          <button type="button" class="text" onclick="modal.hide('modal-inventory-adjust')">取消</button>
+          <button type="button" class="text" data-action="closeModal" data-modal-id="modal-inventory-adjust">取消</button>
           <button type="submit" class="primary">确认调整</button>
         </div>
       </form>
     </div>
   </div>
 
-  <script src="js/backend.js?v=<?php echo time() + 3; ?>"></script>
+  <script type="module" src="js/modules/main.js?v=<?php echo time() + 3; ?>"></script>
 </body>
 </html>
