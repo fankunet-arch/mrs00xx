@@ -284,6 +284,10 @@ th {
   background: var(--danger);
 }
 
+.badge.primary {
+  background: var(--primary);
+}
+
 .tag-row {
   display: flex;
   gap: 8px;
