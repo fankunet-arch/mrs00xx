@@ -35,7 +35,7 @@ $current_user = '管理员';
       <div class="menu-item active" data-target="batches">收货批次管理</div>
       <div class="menu-item" data-target="catalog">物料档案(SKU)</div>
       <div class="menu-item" data-target="categories">品类管理</div>
-      <div class="menu-item" data-target="outbound">出库记录(只读)</div>
+      <div class="menu-item" data-target="inventory">库存管理</div>
       <div class="menu-item" data-target="reports">统计报表</div>
       <div class="menu-item" data-target="system">系统维护</div>
     </aside>
@@ -205,44 +205,38 @@ $current_user = '管理员';
         </div>
       </div>
 
-      <!-- 页面: 出库记录(只读) -->
-      <div class="page" id="page-outbound">
-        <h2>出库记录（只读查询）</h2>
+      <!-- 页面: 库存管理 -->
+      <div class="page" id="page-inventory">
+        <h2>库存管理</h2>
         <div class="card">
-          <p class="muted mb-2">💡 提示：出库操作已简化，请前往"物料档案(SKU)"页面，点击对应SKU的"出库"按钮进行快速出库。</p>
           <div class="flex-between">
             <div class="filters">
-              <select id="filter-outbound-status">
-                <option value="">全部状态</option>
-                <option value="draft">草稿</option>
-                <option value="confirmed">已确认</option>
+              <input type="text" id="inventory-filter-search" placeholder="搜索SKU名称" />
+              <select id="inventory-filter-category">
+                <option value="">全部品类</option>
               </select>
-              <select id="filter-outbound-type">
-                <option value="">全部类型</option>
-                <option value="1">领料</option>
-                <option value="2">调拨</option>
-                <option value="3">退货</option>
-                <option value="4">报废</option>
-              </select>
-              <button class="secondary" onclick="loadOutboundList()">搜索</button>
+              <button class="secondary" onclick="loadInventoryList()">搜索</button>
             </div>
+            <button class="secondary" onclick="refreshInventory()">🔄 刷新库存</button>
           </div>
           <div class="table-responsive mt-10">
             <table>
               <thead>
                 <tr>
-                  <th>出库单号</th>
-                  <th>类型</th>
-                  <th>日期</th>
-                  <th>去向/门店</th>
-                  <th>状态</th>
-                  <th>数量</th>
+                  <th>SKU名称</th>
+                  <th>品类</th>
+                  <th>品牌</th>
+                  <th>单位</th>
+                  <th>当前库存</th>
+                  <th>入库总量</th>
+                  <th>出库总量</th>
+                  <th>调整总量</th>
                   <th>操作</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td colspan="7" class="loading">加载中...</td>
+                  <td colspan="9" class="loading">加载中...</td>
                 </tr>
               </tbody>
             </table>

@@ -181,13 +181,62 @@ button.light-success:hover {
 
 button.text {
   background: transparent;
-  color: var(--muted);
+  color: #4b5563; /* gray-600 */
   box-shadow: none;
+  padding: 8px 12px;
+  font-weight: 500;
 }
 
 button.text:hover {
-  background: rgba(0,0,0,0.04);
+  background: rgba(0,0,0,0.06);
   transform: none;
+}
+
+/* Text button variants with specific colors */
+button.text.primary {
+  color: #2563eb; /* blue-600 */
+}
+
+button.text.primary:hover {
+  background: rgba(37, 99, 235, 0.1);
+  color: #1d4ed8; /* blue-700 */
+}
+
+button.text.danger {
+  color: #dc2626; /* red-600 */
+}
+
+button.text.danger:hover {
+  background: rgba(220, 38, 38, 0.1);
+  color: #b91c1c; /* red-700 */
+}
+
+button.text.success {
+  color: #16a34a; /* green-600 */
+}
+
+button.text.success:hover {
+  background: rgba(22, 163, 74, 0.1);
+  color: #15803d; /* green-700 */
+}
+
+button.text.info {
+  color: #0891b2; /* cyan-600 */
+}
+
+button.text.info:hover {
+  background: rgba(8, 145, 178, 0.1);
+  color: #0e7490; /* cyan-700 */
+}
+
+button.text.secondary {
+  color: #64748b; /* slate-500 */
+  font-weight: 500;
+}
+
+button.text.secondary:hover {
+  background: rgba(100, 116, 139, 0.1);
+  color: #475569; /* slate-600 */
 }
 
 table {

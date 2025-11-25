@@ -11,6 +11,7 @@ const appState = {
   batches: [],
   categories: [],
   skus: [],
+  inventory: [],
   currentBatch: null,
   currentSku: null,
   currentCategory: null
@@ -43,7 +44,7 @@ function initDom() {
     merge: document.getElementById('page-merge'),
     catalog: document.getElementById('page-catalog'),
     categories: document.getElementById('page-categories'),
-    outbound: document.getElementById('page-outbound'),
+    inventory: document.getElementById('page-inventory'),
     reports: document.getElementById('page-reports'),
     system: document.getElementById('page-system')
   };
@@ -297,6 +298,24 @@ const api = {
    */
   async getSkuHistory(skuId) {
     return await this.call(`api.php?route=backend_sku_history&sku_id=${skuId}`);
+  },
+
+  /**
+   * 更新SKU状态
+   */
+  async updateSkuStatus(skuId, status) {
+    return await this.call('api.php?route=backend_save_sku', {
+      method: 'POST',
+      body: JSON.stringify({ sku_id: skuId, status: status })
+    });
+  },
+
+  /**
+   * 获取库存列表
+   */
+  async getInventoryList(filters = {}) {
+    const params = new URLSearchParams(filters);
+    return await this.call(`api.php?route=backend_inventory_list&${params}`);
   }
 };
 
@@ -345,8 +364,9 @@ async function loadPageData(pageName) {
     case 'categories':
       await loadCategories();
       break;
-    case 'outbound':
-      await loadOutboundList();
+    case 'inventory':
+      await loadCategoryFilterOptions(); // 为筛选器加载品类选项
+      await loadInventoryList();
       break;
     case 'reports':
       await loadReports();
@@ -517,6 +537,16 @@ function renderSkus() {
       ? `1 ${sku.case_unit_name} = ${formattedQty} ${sku.standard_unit}`
       : '—';
 
+    // 状态显示
+    const status = sku.status || 'active';
+    const statusBadge = status === 'active'
+      ? '<span class="badge success">上架</span>'
+      : '<span class="badge secondary">下架</span>';
+
+    const statusAction = status === 'active'
+      ? `<button class="text secondary" onclick="toggleSkuStatus(${sku.sku_id}, 'inactive')" title="设为下架">下架</button>`
+      : `<button class="text success" onclick="toggleSkuStatus(${sku.sku_id}, 'active')" title="设为上架">上架</button>`;
+
     return `
       <tr>
         <td>${escapeHtml(sku.sku_name)}</td>
@@ -525,12 +555,10 @@ function renderSkus() {
         <td>${sku.is_precise_item ? '精计' : '粗计'}</td>
         <td>${escapeHtml(sku.standard_unit)}</td>
         <td>${escapeHtml(unitRule)}</td>
-        <td><span class="badge success">启用</span></td>
+        <td>${statusBadge}</td>
         <td class="table-actions">
-          <button class="text info" onclick="viewSkuHistory(${sku.sku_id})" title="查看履历">📜 履历</button>
-          <button class="text primary" onclick="showQuickOutboundModal(${sku.sku_id})" title="极速出库">🔴 出库</button>
-          <button class="text success" onclick="showInventoryAdjustModal(${sku.sku_id})" title="库存盘点">⚖️ 盘点</button>
-          <button class="text" onclick="editSku(${sku.sku_id})">编辑</button>
+          ${statusAction}
+          <button class="text primary" onclick="editSku(${sku.sku_id})">编辑</button>
           <button class="text danger" onclick="deleteSku(${sku.sku_id})">删除</button>
         </td>
       </tr>
@@ -555,19 +583,30 @@ async function loadCategories() {
 }
 
 /**
- * 加载品类筛选选项 (for SKU catalog filter)
+ * 加载品类筛选选项 (for SKU catalog and inventory filters)
  */
 async function loadCategoryFilterOptions() {
   const result = await api.getCategories();
   if (result.success) {
-    const select = document.getElementById('catalog-filter-category');
-    if (select) {
-      const currentVal = select.value;
-      select.innerHTML = '<option value="">全部品类</option>' +
+    // 更新 SKU 页面的筛选器
+    const catalogSelect = document.getElementById('catalog-filter-category');
+    if (catalogSelect) {
+      const currentVal = catalogSelect.value;
+      catalogSelect.innerHTML = '<option value="">全部品类</option>' +
         result.data.map(cat => `<option value="${cat.category_id}">${escapeHtml(cat.category_name)}</option>`).join('');
-      // 尝试恢复之前的选择
       if (currentVal) {
-        select.value = currentVal;
+        catalogSelect.value = currentVal;
+      }
+    }
+
+    // 更新库存页面的筛选器
+    const inventorySelect = document.getElementById('inventory-filter-category');
+    if (inventorySelect) {
+      const currentVal = inventorySelect.value;
+      inventorySelect.innerHTML = '<option value="">全部品类</option>' +
+        result.data.map(cat => `<option value="${cat.category_id}">${escapeHtml(cat.category_name)}</option>`).join('');
+      if (currentVal) {
+        inventorySelect.value = currentVal;
       }
     }
   }
@@ -1777,6 +1816,108 @@ async function saveInventoryAdjustment(event) {
     }
   } catch (error) {
     console.error('库存调整失败:', error);
+    showAlert('danger', '系统错误');
+  }
+}
+
+// ============================================
+// 库存管理功能
+// ============================================
+
+/**
+ * 加载库存列表
+ */
+async function loadInventoryList() {
+  const filters = {
+    search: document.getElementById('inventory-filter-search')?.value.trim() || '',
+    category_id: document.getElementById('inventory-filter-category')?.value || ''
+  };
+
+  const result = await api.getInventoryList(filters);
+
+  if (result.success) {
+    appState.inventory = result.data;
+    renderInventoryList();
+  } else {
+    showAlert('danger', '加载库存列表失败: ' + result.message);
+  }
+}
+
+/**
+ * 渲染库存列表
+ */
+function renderInventoryList() {
+  const tbody = document.querySelector('#page-inventory tbody');
+  if (!tbody) return;
+
+  if (!appState.inventory || appState.inventory.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="9" class="empty">暂无库存数据</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = appState.inventory.map(item => {
+    // 库存显示颜色
+    let inventoryClass = '';
+    if (item.current_inventory <= 0) {
+      inventoryClass = 'text-danger'; // 红色 - 缺货
+    } else if (item.current_inventory < 10) {
+      inventoryClass = 'text-warning'; // 黄色 - 低库存
+    } else {
+      inventoryClass = 'text-success'; // 绿色 - 正常
+    }
+
+    return `
+      <tr>
+        <td>${escapeHtml(item.sku_name)}</td>
+        <td>${escapeHtml(item.category_name)}</td>
+        <td>${escapeHtml(item.brand_name)}</td>
+        <td>${escapeHtml(item.standard_unit)}</td>
+        <td class="${inventoryClass}" style="font-weight: bold;">${escapeHtml(item.display_text)}</td>
+        <td>${item.total_inbound}</td>
+        <td>${item.total_outbound}</td>
+        <td>${item.total_adjustment}</td>
+        <td class="table-actions">
+          <button class="text info" onclick="viewSkuHistory(${item.sku_id})" title="查看履历">📜 履历</button>
+          <button class="text danger" onclick="showQuickOutboundModal(${item.sku_id})" title="出库">出库</button>
+          <button class="text success" onclick="showInventoryAdjustModal(${item.sku_id})" title="盘点">盘点</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+/**
+ * 刷新库存
+ */
+async function refreshInventory() {
+  await loadInventoryList();
+  showAlert('success', '库存数据已刷新');
+}
+
+// ============================================
+// SKU 状态管理功能
+// ============================================
+
+/**
+ * 切换SKU状态(上架/下架)
+ */
+async function toggleSkuStatus(skuId, newStatus) {
+  if (!confirm(`确定要将此SKU设为${newStatus === 'active' ? '上架' : '下架'}状态吗？`)) {
+    return;
+  }
+
+  try {
+    const result = await api.updateSkuStatus(skuId, newStatus);
+
+    if (result.success) {
+      showAlert('success', `SKU状态已更新为${newStatus === 'active' ? '上架' : '下架'}`);
+      // 刷新SKU列表
+      await loadSkus();
+    } else {
+      showAlert('danger', '更新状态失败: ' + result.message);
+    }
+  } catch (error) {
+    console.error('更新SKU状态失败:', error);
     showAlert('danger', '系统错误');
   }
 }
