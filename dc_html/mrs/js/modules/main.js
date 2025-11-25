@@ -104,6 +104,7 @@ function setupEventDelegation() {
     const action = target.dataset.action;
     const skuId = target.dataset.skuId ? parseInt(target.dataset.skuId) : null;
     const batchId = target.dataset.batchId ? parseInt(target.dataset.batchId) : null;
+    const categoryId = target.dataset.categoryId ? parseInt(target.dataset.categoryId) : null;
 
     // 根据 action 执行对应操作
     switch (action) {
@@ -113,6 +114,24 @@ function setupEventDelegation() {
         break;
       case 'showNewBatchModal':
         Batch.showNewBatchModal();
+        break;
+      case 'viewBatch':
+        if (batchId) await Batch.viewBatch(batchId);
+        break;
+      case 'editBatch':
+        if (batchId) await Batch.editBatch(batchId);
+        break;
+      case 'deleteBatch':
+        if (batchId) await Batch.deleteBatch(batchId);
+        break;
+      case 'showMergePage':
+        if (batchId) await Batch.showMergePage(batchId);
+        break;
+      case 'viewRawRecords':
+        if (skuId) await Batch.viewRawRecords(skuId);
+        break;
+      case 'confirmItem':
+        if (skuId) await Batch.confirmItem(skuId);
         break;
       case 'confirmAllMerge':
         await Batch.confirmAllMerge();
@@ -127,6 +146,15 @@ function setupEventDelegation() {
         break;
       case 'showNewSkuModal':
         SKU.showNewSkuModal();
+        break;
+      case 'editSku':
+        if (skuId) await SKU.editSku(skuId);
+        break;
+      case 'deleteSku':
+        if (skuId) await SKU.deleteSku(skuId);
+        break;
+      case 'toggleSkuStatus':
+        if (skuId) await SKU.toggleSkuStatus(skuId, target.dataset.status);
         break;
       case 'showImportSkuModal':
         SKU.showImportSkuModal();
@@ -150,6 +178,12 @@ function setupEventDelegation() {
         break;
       case 'showNewCategoryModal':
         Category.showNewCategoryModal();
+        break;
+      case 'editCategory':
+        if (categoryId) await Category.editCategory(categoryId);
+        break;
+      case 'deleteCategory':
+        if (categoryId) await Category.deleteCategory(categoryId);
         break;
 
       // 库存相关操作
@@ -304,7 +338,7 @@ async function loadCategoryFilterOptions() {
     if (catalogSelect) {
       const currentVal = catalogSelect.value;
       catalogSelect.innerHTML = '<option value="">全部品类</option>' +
-        result.data.map(cat => `<option value="${cat.category_id}">${cat.category_name}</option>`).join('');
+        result.data.categories.map(cat => `<option value="${cat.category_id}">${cat.category_name}</option>`).join('');
       if (currentVal) catalogSelect.value = currentVal;
     }
 
@@ -313,7 +347,7 @@ async function loadCategoryFilterOptions() {
     if (inventorySelect) {
       const currentVal = inventorySelect.value;
       inventorySelect.innerHTML = '<option value="">全部品类</option>' +
-        result.data.map(cat => `<option value="${cat.category_id}">${cat.category_name}</option>`).join('');
+        result.data.categories.map(cat => `<option value="${cat.category_id}">${cat.category_name}</option>`).join('');
       if (currentVal) inventorySelect.value = currentVal;
     }
   }

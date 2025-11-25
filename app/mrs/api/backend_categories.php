@@ -43,7 +43,7 @@ try {
 
     $categories = $stmt->fetchAll();
 
-    json_response(true, $categories);
+    json_response(true, ['categories' => $categories]);
 
 } catch (PDOException $e) {
     mrs_log('获取品类列表失败: ' . $e->getMessage(), 'ERROR');

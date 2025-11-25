@@ -18,7 +18,7 @@ export async function loadInventoryList() {
   const result = await inventoryAPI.getInventoryList(filters);
 
   if (result.success) {
-    appState.inventory = result.data;
+    appState.inventory = result.data.inventory;
     renderInventoryList();
   } else {
     showAlert('danger', '加载库存列表失败: ' + result.message);
