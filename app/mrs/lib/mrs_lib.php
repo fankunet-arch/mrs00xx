@@ -414,6 +414,76 @@ function generate_batch_code($date = null) {
 }
 
 /**
+ * 生成出库单编号
+ * @param string $date 日期 (Y-m-d)
+ * @return string
+ */
+function generate_outbound_code($date = null) {
+    if ($date === null) {
+        $date = date('Y-m-d');
+    }
+
+    try {
+        $pdo = get_db_connection();
+
+        // 查找当天已有的最大序号
+        $sql = "SELECT outbound_code
+                FROM mrs_outbound_order
+                WHERE outbound_date = :outbound_date
+                ORDER BY outbound_code DESC
+                LIMIT 1";
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->bindValue(':outbound_date', $date, PDO::PARAM_STR);
+        $stmt->execute();
+
+        $last_code = $stmt->fetchColumn();
+
+        if ($last_code) {
+            // 提取最后的序号 (OUT-YYYY-MM-DD-001)
+            preg_match('/-(\d+)$/', $last_code, $matches);
+            $next_seq = isset($matches[1]) ? (int)$matches[1] + 1 : 1;
+        } else {
+            $next_seq = 1;
+        }
+
+        // 生成新编号: OUT-2025-11-24-001
+        return sprintf('OUT-%s-%03d', $date, $next_seq);
+
+    } catch (PDOException $e) {
+        mrs_log('生成出库单编号失败: ' . $e->getMessage(), 'ERROR');
+        return 'OUT-' . $date . '-' . time();
+    }
+}
+
+/**
+ * 归一化库存数量 (Auto-Normalization)
+ * 逻辑：根据箱规将 输入的整件+散件 转换为 总标准单位整数
+ *
+ * @param float|string $case_qty 输入整箱数 (可能是小数, 如 1.5)
+ * @param float|string $single_qty 输入散件数
+ * @param float|string $case_spec 箱规 (1箱 = ?标准单位)
+ * @return int 总标准单位数量 (整数)
+ */
+function normalize_quantity_to_storage($case_qty, $single_qty, $case_spec) {
+    $case_qty = floatval($case_qty);
+    $single_qty = floatval($single_qty);
+    $case_spec = floatval($case_spec);
+
+    // 如果没有箱规(0 or 1)，则 case_qty 也是标准单位
+    if ($case_spec <= 1) {
+        return (int)round($case_qty + $single_qty);
+    }
+
+    // 计算总数：(箱数 * 箱规) + 散件数
+    // 例如：1.5 箱 * 10 + 0 = 15
+    $total = ($case_qty * $case_spec) + $single_qty;
+
+    // 强制取整 (四舍五入)
+    return (int)round($total);
+}
+
+/**
  * 验证批次状态是否允许添加记录
  * @param string $status
  * @return bool
