@@ -366,8 +366,11 @@ function renderSkus() {
   }
 
   tbody.innerHTML = appState.skus.map(sku => {
+    // [FIX] Format quantity to remove trailing zeros (e.g., 20.0000 -> 20, 20.50 -> 20.5)
+    const formattedQty = sku.case_to_standard_qty ? parseFloat(sku.case_to_standard_qty) : '';
+
     const unitRule = sku.case_unit_name
-      ? `1 ${sku.case_unit_name} = ${sku.case_to_standard_qty} ${sku.standard_unit}`
+      ? `1 ${sku.case_unit_name} = ${formattedQty} ${sku.standard_unit}`
       : '—';
 
     return `
