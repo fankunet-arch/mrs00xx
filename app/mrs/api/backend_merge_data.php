@@ -156,41 +156,65 @@ try {
     // 生成合并建议
     $items = [];
     foreach ($skuMap as $skuId => $data) {
-        $totalStandard = $data['raw_total_standard'];
+        // [FIX] 始终使用当前原始记录计算的总数
+        $currentRawTotal = $data['raw_total_standard'];
         $expectedQty = $data['expected_qty'];
 
-        // 计算箱数和散件数
+        // 根据当前原始记录计算箱数和散件数
         $caseQty = 0;
         $singleQty = 0;
 
         if ($data['case_to_standard_qty'] > 0) {
-            $caseQty = floor($totalStandard / $data['case_to_standard_qty']);
-            $singleQty = $totalStandard % $data['case_to_standard_qty'];
+            $caseQty = floor($currentRawTotal / $data['case_to_standard_qty']);
+            $singleQty = $currentRawTotal % $data['case_to_standard_qty'];
         } else {
-            $singleQty = $totalStandard;
+            $singleQty = $currentRawTotal;
         }
 
-        // [FIX] 如果存在已确认记录，优先使用已确认的值
+        // [FIX] 检查是否存在已确认记录，并对比数据是否变更
         $isConfirmed = false;
+        $confirmedTotal = 0;
+        $confirmedCase = 0;
+        $confirmedSingle = 0;
+        $hasDataChanged = false; // 新增字段：标记数据是否已变更
+
         if (isset($confirmedMap[$skuId])) {
             $c = $confirmedMap[$skuId];
-            $caseQty = floatval($c['confirmed_case_qty']); // 使用已保存的箱数
-            $singleQty = floatval($c['confirmed_single_qty']); // 使用已保存的散数
-            $totalStandard = floatval($c['total_standard_qty']); // 使用已保存的总数来计算状态
+            $confirmedCase = floatval($c['confirmed_case_qty']);
+            $confirmedSingle = floatval($c['confirmed_single_qty']);
+            $confirmedTotal = floatval($c['total_standard_qty']);
             $isConfirmed = true;
+
+            // [FIX CRITICAL] 对比已确认数量和当前原始记录总数
+            // 如果不一致，说明有新的原始记录被添加，需要重新确认
+            if (abs($confirmedTotal - $currentRawTotal) > 0.001) { // 使用浮点数比较容差
+                $hasDataChanged = true;
+                // 当数据变更时，使用当前原始记录的数量作为建议值
+                // 保留已确认的值用于前端对比显示
+            } else {
+                // 数据未变更，使用已确认的值
+                $caseQty = $confirmedCase;
+                $singleQty = $confirmedSingle;
+            }
         }
 
-        // 判断状态
+        // 判断状态（始终基于当前原始记录总数）
         $status = 'normal';
         $statusText = '正常';
         if ($expectedQty > 0) {
-            if ($totalStandard > $expectedQty) {
+            if ($currentRawTotal > $expectedQty) {
                 $status = 'over';
                 $statusText = '超收';
-            } elseif ($totalStandard < $expectedQty) {
+            } elseif ($currentRawTotal < $expectedQty) {
                 $status = 'under';
                 $statusText = '少收';
             }
+        }
+
+        // [FIX] 如果数据已变更，标记为需要重新确认
+        if ($hasDataChanged) {
+            $status = 'changed';
+            $statusText = '数据已变更，需重新确认';
         }
 
         // 生成原始记录摘要
@@ -211,11 +235,13 @@ try {
             'expected_qty' => $expectedQty,
             'expected_unit' => $data['expected_unit'],
             'raw_summary' => implode(' + ', $rawSummary),
-            'raw_total_standard' => $totalStandard,
+            'raw_total_standard' => $currentRawTotal, // [FIX] 始终返回当前原始记录总数
             'suggested_qty' => $caseQty . ' ' . ($data['case_unit_name'] ?: '箱') . ' + ' . $singleQty . ' ' . $data['standard_unit'],
             'confirmed_case' => $caseQty,
             'confirmed_single' => $singleQty,
             'is_confirmed' => $isConfirmed,
+            'has_data_changed' => $hasDataChanged, // [FIX] 新增字段
+            'confirmed_total' => $confirmedTotal, // [FIX] 返回已确认的总数用于对比
             'status' => $status,
             'status_text' => $statusText
         ];

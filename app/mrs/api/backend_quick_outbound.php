@@ -44,14 +44,22 @@ try {
     $pdo->beginTransaction();
 
     try {
+        // [FIX CONCURRENCY] 使用悲观锁防止并发出库导致超卖
+        // 锁定 SKU 记录，确保同一个 SKU 的并发出库操作串行化
+        $lockSql = "SELECT sku_id, sku_name FROM mrs_sku WHERE sku_id = :sku_id FOR UPDATE";
+        $lockStmt = $pdo->prepare($lockSql);
+        $lockStmt->bindValue(':sku_id', $skuId, PDO::PARAM_INT);
+        $lockStmt->execute();
+        $lockedSku = $lockStmt->fetch();
+
         // 1. 查询SKU是否存在
         $sku = get_sku_by_id($skuId);
-        if (!$sku) {
+        if (!$sku || !$lockedSku) {
             $pdo->rollBack();
             json_response(false, null, 'SKU不存在');
         }
 
-        // 2. 检查库存是否足够
+        // 2. [FIX] 在锁保护下检查库存是否足够
         // 入库总量
         $inboundSql = "SELECT COALESCE(SUM(total_standard_qty), 0) as total
                        FROM mrs_batch_confirmed_item
@@ -82,6 +90,9 @@ try {
 
         // 当前库存 = 入库 - 出库 + 调整
         $currentInventory = $totalInbound - $totalOutbound + $totalAdjustment;
+
+        // [FIX] 记录详细的库存检查日志，用于并发问题排查
+        mrs_log("极速出库库存检查: sku_id={$skuId}, 当前库存={$currentInventory}, 出库数量={$qty}, 入库={$totalInbound}, 出库={$totalOutbound}, 调整={$totalAdjustment}", 'INFO');
 
         // 检查库存是否足够
         if ($currentInventory < $qty) {
