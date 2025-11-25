@@ -114,6 +114,10 @@ export const skuAPI = {
       method: 'POST',
       body: JSON.stringify({ text })
     });
+  },
+
+  async getSkuDetail(skuId) {
+    return await call(`api.php?route=backend_sku_detail&sku_id=${skuId}`);
   }
 };
 
@@ -136,6 +140,10 @@ export const categoryAPI = {
       method: 'POST',
       body: JSON.stringify({ category_id: categoryId })
     });
+  },
+
+  async getCategoryDetail(categoryId) {
+    return await call(`api.php?route=backend_category_detail&category_id=${categoryId}`);
   }
 };
 
