@@ -157,6 +157,7 @@ export async function showMergePage(batchId) {
   const result = await batchAPI.getMergeData(batchId);
   if (result.success) {
     appState.currentBatch = { batch_id: batchId, ...result.data.batch };
+    appState.mergeItems = result.data.items || []; // 保存到 appState
     renderMergePage(result.data);
     showPage('merge');
   } else {
@@ -190,20 +191,29 @@ function renderMergePage(data) {
 
   tbody.innerHTML = data.items.map(item => {
     const isConfirmed = item.merge_status === 'confirmed';
+
+    // 渲染操作列：包含查看明细、输入框和确认按钮
     const actions = isConfirmed
       ? '<span class="badge success">✓ 已确认</span>'
-      : `<button class="success" onclick="confirmItem(${item.sku_id})">确认入库</button>`;
+      : `
+        <div style="display: flex; gap: 4px; align-items: center; flex-wrap: wrap;">
+          <button class="text" onclick="viewRawRecords(${item.sku_id})">查看明细</button>
+          <input type="number" id="case-${item.sku_id}" value="${item.confirmed_case || 0}" style="width: 70px;" placeholder="箱数" min="0" step="1" />
+          <input type="number" id="single-${item.sku_id}" value="${item.confirmed_single || 0}" style="width: 70px;" placeholder="散件" min="0" step="1" />
+          <button class="secondary" onclick="confirmItem(${item.sku_id})">确认</button>
+        </div>
+      `;
 
     return `
       <tr class="${isConfirmed ? 'confirmed' : ''}">
         <td>${escapeHtml(item.sku_name)}</td>
         <td>${escapeHtml(item.category_name || '-')}</td>
         <td>${item.is_precise_item ? '精计' : '粗计'}</td>
-        <td>${escapeHtml(item.unit_rule || '-')}</td>
-        <td><strong>${item.estimated_qty || 0}</strong></td>
-        <td><button class="text info" onclick="viewRawRecords(${item.sku_id})">查看</button></td>
-        <td>${item.suggestion || '-'}</td>
-        <td>${isConfirmed ? '<span class="badge success">已确认</span>' : '<span class="badge secondary">待确认</span>'}</td>
+        <td>${item.case_unit_name ? `1 ${item.case_unit_name} = ${parseFloat(item.case_to_standard_qty)} ${item.standard_unit}` : '—'}</td>
+        <td><strong>${item.expected_qty || 0}</strong></td>
+        <td>${escapeHtml(item.raw_summary || '-')}</td>
+        <td><span class="pill">${escapeHtml(item.suggested_qty || '-')}</span></td>
+        <td><span class="badge ${item.status === 'normal' ? 'success' : item.status === 'over' ? 'warning' : 'danger'}">${item.status_text || '正常'}</span></td>
         <td class="table-actions">${actions}</td>
       </tr>
     `;
@@ -214,9 +224,45 @@ function renderMergePage(data) {
  * 确认单个项目
  */
 export async function confirmItem(skuId) {
-  const result = await batchAPI.confirmMerge(appState.currentBatch.batch_id, skuId);
+  if (!appState.currentBatch) return;
+
+  // 从 appState 中找到对应的 item
+  const item = appState.mergeItems.find(i => i.sku_id === skuId);
+  if (!item) {
+    showAlert('danger', '数据同步错误，请刷新页面');
+    return;
+  }
+
+  // 读取输入框的值
+  const caseInput = document.getElementById(`case-${skuId}`);
+  const singleInput = document.getElementById(`single-${skuId}`);
+
+  if (!caseInput || !singleInput) {
+    showAlert('danger', '输入框未找到，请刷新页面');
+    return;
+  }
+
+  // 构建 payload
+  const payload = {
+    batch_id: appState.currentBatch.batch_id,
+    close_batch: false, // 单个确认不关闭批次
+    items: [{
+      sku_id: item.sku_id,
+      case_qty: parseFloat(caseInput.value) || 0,
+      single_qty: parseFloat(singleInput.value) || 0,
+      expected_qty: item.expected_qty || 0
+    }]
+  };
+
+  // 使用 api.js 中的 call 函数直接调用 API
+  const call = (await import('./api.js')).call;
+  const result = await call('api.php?route=backend_confirm_merge', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+
   if (result.success) {
-    showAlert('success', '确认成功');
+    showAlert('success', '已确认');
     await showMergePage(appState.currentBatch.batch_id);
   } else {
     showAlert('danger', '确认失败: ' + result.message);
@@ -227,15 +273,53 @@ export async function confirmItem(skuId) {
  * 确认全部
  */
 export async function confirmAllMerge() {
-  if (!confirm('确认全部并入库？')) return;
+  if (!appState.currentBatch) return;
+  if (!confirm('确定要根据当前的输入值确认所有条目吗？')) return;
 
-  const result = await batchAPI.confirmMerge(appState.currentBatch.batch_id, null);
+  // 收集所有项目的输入值
+  const items = [];
+  if (appState.mergeItems) {
+    appState.mergeItems.forEach((item) => {
+      const caseInput = document.getElementById(`case-${item.sku_id}`);
+      const singleInput = document.getElementById(`single-${item.sku_id}`);
+
+      // 只包含输入框存在的项目（未确认的项目）
+      if (caseInput && singleInput) {
+        items.push({
+          sku_id: item.sku_id,
+          case_qty: parseFloat(caseInput.value) || 0,
+          single_qty: parseFloat(singleInput.value) || 0,
+          expected_qty: item.expected_qty || 0
+        });
+      }
+    });
+  }
+
+  if (items.length === 0) {
+    showAlert('warning', '没有可确认的条目');
+    return;
+  }
+
+  // 构建 payload
+  const payload = {
+    batch_id: appState.currentBatch.batch_id,
+    close_batch: true, // 确认全部时关闭批次
+    items: items
+  };
+
+  // 使用 api.js 中的 call 函数直接调用 API
+  const call = (await import('./api.js')).call;
+  const result = await call('api.php?route=backend_confirm_merge', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+
   if (result.success) {
     showAlert('success', '全部确认成功');
     showPage('batches');
     loadBatches();
   } else {
-    showAlert('danger', '确认失败: ' + result.message);
+    showAlert('danger', '批量确认失败: ' + result.message);
   }
 }
 
