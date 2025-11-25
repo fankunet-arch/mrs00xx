@@ -146,7 +146,7 @@ function renderBatches() {
 }
 
 /**
- * 渲染批次信息
+ * 渲染批次信息 (紧凑版 - 优化首屏空间)
  */
 function renderBatchInfo() {
   if (!appState.currentBatch) {
@@ -154,24 +154,42 @@ function renderBatchInfo() {
     return;
   }
 
+  // 清空原有网格内容
   dom.batchInfoGrid.innerHTML = '';
-  const infoItems = [
-    { label: '批次编号', value: appState.currentBatch.batch_code },
-    { label: '收货日期', value: appState.currentBatch.batch_date },
-    { label: '地点', value: appState.currentBatch.location_name },
-    { label: '状态', value: getStatusText(appState.currentBatch.batch_status) },
-  ];
 
+  // 移除原有的 grid 样式（如果是在 CSS 中定义的 .info-grid，这里通过 JS 覆盖样式或更改 class 亦可，
+  // 但最简单的是直接渲染不同的 HTML 结构）
+  dom.batchInfoGrid.className = ''; // 移除 .info-grid class 以取消网格布局
+
+  // 构造紧凑的信息字符串
+  const batchCode = appState.currentBatch.batch_code;
+  const date = appState.currentBatch.batch_date;
+  const location = appState.currentBatch.location_name;
+  const status = getStatusText(appState.currentBatch.batch_status);
+
+  // 构造一行显示的 HTML
+  const div = document.createElement('div');
+  div.className = 'compact-info-bar';
+
+  // 使用 innerHTML 填充内容
+  div.innerHTML = `
+    <span class="compact-info-item"><strong>${batchCode}</strong></span>
+    <span class="compact-info-item">${date}</span>
+    <span class="compact-info-item">${location}</span>
+    <span class="compact-info-item">${status}</span>
+  `;
+
+  // 如果有备注，单独显示一行（可选，为了极致压缩也可以不显示或悬浮显示）
   if (appState.currentBatch.remark) {
-    infoItems.push({ label: '备注', value: appState.currentBatch.remark });
+    const remarkDiv = document.createElement('div');
+    remarkDiv.style.fontSize = '12px';
+    remarkDiv.style.color = '#64748b';
+    remarkDiv.style.marginTop = '4px';
+    remarkDiv.textContent = '备注: ' + appState.currentBatch.remark;
+    div.appendChild(remarkDiv); // 将其加到 compact-info-bar 内部或外部均可，这里加在内部会破坏flex，建议外部
   }
 
-  infoItems.forEach((item) => {
-    const div = document.createElement('div');
-    div.className = 'info-item';
-    div.innerHTML = `<div class="label">${item.label}</div><div class="value">${item.value}</div>`;
-    dom.batchInfoGrid.appendChild(div);
-  });
+  dom.batchInfoGrid.appendChild(div);
 }
 
 /**
