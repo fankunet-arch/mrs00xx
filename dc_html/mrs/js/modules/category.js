@@ -1,6 +1,14 @@
-import { appState, showAlert, escapeHtml, modal } from './core.js';
+/**
+ * MRS Backend - Category Management Module
+ * 品类管理模块
+ */
+
+import { modal, showAlert, escapeHtml, appState } from './core.js';
 import { categoryAPI } from './api.js';
 
+/**
+ * 加载品类列表
+ */
 export async function loadCategories() {
   const filters = {
     search: document.getElementById('category-filter-search')?.value.trim() || ''
@@ -14,6 +22,9 @@ export async function loadCategories() {
   }
 }
 
+/**
+ * 渲染品类列表
+ */
 function renderCategories() {
   const tbody = document.querySelector('#page-categories tbody');
   if (!tbody) return;
@@ -29,13 +40,16 @@ function renderCategories() {
       <td>${escapeHtml(category.category_code || '-')}</td>
       <td>${new Date(category.created_at).toLocaleString('zh-CN')}</td>
       <td class="table-actions">
-        <button class="text" data-action="editCategory" data-category-id="${category.category_id}">编辑</button>
-        <button class="text danger" data-action="deleteCategory" data-category-id="${category.category_id}">删除</button>
+        <button class="text" onclick="editCategory(${category.category_id})">编辑</button>
+        <button class="text danger" onclick="deleteCategory(${category.category_id})">删除</button>
       </td>
     </tr>
   `).join('');
 }
 
+/**
+ * 显示新建品类模态框
+ */
 export function showNewCategoryModal() {
   document.getElementById('form-category').reset();
   document.getElementById('category-id').value = '';
@@ -43,14 +57,18 @@ export function showNewCategoryModal() {
   modal.show('modal-category');
 }
 
+/**
+ * 保存品类
+ */
 export async function saveCategory(event) {
-  const form = document.getElementById('form-category');
+  event.preventDefault();
+  const form = event.target;
   const formData = new FormData(form);
-  const data = Object.fromEntries(formData);
+  const data = Object.fromEntries(formData.entries());
 
   const result = await categoryAPI.saveCategory(data);
   if (result.success) {
-    showAlert('success', '品类保存成功');
+    showAlert('success', '保存成功');
     modal.hide('modal-category');
     loadCategories();
   } else {
@@ -58,58 +76,32 @@ export async function saveCategory(event) {
   }
 }
 
+/**
+ * 编辑品类
+ */
 export async function editCategory(categoryId) {
-  const result = await categoryAPI.getCategoryDetail(categoryId);
+  const category = appState.categories.find(c => c.category_id === categoryId);
+  if (!category) return;
 
-  if (result.success) {
-    const category = result.data;
+  document.getElementById('category-id').value = category.category_id;
+  document.getElementById('category-name').value = category.category_name;
+  document.getElementById('category-code').value = category.category_code || '';
+  document.getElementById('modal-category-title').textContent = '编辑品类';
 
-    document.getElementById('category-id').value = category.category_id;
-    document.getElementById('category-name').value = category.category_name;
-    document.getElementById('category-code').value = category.category_code || '';
-
-    document.getElementById('modal-category-title').textContent = '编辑品类';
-    modal.show('modal-category');
-  } else {
-    showAlert('danger', '获取品类信息失败: ' + result.message);
-  }
+  modal.show('modal-category');
 }
 
+/**
+ * 删除品类
+ */
 export async function deleteCategory(categoryId) {
-  if (!confirm('确定要删除这个品类吗?')) {
-    return;
-  }
+  if (!confirm('确定要删除该品类吗？')) return;
 
   const result = await categoryAPI.deleteCategory(categoryId);
   if (result.success) {
-    showAlert('success', '品类删除成功');
+    showAlert('success', '删除成功');
     loadCategories();
   } else {
     showAlert('danger', '删除失败: ' + result.message);
   }
 }
-
-export async function loadCategoryFilterOptions() {
-    const result = await categoryAPI.getCategories();
-    if (result.success) {
-      const catalogSelect = document.getElementById('catalog-filter-category');
-      if (catalogSelect) {
-        const currentVal = catalogSelect.value;
-        catalogSelect.innerHTML = '<option value="">全部品类</option>' +
-          result.data.map(cat => `<option value="${cat.category_id}">${escapeHtml(cat.category_name)}</option>`).join('');
-        if (currentVal) {
-          catalogSelect.value = currentVal;
-        }
-      }
-
-      const inventorySelect = document.getElementById('inventory-filter-category');
-      if (inventorySelect) {
-        const currentVal = inventorySelect.value;
-        inventorySelect.innerHTML = '<option value="">全部品类</option>' +
-          result.data.map(cat => `<option value="${cat.category_id}">${escapeHtml(cat.category_name)}</option>`).join('');
-        if (currentVal) {
-          inventorySelect.value = currentVal;
-        }
-      }
-    }
-  }
