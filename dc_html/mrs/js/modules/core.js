@@ -47,7 +47,8 @@ export function initDom() {
     aiPrompt: document.getElementById('modal-ai-prompt'),
     skuHistory: document.getElementById('modal-sku-history'),
     quickOutbound: document.getElementById('modal-quick-outbound'),
-    inventoryAdjust: document.getElementById('modal-inventory-adjust')
+    inventoryAdjust: document.getElementById('modal-inventory-adjust'),
+    rawRecords: document.getElementById('modal-raw-records')
   };
 }
 
@@ -58,7 +59,7 @@ export const modal = {
   show(modalId) {
     const modalEl = dom.modals[modalId] || document.getElementById(modalId);
     if (modalEl) {
-      modalEl.classList.add('show');
+      modalEl.querySelector('.modal').classList.add('show');
       document.body.style.overflow = 'hidden';
     }
   },
@@ -66,7 +67,7 @@ export const modal = {
   hide(modalId) {
     const modalEl = dom.modals[modalId] || document.getElementById(modalId);
     if (modalEl) {
-      modalEl.classList.remove('show');
+      modalEl.querySelector('.modal').classList.remove('show');
       document.body.style.overflow = '';
     }
   }
