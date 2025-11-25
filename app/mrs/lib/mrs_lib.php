@@ -207,6 +207,7 @@ function save_raw_record($data) {
             }
         }
 
+        // [GRACEFUL FIX] 尝试插入（包含 input_sku_name）
         $sql = "INSERT INTO mrs_batch_raw_record (
                     batch_id,
                     sku_id,
@@ -246,6 +247,50 @@ function save_raw_record($data) {
         return $pdo->lastInsertId();
 
     } catch (PDOException $e) {
+        // [GRACEFUL FIX] 如果是因为 input_sku_name 列不存在 (Error 1054 / 42S22)，则降级重试
+        if ($e->getCode() === '42S22' && strpos($e->getMessage(), 'input_sku_name') !== false) {
+            mrs_log('保存原始记录降级: input_sku_name 列不存在，正在重试...', 'WARNING');
+
+            try {
+                $sql = "INSERT INTO mrs_batch_raw_record (
+                            batch_id,
+                            sku_id,
+                            qty,
+                            unit_name,
+                            operator_name,
+                            recorded_at,
+                            note,
+                            created_at,
+                            updated_at
+                        ) VALUES (
+                            :batch_id,
+                            :sku_id,
+                            :qty,
+                            :unit_name,
+                            :operator_name,
+                            :recorded_at,
+                            :note,
+                            NOW(6),
+                            NOW(6)
+                        )";
+
+                $stmt = $pdo->prepare($sql);
+                $stmt->bindValue(':batch_id', $data['batch_id'], PDO::PARAM_INT);
+                $stmt->bindValue(':sku_id', $data['sku_id'] ?? null, PDO::PARAM_INT);
+                $stmt->bindValue(':qty', $data['qty'], PDO::PARAM_STR);
+                $stmt->bindValue(':unit_name', $data['unit_name'], PDO::PARAM_STR);
+                $stmt->bindValue(':operator_name', $data['operator_name'], PDO::PARAM_STR);
+                $stmt->bindValue(':recorded_at', $data['recorded_at'] ?? date('Y-m-d H:i:s.u'), PDO::PARAM_STR);
+                $stmt->bindValue(':note', $data['note'] ?? '', PDO::PARAM_STR);
+
+                $stmt->execute();
+                return $pdo->lastInsertId();
+            } catch (PDOException $e2) {
+                mrs_log('保存原始记录(降级)失败: ' . $e2->getMessage(), 'ERROR', $data);
+                return false;
+            }
+        }
+
         mrs_log('保存原始记录失败: ' . $e->getMessage(), 'ERROR', $data);
         return false;
     }
@@ -284,6 +329,37 @@ function get_batch_raw_records($batch_id) {
         return $stmt->fetchAll();
 
     } catch (PDOException $e) {
+        // [GRACEFUL FIX] 降级查询
+        if ($e->getCode() === '42S22' && strpos($e->getMessage(), 'input_sku_name') !== false) {
+             mrs_log('获取记录列表降级: input_sku_name 列不存在，使用基础查询', 'WARNING');
+
+             try {
+                $sql = "SELECT
+                            r.raw_record_id,
+                            r.batch_id,
+                            r.sku_id,
+                            r.qty,
+                            r.unit_name,
+                            r.operator_name,
+                            r.recorded_at,
+                            r.note,
+                            s.sku_name,
+                            s.brand_name
+                        FROM mrs_batch_raw_record r
+                        LEFT JOIN mrs_sku s ON r.sku_id = s.sku_id
+                        WHERE r.batch_id = :batch_id
+                        ORDER BY r.recorded_at DESC";
+
+                $stmt = $pdo->prepare($sql);
+                $stmt->bindValue(':batch_id', $batch_id, PDO::PARAM_INT);
+                $stmt->execute();
+                return $stmt->fetchAll();
+             } catch (PDOException $e2) {
+                 mrs_log('获取批次原始记录(降级)失败: ' . $e2->getMessage(), 'ERROR');
+                 return [];
+             }
+        }
+
         mrs_log('获取批次原始记录失败: ' . $e->getMessage(), 'ERROR');
         return [];
     }
