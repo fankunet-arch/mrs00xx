@@ -647,6 +647,47 @@ $current_user = '管理员';
     </div>
   </div>
 
+  <!-- 模态框: 查看原始记录明细 -->
+  <div class="modal-backdrop" id="modal-raw-records">
+    <div class="modal modal-large">
+      <div class="modal-header">
+        <h3>原始收货记录明细</h3>
+        <button class="text" data-action="closeModal" data-modal-id="modal-raw-records">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>SKU名称</label>
+          <div id="raw-records-sku-name" class="form-value"></div>
+        </div>
+        <div class="form-group">
+          <label>批次编号</label>
+          <div id="raw-records-batch-code" class="form-value"></div>
+        </div>
+        <div class="table-responsive mt-10">
+          <table>
+            <thead>
+              <tr>
+                <th>录入时间</th>
+                <th>操作员</th>
+                <th>录入数量</th>
+                <th>单位</th>
+                <th>备注</th>
+              </tr>
+            </thead>
+            <tbody id="raw-records-tbody">
+              <tr>
+                <td colspan="5" class="loading">加载中...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="text" data-action="closeModal" data-modal-id="modal-raw-records">关闭</button>
+      </div>
+    </div>
+  </div>
+
   <script type="module" src="js/modules/main.js?v=<?php echo time() + 3; ?>"></script>
 </body>
 </html>

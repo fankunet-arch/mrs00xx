@@ -327,6 +327,45 @@ export async function confirmAllMerge() {
  * 查看原始记录
  */
 export async function viewRawRecords(skuId) {
-  // TODO: 实现查看原始记录功能
-  showAlert('info', '原始记录查看功能待实现');
+  if (!appState.currentBatch) {
+    showAlert('danger', '批次信息未加载');
+    return;
+  }
+
+  // 从 appState 中找到对应的 item
+  const item = appState.mergeItems.find(i => i.sku_id === skuId);
+  if (!item) {
+    showAlert('danger', '数据同步错误，请刷新页面');
+    return;
+  }
+
+  // 获取原始记录
+  const result = await batchAPI.getRawRecords(appState.currentBatch.batch_id, skuId);
+
+  if (!result.success) {
+    showAlert('danger', '加载原始记录失败: ' + result.message);
+    return;
+  }
+
+  // 填充模态框内容
+  document.getElementById('raw-records-sku-name').textContent = item.sku_name || '-';
+  document.getElementById('raw-records-batch-code').textContent = appState.currentBatch.batch_code || '-';
+
+  const tbody = document.getElementById('raw-records-tbody');
+  if (!result.data.records || result.data.records.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" class="empty">暂无原始记录</td></tr>';
+  } else {
+    tbody.innerHTML = result.data.records.map(record => `
+      <tr>
+        <td>${escapeHtml(record.recorded_at || '-')}</td>
+        <td>${escapeHtml(record.operator_name || '-')}</td>
+        <td><strong>${escapeHtml(record.qty || '0')}</strong></td>
+        <td>${escapeHtml(record.unit_name || '-')}</td>
+        <td>${escapeHtml(record.note || '-')}</td>
+      </tr>
+    `).join('');
+  }
+
+  // 显示模态框
+  modal.show('modal-raw-records');
 }
