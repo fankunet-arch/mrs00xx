@@ -532,6 +532,43 @@ $current_user = '管理员';
     </div>
   </div>
 
+  <!-- 模态框: SKU履历追溯 -->
+  <div class="modal-backdrop" id="modal-sku-history">
+    <div class="modal modal-large">
+      <div class="modal-header">
+        <h3>SKU 履历追溯</h3>
+        <button class="text" onclick="modal.hide('modal-sku-history')">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>SKU名称</label>
+          <div id="history-sku-name" class="form-value"></div>
+        </div>
+        <div class="table-responsive mt-10">
+          <table>
+            <thead>
+              <tr>
+                <th>时间</th>
+                <th>类型</th>
+                <th>单号/来源</th>
+                <th>数量变动</th>
+                <th>详情/备注</th>
+              </tr>
+            </thead>
+            <tbody id="history-tbody">
+              <tr>
+                <td colspan="5" class="loading">加载中...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="text" onclick="modal.hide('modal-sku-history')">关闭</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 模态框: 极速出库 -->
   <div class="modal-backdrop" id="modal-quick-outbound">
     <div class="modal">

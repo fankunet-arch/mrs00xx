@@ -290,6 +290,13 @@ const api = {
       method: 'POST',
       body: JSON.stringify(data)
     });
+  },
+
+  /**
+   * 获取SKU履历
+   */
+  async getSkuHistory(skuId) {
+    return await this.call(`api.php?route=backend_sku_history&sku_id=${skuId}`);
   }
 };
 
@@ -520,6 +527,7 @@ function renderSkus() {
         <td>${escapeHtml(unitRule)}</td>
         <td><span class="badge success">启用</span></td>
         <td class="table-actions">
+          <button class="text info" onclick="viewSkuHistory(${sku.sku_id})" title="查看履历">📜 履历</button>
           <button class="text primary" onclick="showQuickOutboundModal(${sku.sku_id})" title="极速出库">🔴 出库</button>
           <button class="text success" onclick="showInventoryAdjustModal(${sku.sku_id})" title="库存盘点">⚖️ 盘点</button>
           <button class="text" onclick="editSku(${sku.sku_id})">编辑</button>
@@ -1769,6 +1777,75 @@ async function saveInventoryAdjustment(event) {
     }
   } catch (error) {
     console.error('库存调整失败:', error);
+    showAlert('danger', '系统错误');
+  }
+}
+
+// ============================================
+// SKU 履历追溯功能
+// ============================================
+
+/**
+ * 查看SKU履历
+ */
+async function viewSkuHistory(skuId) {
+  try {
+    // 获取SKU信息
+    const sku = appState.skus.find(s => s.sku_id === skuId);
+    if (!sku) {
+      showAlert('danger', 'SKU不存在');
+      return;
+    }
+
+    // 显示模态框并显示加载状态
+    document.getElementById('history-sku-name').textContent = sku.sku_name;
+    document.getElementById('history-tbody').innerHTML = '<tr><td colspan="5" class="loading">加载中...</td></tr>';
+    modal.show('modal-sku-history');
+
+    // 查询履历
+    const result = await api.getSkuHistory(skuId);
+
+    if (!result.success) {
+      document.getElementById('history-tbody').innerHTML =
+        `<tr><td colspan="5" class="empty">加载失败: ${result.message}</td></tr>`;
+      return;
+    }
+
+    // 渲染履历列表
+    const history = result.data.history || [];
+
+    if (history.length === 0) {
+      document.getElementById('history-tbody').innerHTML =
+        '<tr><td colspan="5" class="empty">暂无历史记录</td></tr>';
+      return;
+    }
+
+    // 渲染历史记录
+    const tbody = document.getElementById('history-tbody');
+    tbody.innerHTML = history.map(record => {
+      // 根据类型设置颜色
+      let qtyClass = '';
+      if (record.type === '入库') {
+        qtyClass = 'text-success'; // 绿色
+      } else if (record.type === '出库') {
+        qtyClass = 'text-danger'; // 红色
+      } else if (record.type === '盘点调整') {
+        qtyClass = record.qty > 0 ? 'text-success' : 'text-danger';
+      }
+
+      return `
+        <tr>
+          <td>${escapeHtml(record.date)}</td>
+          <td><span class="badge ${record.type === '入库' ? 'success' : record.type === '出库' ? 'danger' : 'info'}">${escapeHtml(record.type)}</span></td>
+          <td>${escapeHtml(record.code)}</td>
+          <td class="${qtyClass}" style="font-weight: bold;">${escapeHtml(record.qty_display)}</td>
+          <td>${escapeHtml(record.location)} ${record.remark !== '-' ? '/ ' + escapeHtml(record.remark) : ''}</td>
+        </tr>
+      `;
+    }).join('');
+
+  } catch (error) {
+    console.error('查看SKU履历失败:', error);
     showAlert('danger', '系统错误');
   }
 }
