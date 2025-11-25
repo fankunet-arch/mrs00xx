@@ -6,7 +6,7 @@
 /**
  * 通用API调用
  */
-async function call(url, options = {}) {
+export async function call(url, options = {}) {
   try {
     const separator = url.includes('?') ? '&' : '?';
     const finalUrl = `${url}${separator}_t=${Date.now()}`;

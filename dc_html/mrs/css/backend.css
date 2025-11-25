@@ -364,6 +364,21 @@ th {
   border: 1px solid var(--border);
 }
 
+.modal.modal-large,
+.modal.modal-lg {
+  width: min(800px, 92vw);
+}
+
+.modal-body {
+  margin-bottom: 12px;
+}
+
+.modal-body .form-value {
+  font-weight: 600;
+  color: var(--text);
+  padding: 8px 0;
+}
+
 .modal-header {
   display: flex;
   justify-content: space-between;
@@ -534,6 +549,42 @@ th {
 
 .mb-12 {
   margin-bottom: 12px;
+}
+
+.mt-2 {
+  margin-top: 8px;
+}
+
+.mt-4 {
+  margin-top: 16px;
+}
+
+.mb-2 {
+  margin-bottom: 8px;
+}
+
+.text-success {
+  color: var(--accent);
+}
+
+.text-danger {
+  color: var(--danger);
+}
+
+.text-warning {
+  color: var(--warning);
+}
+
+.text-info {
+  color: var(--primary);
+}
+
+.small {
+  font-size: 13px;
+}
+
+.badge.secondary {
+  background: #64748b;
 }
 
 @media (max-width: 640px) {
