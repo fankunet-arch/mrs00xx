@@ -1,9 +1,28 @@
+// 文件路径: fankunet-arch/mrs01xx/mrs01xx-010e6f69542fe42f0d89e7b08582c8361ace551f/dc_html/mrs/js/receipt.js
 /**
  * MRS 物料收发管理系统 - 极速收货前台交互逻辑
  * 文件路径: dc_html/mrs/js/receipt.js
  * 说明: 前台收货页面的所有交互逻辑
  * 重构: 使用 showAlert 统一通知，移除 inline onclick 处理器
  */
+
+/**
+ * 格式化数字显示：去除不必要的小数点后的0
+ * @param {number|string} value - 要格式化的数值
+ * @returns {string} - 格式化后的字符串
+ */
+function formatNumber(value) {
+  const num = parseFloat(value);
+  if (isNaN(num)) return '0';
+
+  // 如果是整数，直接返回整数形式
+  if (num % 1 === 0) {
+    return parseInt(num, 10).toString();
+  }
+
+  // 否则保留最多4位小数，并移除末尾的0
+  return num.toFixed(4).replace(/\.?0+$/, '');
+}
 
 /**
  * 显示通知消息（与 backend 保持一致）
@@ -84,7 +103,7 @@ const api = {
    */
   async getBatches() {
     try {
-      const response = await fetch('api.php?route=batch_list');
+      const response = await fetch('/mrs/be/index.php?action=get_batch_list_api');
       const data = await response.json();
       if (data.success) {
         return data.data;
@@ -103,7 +122,7 @@ const api = {
    */
   async searchSku(keyword) {
     try {
-      const response = await fetch(`api.php?route=sku_search&keyword=${encodeURIComponent(keyword)}`);
+      const response = await fetch(`/mrs/be/index.php?action=sku_search_api&keyword=${encodeURIComponent(keyword)}`);
       const data = await response.json();
       if (data.success) {
         return data.data;
@@ -122,7 +141,7 @@ const api = {
    */
   async saveRecord(recordData) {
     try {
-      const response = await fetch('api.php?route=save_record', {
+      const response = await fetch('/mrs/be/index.php?action=save_receipt_api', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -142,7 +161,7 @@ const api = {
    */
   async getBatchRecords(batchId) {
     try {
-      const response = await fetch(`api.php?route=batch_records&batch_id=${batchId}`);
+      const response = await fetch(`/mrs/be/index.php?action=get_batch_records_api&batch_id=${batchId}`);
       const data = await response.json();
       if (data.success) {
         return data.data;
@@ -306,7 +325,7 @@ async function renderCandidates(keyword = '') {
     row.dataset.skuId = material.sku_id;
 
     const unitInfo = material.case_unit_name
-      ? `${material.case_to_standard_qty} ${material.standard_unit}/${material.case_unit_name}`
+      ? `${formatNumber(material.case_to_standard_qty)} ${material.standard_unit}/${material.case_unit_name}`
       : material.standard_unit;
 
     row.innerHTML = `
@@ -403,12 +422,15 @@ function renderRecords() {
 
     const time = new Date(record.recorded_at).toLocaleTimeString('zh-CN', { hour12: false });
 
+    // 使用统一的数字格式化函数
+    const displayQty = formatNumber(record.qty);
+
     row.innerHTML = `
       <div>
         <div><strong>${record.sku_name || '未知物料'}</strong></div>
         <div class="time">${time} - ${record.operator_name}</div>
       </div>
-      <div class="value">${record.qty}</div>
+      <div class="value">${displayQty}</div>
       <div class="tag">${record.unit_name}</div>
     `;
 
@@ -438,7 +460,10 @@ function renderSummary() {
   dom.summaryEl.innerHTML = '<div style="margin-bottom: 8px;"><strong>本批次汇总：</strong></div>' +
     entries.map(([key, value]) => {
       const [material, unit] = key.split('-');
-      return `<div style="margin-top: 4px;">• <strong>${material}</strong>：${value} ${unit}</div>`;
+      // 使用统一的数字格式化函数
+      const displayQty = formatNumber(value);
+
+      return `<div style="margin-top: 4px;">• <strong>${material}</strong>：${displayQty} ${unit}</div>`;
     }).join('');
 }
 

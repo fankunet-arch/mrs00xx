@@ -1,0 +1,450 @@
+/**
+ * Express Package Management System - Quick Operations Frontend
+ * 文件路径: dc_html/express/js/quick_ops.js
+ */
+
+// 全局状态
+const state = {
+    currentBatchId: null,
+    currentOperation: null,
+    searchTimeout: null,
+    operationHistory: []
+};
+
+// 初始化
+document.addEventListener('DOMContentLoaded', function() {
+    initializeApp();
+});
+
+function initializeApp() {
+    // 更新时间显示
+    updateCurrentTime();
+    setInterval(updateCurrentTime, 1000);
+
+    // 绑定事件
+    bindEvents();
+
+    // 从历史记录加载操作记录
+    loadHistoryFromStorage();
+}
+
+function bindEvents() {
+    // 批次选择
+    document.getElementById('batch-select').addEventListener('change', onBatchChange);
+    document.getElementById('refresh-batches').addEventListener('click', refreshBatches);
+
+    // 操作类型选择
+    document.querySelectorAll('.btn-operation').forEach(btn => {
+        btn.addEventListener('click', function() {
+            selectOperation(this.dataset.operation);
+        });
+    });
+
+    // 快递单号输入
+    const trackingInput = document.getElementById('tracking-input');
+    trackingInput.addEventListener('input', onTrackingInput);
+    trackingInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            handleDirectInput();
+        }
+    });
+
+    // 按钮事件
+    document.getElementById('btn-clear-input').addEventListener('click', clearInput);
+    document.getElementById('btn-submit').addEventListener('click', submitOperation);
+    document.getElementById('btn-reset').addEventListener('click', resetForm);
+    document.getElementById('btn-change-operation').addEventListener('click', changeOperation);
+}
+
+// 时间更新
+function updateCurrentTime() {
+    const now = new Date();
+    const timeStr = now.toLocaleString('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+    });
+    document.getElementById('current-time').textContent = timeStr;
+}
+
+// 批次选择事件
+async function onBatchChange(e) {
+    const batchId = e.target.value;
+
+    if (!batchId) {
+        state.currentBatchId = null;
+        document.getElementById('batch-stats').style.display = 'none';
+        document.getElementById('operation-section').style.display = 'none';
+        document.getElementById('input-section').style.display = 'none';
+        return;
+    }
+
+    state.currentBatchId = batchId;
+
+    // 更新统计信息
+    const selectedOption = e.target.options[e.target.selectedIndex];
+    updateBatchStats({
+        total_count: parseInt(selectedOption.dataset.total) || 0,
+        verified_count: parseInt(selectedOption.dataset.verified) || 0,
+        counted_count: parseInt(selectedOption.dataset.counted) || 0,
+        adjusted_count: parseInt(selectedOption.dataset.adjusted) || 0
+    });
+
+    // 显示操作选择区域
+    document.getElementById('batch-stats').style.display = 'flex';
+    document.getElementById('operation-section').style.display = 'block';
+    document.getElementById('input-section').style.display = 'none';
+}
+
+// 更新批次统计
+function updateBatchStats(stats) {
+    document.getElementById('stat-total').textContent = stats.total_count;
+    document.getElementById('stat-verified').textContent = stats.verified_count;
+    document.getElementById('stat-counted').textContent = stats.counted_count;
+    document.getElementById('stat-adjusted').textContent = stats.adjusted_count;
+
+    // 更新进度条
+    const progress = stats.total_count > 0
+        ? Math.round((stats.verified_count / stats.total_count) * 100)
+        : 0;
+
+    document.getElementById('progress-fill').style.width = progress + '%';
+    document.getElementById('progress-text').textContent = progress + '%';
+}
+
+// 刷新批次列表
+async function refreshBatches() {
+    try {
+        const response = await fetch('/express/index.php?action=get_batches_api');
+        const data = await response.json();
+
+        if (data.success) {
+            const batchSelect = document.getElementById('batch-select');
+            const currentBatchId = batchSelect.value;
+
+            batchSelect.innerHTML = '<option value="">-- 请选择批次 --</option>';
+
+            data.data.forEach(batch => {
+                const option = document.createElement('option');
+                option.value = batch.batch_id;
+                option.textContent = `${batch.batch_name} (${batch.total_count}个包裹)`;
+                option.dataset.total = batch.total_count;
+                option.dataset.verified = batch.verified_count;
+                option.dataset.counted = batch.counted_count;
+                option.dataset.adjusted = batch.adjusted_count;
+                batchSelect.appendChild(option);
+            });
+
+            // 保持当前选择
+            if (currentBatchId) {
+                batchSelect.value = currentBatchId;
+            }
+
+            showMessage('批次列表已刷新', 'success');
+        }
+    } catch (error) {
+        showMessage('刷新失败: ' + error.message, 'error');
+    }
+}
+
+// 选择操作类型
+function selectOperation(operation) {
+    state.currentOperation = operation;
+
+    // 更新操作名称显示
+    const operationNames = {
+        'verify': '核实',
+        'count': '清点',
+        'adjust': '调整'
+    };
+
+    document.getElementById('operation-name').textContent = operationNames[operation];
+
+    // 显示/隐藏相应的备注输入框
+    document.getElementById('content-note-group').style.display =
+        operation === 'count' ? 'block' : 'none';
+    document.getElementById('adjustment-note-group').style.display =
+        operation === 'adjust' ? 'block' : 'none';
+
+    // 显示输入区域
+    document.getElementById('input-section').style.display = 'block';
+
+    // 聚焦到输入框
+    document.getElementById('tracking-input').focus();
+}
+
+// 快递单号输入事件（模糊搜索）
+function onTrackingInput(e) {
+    const keyword = e.target.value.trim();
+
+    // 清除之前的延时
+    if (state.searchTimeout) {
+        clearTimeout(state.searchTimeout);
+    }
+
+    if (!keyword) {
+        hideSearchResults();
+        return;
+    }
+
+    // 延时搜索（防抖）
+    state.searchTimeout = setTimeout(() => {
+        performSearch(keyword);
+    }, 300);
+}
+
+// 执行搜索
+async function performSearch(keyword) {
+    if (!state.currentBatchId) {
+        return;
+    }
+
+    try {
+        const response = await fetch(
+            `/express/index.php?action=search_tracking_api&batch_id=${state.currentBatchId}&keyword=${encodeURIComponent(keyword)}`
+        );
+        const data = await response.json();
+
+        if (data.success) {
+            displaySearchResults(data.data, keyword);
+        }
+    } catch (error) {
+        console.error('Search error:', error);
+    }
+}
+
+// 显示搜索结果
+function displaySearchResults(results, keyword) {
+    const resultsDiv = document.getElementById('search-results');
+
+    if (results.length === 0) {
+        resultsDiv.innerHTML = `
+            <div class="search-result-item new-item" data-tracking="${keyword}">
+                <div class="tracking-number">${keyword}</div>
+                <div class="tracking-status">新单号（点击创建）</div>
+            </div>
+        `;
+    } else {
+        resultsDiv.innerHTML = results.map(pkg => `
+            <div class="search-result-item" data-tracking="${pkg.tracking_number}">
+                <div class="tracking-number">${pkg.tracking_number}</div>
+                <div class="tracking-status status-${pkg.package_status}">${getStatusText(pkg.package_status)}</div>
+            </div>
+        `).join('');
+    }
+
+    // 绑定点击事件
+    resultsDiv.querySelectorAll('.search-result-item').forEach(item => {
+        item.addEventListener('click', function() {
+            selectTrackingNumber(this.dataset.tracking);
+        });
+    });
+
+    resultsDiv.style.display = 'block';
+}
+
+// 隐藏搜索结果
+function hideSearchResults() {
+    document.getElementById('search-results').style.display = 'none';
+}
+
+// 选择快递单号
+function selectTrackingNumber(trackingNumber) {
+    document.getElementById('tracking-input').value = trackingNumber;
+    hideSearchResults();
+
+    // 如果是清点操作，聚焦到内容备注
+    if (state.currentOperation === 'count') {
+        document.getElementById('content-note').focus();
+    } else if (state.currentOperation === 'adjust') {
+        document.getElementById('adjustment-note').focus();
+    }
+}
+
+// 直接按Enter键处理
+function handleDirectInput() {
+    const trackingNumber = document.getElementById('tracking-input').value.trim();
+
+    if (!trackingNumber) {
+        return;
+    }
+
+    selectTrackingNumber(trackingNumber);
+}
+
+// 清空输入
+function clearInput() {
+    document.getElementById('tracking-input').value = '';
+    document.getElementById('content-note').value = '';
+    document.getElementById('adjustment-note').value = '';
+    hideSearchResults();
+    document.getElementById('tracking-input').focus();
+}
+
+// 提交操作
+async function submitOperation() {
+    const trackingNumber = document.getElementById('tracking-input').value.trim();
+
+    if (!trackingNumber) {
+        showMessage('请输入快递单号', 'error');
+        return;
+    }
+
+    if (!state.currentBatchId || !state.currentOperation) {
+        showMessage('请选择批次和操作类型', 'error');
+        return;
+    }
+
+    const payload = {
+        batch_id: state.currentBatchId,
+        tracking_number: trackingNumber,
+        operation_type: state.currentOperation,
+        operator: 'frontend_user'
+    };
+
+    if (state.currentOperation === 'count') {
+        payload.content_note = document.getElementById('content-note').value.trim();
+    }
+
+    if (state.currentOperation === 'adjust') {
+        payload.adjustment_note = document.getElementById('adjustment-note').value.trim();
+    }
+
+    try {
+        const response = await fetch('/express/index.php?action=save_record_api', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            showMessage(data.message, 'success');
+
+            // 更新批次统计
+            if (data.data.batch) {
+                updateBatchStats(data.data.batch);
+            }
+
+            // 添加到操作历史
+            addToHistory({
+                tracking_number: trackingNumber,
+                operation: state.currentOperation,
+                status: data.data.package.package_status,
+                time: new Date().toLocaleTimeString()
+            });
+
+            // 清空输入，准备下一个
+            clearInput();
+        } else {
+            showMessage(data.message, 'error');
+        }
+    } catch (error) {
+        showMessage('操作失败: ' + error.message, 'error');
+    }
+}
+
+// 重置表单
+function resetForm() {
+    clearInput();
+    state.currentOperation = null;
+    document.getElementById('input-section').style.display = 'none';
+}
+
+// 切换操作类型
+function changeOperation() {
+    resetForm();
+}
+
+// 显示消息
+function showMessage(message, type) {
+    const messageBox = document.getElementById('message-box');
+    messageBox.textContent = message;
+    messageBox.className = `message-box ${type}`;
+    messageBox.style.display = 'block';
+
+    setTimeout(() => {
+        messageBox.style.display = 'none';
+    }, 3000);
+}
+
+// 获取状态文本
+function getStatusText(status) {
+    const statusMap = {
+        'pending': '待处理',
+        'verified': '已核实',
+        'counted': '已清点',
+        'adjusted': '已调整'
+    };
+    return statusMap[status] || status;
+}
+
+// 添加到操作历史
+function addToHistory(record) {
+    state.operationHistory.unshift(record);
+
+    // 只保留最近10条
+    if (state.operationHistory.length > 10) {
+        state.operationHistory = state.operationHistory.slice(0, 10);
+    }
+
+    // 保存到localStorage
+    saveHistoryToStorage();
+
+    // 更新显示
+    displayHistory();
+}
+
+// 显示历史记录
+function displayHistory() {
+    const historyDiv = document.getElementById('operation-history');
+
+    if (state.operationHistory.length === 0) {
+        historyDiv.innerHTML = '<p class="empty-text">暂无操作记录</p>';
+        return;
+    }
+
+    const operationNames = {
+        'verify': '核实',
+        'count': '清点',
+        'adjust': '调整'
+    };
+
+    historyDiv.innerHTML = state.operationHistory.map(record => `
+        <div class="history-item">
+            <span class="history-time">${record.time}</span>
+            <span class="history-tracking">${record.tracking_number}</span>
+            <span class="history-operation">${operationNames[record.operation]}</span>
+            <span class="history-status status-${record.status}">${getStatusText(record.status)}</span>
+        </div>
+    `).join('');
+}
+
+// 保存历史到localStorage
+function saveHistoryToStorage() {
+    try {
+        localStorage.setItem('express_operation_history', JSON.stringify(state.operationHistory));
+    } catch (e) {
+        console.error('Failed to save history:', e);
+    }
+}
+
+// 从localStorage加载历史
+function loadHistoryFromStorage() {
+    try {
+        const stored = localStorage.getItem('express_operation_history');
+        if (stored) {
+            state.operationHistory = JSON.parse(stored);
+            displayHistory();
+        }
+    } catch (e) {
+        console.error('Failed to load history:', e);
+    }
+}

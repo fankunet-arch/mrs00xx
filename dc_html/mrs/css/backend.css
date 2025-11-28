@@ -73,17 +73,20 @@ aside {
   display: flex;
   align-items: center;
   font-weight: 600;
-  transition: background 0.2s ease;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  color: #94a3b8;
 }
 
 .menu-item:hover {
-  background: rgba(255,255,255,0.07);
+  background: rgba(255,255,255,0.1);
+  color: #e2e8f0;
 }
 
 .menu-item.active {
-  background: rgba(31, 122, 236, 0.18);
-  color: #fff;
-  border: 1px solid rgba(255,255,255,0.08);
+  background: linear-gradient(135deg, #1f7aec 0%, #1e5bb8 100%);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(31, 122, 236, 0.3);
 }
 
 .content {
@@ -106,9 +109,28 @@ h2 {
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: 12px;
-  padding: 16px;
+  padding: 0;
   margin-bottom: 16px;
   box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+}
+
+.card-header {
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.card-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text);
+}
+
+.card-body {
+  padding: 16px;
 }
 
 .filters {
@@ -129,6 +151,30 @@ textarea {
   font-size: 14px;
   min-width: 120px;
   font-family: inherit;
+}
+
+.form-control {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text);
+  background-color: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  transition: border-color 0.15s ease-in-out;
+}
+
+.form-control:focus {
+  border-color: var(--primary);
+  outline: 0;
+  box-shadow: 0 0 0 2px rgba(31, 122, 236, 0.1);
+}
+
+.form-control-sm {
+  padding: 5px 10px;
+  font-size: 13px;
 }
 
 textarea {
@@ -259,6 +305,100 @@ th {
   font-size: 13px;
 }
 
+/* Table header sortable links */
+th a {
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+th a:hover {
+  color: var(--primary);
+}
+
+/* Action buttons in tables */
+.btn {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  text-align: center;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s ease;
+  line-height: 1.4;
+}
+
+.btn-sm {
+  padding: 5px 10px;
+  font-size: 12px;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background: #1e5bb8;
+  box-shadow: 0 2px 6px rgba(31, 122, 236, 0.3);
+}
+
+.btn-success {
+  background: var(--accent);
+  color: #fff;
+}
+
+.btn-success:hover {
+  background: #0d9668;
+  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3);
+}
+
+.btn-warning {
+  background: var(--warning);
+  color: #fff;
+}
+
+.btn-warning:hover {
+  background: #d97706;
+  box-shadow: 0 2px 6px rgba(245, 158, 11, 0.3);
+}
+
+.btn-danger {
+  background: var(--danger);
+  color: #fff;
+}
+
+.btn-danger:hover {
+  background: #dc2626;
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.3);
+}
+
+.btn-info {
+  background: #0ea5e9;
+  color: #fff;
+}
+
+.btn-info:hover {
+  background: #0284c7;
+  box-shadow: 0 2px 6px rgba(14, 165, 233, 0.3);
+}
+
+.btn-secondary {
+  background: #64748b;
+  color: #fff;
+}
+
+.btn-secondary:hover {
+  background: #475569;
+  box-shadow: 0 2px 6px rgba(100, 116, 139, 0.3);
+}
+
 .badge {
   display: inline-block;
   padding: 4px 8px;
@@ -270,22 +410,32 @@ th {
 
 .badge.info {
   background: var(--primary);
+  color: #fff;
 }
 
 .badge.success {
   background: var(--accent);
+  color: #fff;
 }
 
 .badge.warning {
   background: var(--warning);
+  color: #fff;
 }
 
 .badge.danger {
   background: var(--danger);
+  color: #fff;
 }
 
 .badge.primary {
   background: var(--primary);
+  color: #fff;
+}
+
+.badge-secondary {
+  background: #64748b;
+  color: #fff;
 }
 
 .tag-row {
@@ -543,8 +693,46 @@ th {
 }
 
 /* 工具类 (Utility Classes) */
+.container-fluid {
+  width: 100%;
+  padding-right: 15px;
+  padding-left: 15px;
+  margin-right: auto;
+  margin-left: auto;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  margin-right: -15px;
+  margin-left: -15px;
+}
+
+.col-lg-12 {
+  position: relative;
+  width: 100%;
+  padding-right: 15px;
+  padding-left: 15px;
+}
+
 .table-responsive {
   overflow-x: auto;
+}
+
+.float-right {
+  float: right;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.table-bordered {
+  border: 1px solid var(--border);
+}
+
+.table-hover tbody tr:hover {
+  background-color: rgba(0, 0, 0, 0.02);
 }
 
 .mt-10 {
@@ -587,6 +775,10 @@ th {
   font-size: 13px;
 }
 
+.font-weight-bold {
+  font-weight: 700;
+}
+
 .badge.secondary {
   background: #64748b;
 }
@@ -611,4 +803,34 @@ th {
   .table-actions button {
     width: 100%;
   }
+}
+
+/* Custom row highlight for pending batches */
+tr.row-danger {
+  background-color: #fef2f2; /* A light red, matching .alert.danger */
+  --tw-shadow: 0 0 #0000;
+  border-left: 3px solid var(--danger);
+}
+
+tr.row-danger:hover {
+  background-color: #fee2e2; /* A slightly darker red for hover */
+}
+
+/* Row background colors for confirmed/deleted items */
+tr.table-success {
+  background-color: #f0fdf4; /* Light green background for confirmed items */
+  border-left: 3px solid var(--accent);
+}
+
+tr.table-success:hover {
+  background-color: #dcfce7; /* Slightly darker green for hover */
+}
+
+tr.table-danger {
+  background-color: #fef2f2; /* Light red background for deleted items */
+  border-left: 3px solid var(--danger);
+}
+
+tr.table-danger:hover {
+  background-color: #fee2e2; /* Slightly darker red for hover */
 }

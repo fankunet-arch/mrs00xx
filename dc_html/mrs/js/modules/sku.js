@@ -1,3 +1,4 @@
+// 文件路径: fankunet-arch/mrs01xx/mrs01xx-010e6f69542fe42f0d89e7b08582c8361ace551f/dc_html/mrs/js/modules/sku.js
 /**
  * MRS Backend - SKU Management Module
  * SKU 管理模块
@@ -110,6 +111,16 @@ export async function editSku(skuId) {
   const sku = appState.skus.find(s => s.sku_id === skuId);
   if (!sku) return;
 
+  // [FIX 2.1] 加载品类选项并设置当前值
+  await loadCategoryOptions();
+  document.getElementById('sku-category').value = sku.category_id;
+
+  // [FIX 2.2] 格式化箱规换算数量，移除多余的零点
+  const rawQty = sku.case_to_standard_qty;
+  const displayQty = rawQty
+      ? (parseFloat(rawQty) % 1 === 0 ? parseInt(rawQty, 10) : parseFloat(rawQty).toFixed(4).replace(/\.?0+$/, ''))
+      : '';
+
   document.getElementById('sku-id').value = sku.sku_id;
   document.getElementById('sku-name').value = sku.sku_name;
   document.getElementById('sku-brand').value = sku.brand_name;
@@ -117,12 +128,9 @@ export async function editSku(skuId) {
   document.getElementById('sku-type').value = sku.is_precise_item ? '1' : '0';
   document.getElementById('sku-unit').value = sku.standard_unit;
   document.getElementById('sku-case-unit').value = sku.case_unit_name || '';
-  document.getElementById('sku-case-qty').value = sku.case_to_standard_qty || '';
+  document.getElementById('sku-case-qty').value = displayQty; // 使用格式化后的值
   document.getElementById('sku-note').value = sku.note || '';
   document.getElementById('modal-sku-title').textContent = '编辑SKU';
-
-  await loadCategoryOptions();
-  document.getElementById('sku-category').value = sku.category_id;
 
   modal.show('modal-sku');
 }

@@ -35,40 +35,40 @@ export async function call(url, options = {}) {
 export const batchAPI = {
   async getBatches(filters = {}) {
     const params = new URLSearchParams(filters);
-    return await call(`api.php?route=backend_batches&${params}`);
+    return await call(`/mrs/be/index.php?action=backend_batches&${params}`);
   },
 
   async getBatchDetail(batchId) {
-    return await call(`api.php?route=backend_batch_detail&batch_id=${batchId}`);
+    return await call(`/mrs/be/index.php?action=backend_batch_detail&batch_id=${batchId}`);
   },
 
   async saveBatch(data) {
-    return await call('api.php?route=backend_save_batch', {
+    return await call('/mrs/be/index.php?action=backend_save_batch', {
       method: 'POST',
       body: JSON.stringify(data)
     });
   },
 
   async deleteBatch(batchId) {
-    return await call('api.php?route=backend_delete_batch', {
+    return await call('/mrs/be/index.php?action=backend_delete_batch', {
       method: 'POST',
       body: JSON.stringify({ batch_id: batchId })
     });
   },
 
   async getMergeData(batchId) {
-    return await call(`api.php?route=backend_merge_data&batch_id=${batchId}`);
+    return await call(`/mrs/be/index.php?action=backend_merge_data&batch_id=${batchId}`);
   },
 
   async confirmMerge(batchId, items, closeBatch = false) {
-    return await call('api.php?route=backend_confirm_merge', {
+    return await call('/mrs/be/index.php?action=backend_confirm_merge', {
       method: 'POST',
       body: JSON.stringify({ batch_id: batchId, items, close_batch: closeBatch })
     });
   },
 
   async getRawRecords(batchId, skuId) {
-    return await call(`api.php?route=backend_raw_records&batch_id=${batchId}&sku_id=${skuId}`);
+    return await call(`/mrs/be/index.php?action=backend_raw_records&batch_id=${batchId}&sku_id=${skuId}`);
   }
 };
 
@@ -84,44 +84,44 @@ export const skuAPI = {
 
     const params = new URLSearchParams(cleanFilters);
     const queryString = params.toString();
-    const url = `api.php?route=backend_skus${queryString ? '&' + queryString : ''}`;
+    const url = `/mrs/be/index.php?action=backend_skus${queryString ? '&' + queryString : ''}`;
     return await call(url);
   },
 
   async saveSku(data) {
-    return await call('api.php?route=backend_save_sku', {
+    return await call('/mrs/be/index.php?action=backend_save_sku', {
       method: 'POST',
       body: JSON.stringify(data)
     });
   },
 
   async deleteSku(skuId) {
-    return await call('api.php?route=backend_delete_sku', {
+    return await call('/mrs/be/index.php?action=backend_delete_sku', {
       method: 'POST',
       body: JSON.stringify({ sku_id: skuId })
     });
   },
 
   async updateSkuStatus(skuId, status) {
-    return await call('api.php?route=backend_save_sku', {
+    return await call('/mrs/be/index.php?action=backend_save_sku', {
       method: 'POST',
       body: JSON.stringify({ sku_id: skuId, status: status })
     });
   },
 
   async getSkuHistory(skuId) {
-    return await call(`api.php?route=backend_sku_history&sku_id=${skuId}`);
+    return await call(`/mrs/be/index.php?action=backend_sku_history&sku_id=${skuId}`);
   },
 
   async importSkusText(text) {
-    return await call('api.php?route=backend_import_skus_text', {
+    return await call('/mrs/be/index.php?action=backend_import_skus_text', {
       method: 'POST',
       body: JSON.stringify({ text })
     });
   },
 
   async getSkuDetail(skuId) {
-    return await call(`api.php?route=backend_sku_detail&sku_id=${skuId}`);
+    return await call(`/mrs/be/index.php?action=backend_sku_detail&sku_id=${skuId}`);
   }
 };
 
@@ -129,25 +129,25 @@ export const skuAPI = {
 export const categoryAPI = {
   async getCategories(filters = {}) {
     const params = new URLSearchParams(filters);
-    return await call(`api.php?route=backend_categories&${params}`);
+    return await call(`/mrs/be/index.php?action=backend_categories&${params}`);
   },
 
   async saveCategory(data) {
-    return await call('api.php?route=backend_save_category', {
+    return await call('/mrs/be/index.php?action=backend_save_category', {
       method: 'POST',
       body: JSON.stringify(data)
     });
   },
 
   async deleteCategory(categoryId) {
-    return await call('api.php?route=backend_delete_category', {
+    return await call('/mrs/be/index.php?action=backend_delete_category', {
       method: 'POST',
       body: JSON.stringify({ category_id: categoryId })
     });
   },
 
   async getCategoryDetail(categoryId) {
-    return await call(`api.php?route=backend_category_detail&category_id=${categoryId}`);
+    return await call(`/mrs/be/index.php?action=backend_category_detail&category_id=${categoryId}`);
   }
 };
 
@@ -155,22 +155,22 @@ export const categoryAPI = {
 export const inventoryAPI = {
   async getInventoryList(filters = {}) {
     const params = new URLSearchParams(filters);
-    return await call(`api.php?route=backend_inventory_list&${params}`);
+    return await call(`/mrs/be/index.php?action=backend_inventory_list&${params}`);
   },
 
   async queryInventory(skuId) {
-    return await call(`api.php?route=backend_inventory_query&sku_id=${skuId}`);
+    return await call(`/mrs/be/index.php?action=backend_inventory_query&sku_id=${skuId}`);
   },
 
   async quickOutbound(data) {
-    return await call('api.php?route=backend_quick_outbound', {
+    return await call('/mrs/be/index.php?action=backend_quick_outbound', {
       method: 'POST',
       body: JSON.stringify(data)
     });
   },
 
   async adjustInventory(data) {
-    return await call('api.php?route=backend_adjust_inventory', {
+    return await call('/mrs/be/index.php?action=backend_adjust_inventory', {
       method: 'POST',
       body: JSON.stringify(data)
     });
@@ -181,22 +181,22 @@ export const inventoryAPI = {
 export const outboundAPI = {
   async getOutboundList(filters = {}) {
     const params = new URLSearchParams(filters);
-    return await call(`api.php?route=backend_outbound_list&${params}`);
+    return await call(`/mrs/be/index.php?action=backend_outbound_list&${params}`);
   },
 
   async getOutboundDetail(orderId) {
-    return await call(`api.php?route=backend_outbound_detail&order_id=${orderId}`);
+    return await call(`/mrs/be/index.php?action=backend_outbound_detail&order_id=${orderId}`);
   },
 
   async saveOutbound(data) {
-    return await call('api.php?route=backend_save_outbound', {
+    return await call('/mrs/be/index.php?action=backend_save_outbound', {
       method: 'POST',
       body: JSON.stringify(data)
     });
   },
 
   async confirmOutbound(orderId) {
-    return await call('api.php?route=backend_confirm_outbound', {
+    return await call('/mrs/be/index.php?action=backend_confirm_outbound', {
       method: 'POST',
       body: JSON.stringify({ order_id: orderId })
     });
@@ -207,18 +207,18 @@ export const outboundAPI = {
 export const reportsAPI = {
   async getReports(type, filters = {}) {
     const params = new URLSearchParams({ type, ...filters });
-    return await call(`api.php?route=backend_reports&${params}`);
+    return await call(`/mrs/be/index.php?action=backend_reports&${params}`);
   }
 };
 
 // 系统相关 API
 export const systemAPI = {
   async getSystemStatus() {
-    return await call('api.php?route=backend_system_status');
+    return await call('/mrs/be/index.php?action=backend_system_status');
   },
 
   async fixSystem(action) {
-    return await call('api.php?route=backend_system_fix', {
+    return await call('/mrs/be/index.php?action=backend_system_fix', {
       method: 'POST',
       body: JSON.stringify({ action })
     });
