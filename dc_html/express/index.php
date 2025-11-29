@@ -35,8 +35,21 @@ $allowed_actions = [
 
 // 验证action是否允许
 if (!in_array($action, $allowed_actions)) {
+    $accepts_json = isset($_SERVER['HTTP_ACCEPT']) && stripos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false;
+    $is_ajax = isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+
+    if ($accepts_json || $is_ajax) {
+        express_json_response(false, null, 'Invalid action');
+    }
+
     http_response_code(404);
-    die('Invalid action');
+    echo '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>404 - Page Not Found</title>';
+    echo '<style>body{font-family:Arial,Helvetica,sans-serif;background:#f5f5f5;margin:0;padding:40px;}';
+    echo '.card{max-width:520px;margin:0 auto;background:#fff;border:1px solid #e0e0e0;border-radius:8px;padding:24px;box-shadow:0 2px 8px rgba(0,0,0,0.08);}';
+    echo '.card h1{margin-top:0;font-size:22px;color:#c62828;} .card p{color:#444;line-height:1.6;} .card a{color:#1565c0;text-decoration:none;font-weight:600;}</style>';
+    echo '</head><body><div class="card"><h1>404 - 无效的前台入口</h1><p>请求的操作未被允许或链接已失效。</p>';
+    echo '<p><a href="/express/index.php?action=quick_ops">返回前台首页</a></p></div></body></html>';
+    exit;
 }
 
 // 路由到对应的action文件（在app目录中）
