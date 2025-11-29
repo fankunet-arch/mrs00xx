@@ -69,21 +69,35 @@ try {
         json_response(false, null, '批次不存在');
     }
 
-    // 验证批次状态是否允许编辑
-    if (!is_batch_editable($batch['batch_status'])) {
-        json_response(false, null, '批次状态不允许添加记录');
+    // [MODIFIED] 状态流转逻辑
+    $current_status = $batch['batch_status'];
+    $new_status = null;
+
+    // 如果是 Draft，自动转为 Receiving
+    if ($current_status === 'draft') {
+        $new_status = 'receiving';
+    }
+    // 如果是 Confirmed，自动转回 Pending Merge 以便重新确认
+    elseif ($current_status === 'confirmed') {
+        $new_status = 'pending_merge';
+    }
+    // Posted 状态的批次是最终锁定的，不允许再添加
+    elseif ($current_status === 'posted') {
+        json_response(false, null, '批次已过账锁定，不允许添加记录');
     }
 
-    // [FIX] 状态流转：如果是 Draft，自动转为 Receiving
-    if ($batch['batch_status'] === 'draft') {
+    // 如果需要更新状态，则执行数据库操作
+    if ($new_status !== null) {
         try {
-            $pdo = get_db_connection();
-            $upSql = "UPDATE mrs_batch SET batch_status = 'receiving', updated_at = NOW(6) WHERE batch_id = :bid";
-            $upStmt = $pdo->prepare($upSql);
+            $pdo_status_update = get_db_connection();
+            $upSql = "UPDATE mrs_batch SET batch_status = :new_status, updated_at = NOW(6) WHERE batch_id = :bid";
+            $upStmt = $pdo_status_update->prepare($upSql);
+            $upStmt->bindValue(':new_status', $new_status, PDO::PARAM_STR);
             $upStmt->bindValue(':bid', $input['batch_id'], PDO::PARAM_INT);
             $upStmt->execute();
+            mrs_log("批次 {$input['batch_id']} 状态自动从 {$current_status} 流转到 {$new_status}", 'INFO');
         } catch (Exception $e) {
-            // Ignore status update error, just log
+            // 状态更新失败是一个需要关注的问题，但为了保证数据录入，我们只记录日志
             mrs_log('Auto status update failed: ' . $e->getMessage(), 'WARNING');
         }
     }

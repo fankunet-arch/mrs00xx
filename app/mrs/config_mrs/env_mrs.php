@@ -27,25 +27,39 @@ define('DB_CHARSET', getenv('MRS_DB_CHARSET') ?: 'utf8mb4');
 // ============================================
 
 // 应用根目录
-define('MRS_APP_PATH', dirname(dirname(__FILE__)));
+if (!defined('MRS_APP_PATH')) {
+    define('MRS_APP_PATH', dirname(dirname(__FILE__)));
+}
 
 // 配置目录
-define('MRS_CONFIG_PATH', MRS_APP_PATH . '/config_mrs');
+if (!defined('MRS_CONFIG_PATH')) {
+    define('MRS_CONFIG_PATH', MRS_APP_PATH . '/config_mrs');
+}
 
 // 业务库目录
-define('MRS_LIB_PATH', MRS_APP_PATH . '/lib');
+if (!defined('MRS_LIB_PATH')) {
+    define('MRS_LIB_PATH', MRS_APP_PATH . '/lib');
+}
 
 // 控制器目录
-define('MRS_ACTION_PATH', MRS_APP_PATH . '/actions');
+if (!defined('MRS_ACTION_PATH')) {
+    define('MRS_ACTION_PATH', MRS_APP_PATH . '/actions');
+}
 
 // API目录
-define('MRS_API_PATH', MRS_APP_PATH . '/api');
+if (!defined('MRS_API_PATH')) {
+    define('MRS_API_PATH', MRS_APP_PATH . '/api');
+}
 
 // 日志目录
-define('MRS_LOG_PATH', dirname(dirname(MRS_APP_PATH)) . '/logs/mrs');
+if (!defined('MRS_LOG_PATH')) {
+    define('MRS_LOG_PATH', dirname(dirname(MRS_APP_PATH)) . '/logs/mrs');
+}
 
 // Web根目录 (dc_html/mrs)
-define('MRS_WEB_ROOT', dirname(dirname(dirname(MRS_APP_PATH))) . '/dc_html/mrs');
+if (!defined('MRS_WEB_ROOT')) {
+    define('MRS_WEB_ROOT', dirname(dirname(dirname(MRS_APP_PATH))) . '/dc_html/mrs');
+}
 
 // ============================================
 // 系统配置
