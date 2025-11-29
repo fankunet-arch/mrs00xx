@@ -67,6 +67,8 @@ $batches = express_get_batches($pdo, 'all', 100);
                                 <td><?= date('Y-m-d H:i', strtotime($batch['created_at'])) ?></td>
                                 <td><?= htmlspecialchars($batch['created_by'] ?? '-') ?></td>
                                 <td>
+                                    <a href="/express/exp/index.php?action=batch_edit&batch_id=<?= $batch['batch_id'] ?>"
+                                       class="btn btn-sm btn-secondary" style="margin-right: 6px;">编辑</a>
                                     <a href="/express/exp/index.php?action=batch_detail&batch_id=<?= $batch['batch_id'] ?>"
                                        class="btn btn-sm btn-info">详情</a>
                                 </td>
