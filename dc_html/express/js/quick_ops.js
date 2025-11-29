@@ -258,6 +258,15 @@ async function performSearch(keyword) {
             data.data.forEach(pkg => {
                 state.searchResults.set(pkg.tracking_number, pkg);
             });
+
+            const currentInput = document.getElementById('tracking-input');
+            if (currentInput) {
+                const currentValue = currentInput.value.trim();
+                if (currentValue && state.searchResults.has(currentValue)) {
+                    updateNotesPrefill(currentValue);
+                }
+            }
+
             displaySearchResults(data.data, keyword);
         }
     } catch (error) {
