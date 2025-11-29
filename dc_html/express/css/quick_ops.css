@@ -1,6 +1,7 @@
 /**
  * Express Package Management System - Quick Operations Frontend CSS
  * 文件路径: dc_html/express/css/quick_ops.css
+ * 修复说明: 修复操作历史记录状态标签倒立显示的问题
  */
 
 /* 全局样式 */
@@ -368,6 +369,16 @@ section h2 {
     padding: 2px 6px;
     border-radius: 3px;
     background-color: #e9ecef;
+    
+    /* [FIX] 暴力重置所有可能导致旋转或翻转的属性 */
+    -webkit-transform: none !important;
+    -moz-transform: none !important;
+    -ms-transform: none !important;
+    transform: none !important;
+    rotate: 0deg !important;
+    scale: 1 !important;
+    writing-mode: horizontal-tb !important; /* 防止竖排导致的旋转 */
+    display: inline-block; /* 确保 transforms 属性生效 */
 }
 
 .empty-text {

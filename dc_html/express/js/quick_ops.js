@@ -1,6 +1,10 @@
 /**
  * Express Package Management System - Quick Operations Frontend
  * 文件路径: dc_html/express/js/quick_ops.js
+ * 修复说明: 
+ * 1. 历史记录列表现在跟随“操作类型”变化，仅显示当前类型的记录。
+ * 2. 增加了单号去重逻辑，同一单号在同一操作类型下只显示最新一条。
+ * 3. 增加了历史记录存储容量（10 -> 100），以支持筛选。
  */
 
 // 全局状态
@@ -30,8 +34,15 @@ function initializeApp() {
 
 function bindEvents() {
     // 批次选择
-    document.getElementById('batch-select').addEventListener('change', onBatchChange);
-    document.getElementById('refresh-batches').addEventListener('click', refreshBatches);
+    const batchSelect = document.getElementById('batch-select');
+    if (batchSelect) {
+        batchSelect.addEventListener('change', onBatchChange);
+    }
+    
+    const refreshBtn = document.getElementById('refresh-batches');
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', refreshBatches);
+    }
 
     // 操作类型选择
     document.querySelectorAll('.btn-operation').forEach(btn => {
@@ -42,19 +53,28 @@ function bindEvents() {
 
     // 快递单号输入
     const trackingInput = document.getElementById('tracking-input');
-    trackingInput.addEventListener('input', onTrackingInput);
-    trackingInput.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            handleDirectInput();
-        }
-    });
+    if (trackingInput) {
+        trackingInput.addEventListener('input', onTrackingInput);
+        trackingInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                handleDirectInput();
+            }
+        });
+    }
 
     // 按钮事件
-    document.getElementById('btn-clear-input').addEventListener('click', clearInput);
-    document.getElementById('btn-submit').addEventListener('click', submitOperation);
-    document.getElementById('btn-reset').addEventListener('click', resetForm);
-    document.getElementById('btn-change-operation').addEventListener('click', changeOperation);
+    const btnClear = document.getElementById('btn-clear-input');
+    if (btnClear) btnClear.addEventListener('click', clearInput);
+    
+    const btnSubmit = document.getElementById('btn-submit');
+    if (btnSubmit) btnSubmit.addEventListener('click', submitOperation);
+    
+    const btnReset = document.getElementById('btn-reset');
+    if (btnReset) btnReset.addEventListener('click', resetForm);
+    
+    const btnChangeOp = document.getElementById('btn-change-operation');
+    if (btnChangeOp) btnChangeOp.addEventListener('click', changeOperation);
 }
 
 // 时间更新
@@ -68,7 +88,8 @@ function updateCurrentTime() {
         minute: '2-digit',
         second: '2-digit'
     });
-    document.getElementById('current-time').textContent = timeStr;
+    const timeEl = document.getElementById('current-time');
+    if (timeEl) timeEl.textContent = timeStr;
 }
 
 // 批次选择事件
@@ -175,6 +196,9 @@ function selectOperation(operation) {
 
     // 聚焦到输入框
     document.getElementById('tracking-input').focus();
+
+    // [FIX] 切换操作类型时，立即刷新并筛选历史记录
+    displayHistory();
 }
 
 // 快递单号输入事件（模糊搜索）
@@ -354,13 +378,17 @@ async function submitOperation() {
 // 重置表单
 function resetForm() {
     clearInput();
-    state.currentOperation = null;
-    document.getElementById('input-section').style.display = 'none';
+    // [FIX] 重置时不清除当前选择的操作类型，符合连续操作习惯
+    // state.currentOperation = null; 
+    // document.getElementById('input-section').style.display = 'none';
 }
 
 // 切换操作类型
 function changeOperation() {
-    resetForm();
+    state.currentOperation = null;
+    document.getElementById('input-section').style.display = 'none';
+    // 清空历史显示（因为没有选择类型）
+    displayHistory();
 }
 
 // 显示消息
@@ -390,9 +418,9 @@ function getStatusText(status) {
 function addToHistory(record) {
     state.operationHistory.unshift(record);
 
-    // 只保留最近10条
-    if (state.operationHistory.length > 10) {
-        state.operationHistory = state.operationHistory.slice(0, 10);
+    // [FIX] 增加存储上限到100条，以便在筛选后仍有足够数据展示
+    if (state.operationHistory.length > 100) {
+        state.operationHistory = state.operationHistory.slice(0, 100);
     }
 
     // 保存到localStorage
@@ -402,26 +430,42 @@ function addToHistory(record) {
     displayHistory();
 }
 
-// 显示历史记录
+// [FIX] 显示历史记录（重构：增加筛选和去重逻辑）
 function displayHistory() {
     const historyDiv = document.getElementById('operation-history');
+    
+    // 1. 获取所有记录
+    let records = state.operationHistory || [];
 
-    if (state.operationHistory.length === 0) {
+    // 2. 如果已选择操作类型，则只显示该类型的记录
+    if (state.currentOperation) {
+        records = records.filter(r => r.operation === state.currentOperation);
+    }
+
+    // 3. 按快递单号去重，只保留最新的一条
+    // (由于 records 是按时间倒序排列的，第一次出现的单号即为最新的)
+    const uniqueMap = new Map();
+    const uniqueRecords = [];
+    
+    for (const record of records) {
+        if (!uniqueMap.has(record.tracking_number)) {
+            uniqueMap.set(record.tracking_number, true);
+            uniqueRecords.push(record);
+        }
+    }
+    
+    // 4. 只显示前 10 条
+    const displayRecords = uniqueRecords.slice(0, 10);
+
+    if (displayRecords.length === 0) {
         historyDiv.innerHTML = '<p class="empty-text">暂无操作记录</p>';
         return;
     }
 
-    const operationNames = {
-        'verify': '核实',
-        'count': '清点',
-        'adjust': '调整'
-    };
-
-    historyDiv.innerHTML = state.operationHistory.map(record => `
+    historyDiv.innerHTML = displayRecords.map(record => `
         <div class="history-item">
             <span class="history-time">${record.time}</span>
             <span class="history-tracking">${record.tracking_number}</span>
-            <span class="history-operation">${operationNames[record.operation]}</span>
             <span class="history-status status-${record.status}">${getStatusText(record.status)}</span>
         </div>
     `).join('');
@@ -441,10 +485,19 @@ function loadHistoryFromStorage() {
     try {
         const stored = localStorage.getItem('express_operation_history');
         if (stored) {
-            state.operationHistory = JSON.parse(stored);
-            displayHistory();
+            const parsed = JSON.parse(stored);
+            if (Array.isArray(parsed)) {
+                state.operationHistory = parsed;
+            } else {
+                state.operationHistory = [];
+                localStorage.removeItem('express_operation_history');
+            }
         }
     } catch (e) {
         console.error('Failed to load history:', e);
+        state.operationHistory = [];
+        localStorage.removeItem('express_operation_history');
     }
+    
+    displayHistory();
 }
