@@ -13,7 +13,8 @@ const state = {
     currentOperation: null,
     searchTimeout: null,
     operationHistory: [],
-    searchResults: new Map()
+    searchResults: new Map(),
+    lastCountNote: ''
 };
 
 // 初始化
@@ -390,6 +391,10 @@ async function submitOperation() {
         if (data.success) {
             showMessage(data.message, 'success');
 
+            if (state.currentOperation === 'count') {
+                state.lastCountNote = (payload.content_note || '').trim();
+            }
+
             // 更新批次统计
             if (data.data.batch) {
                 updateBatchStats(data.data.batch);
@@ -556,21 +561,28 @@ function updateNotesPrefill(trackingNumber) {
 
     const pkg = state.searchResults.get(trackingNumber);
     if (state.currentOperation === 'count') {
-        const lastContent = pkg && pkg.content_note ? pkg.content_note : '';
-        showLastCountSuggestion(lastContent);
+        const noteField = document.getElementById('content-note');
+        const savedContent = pkg && pkg.content_note ? pkg.content_note : '';
+
+        if (pkg && savedContent) {
+            hideLastCountSuggestion();
+            if (noteField) {
+                noteField.value = savedContent;
+            }
+            return;
+        }
+
+        if (noteField) {
+            noteField.value = '';
+        }
+
+        showLastCountSuggestion(state.lastCountNote);
     } else {
         hideLastCountSuggestion();
     }
 
     if (!pkg) {
         return;
-    }
-
-    if (state.currentOperation === 'count') {
-        const noteField = document.getElementById('content-note');
-        if (noteField) {
-            noteField.value = pkg.content_note || '';
-        }
     }
 
     if (state.currentOperation === 'adjust') {
