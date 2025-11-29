@@ -7,6 +7,7 @@
 if (!defined('EXPRESS_ENTRY')) {
     die('Access denied');
 }
+$currentUser = express_get_current_user();
 ?>
 <!DOCTYPE html>
 <html lang="zh-CN">
@@ -14,7 +15,7 @@ if (!defined('EXPRESS_ENTRY')) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>创建批次 - Express Backend</title>
-    <link rel="stylesheet" href="/dc_html/express/css/backend.css">
+    <link rel="stylesheet" href="/express/css/backend.css">
 </head>
 <body>
     <?php include EXPRESS_VIEW_PATH . '/shared/sidebar.php'; ?>
@@ -73,7 +74,7 @@ if (!defined('EXPRESS_ENTRY')) {
                     body: JSON.stringify({
                         batch_name: batch_name,
                         notes: notes,
-                        created_by: '<?= $_SESSION['express_admin_username'] ?? 'admin' ?>'
+                        created_by: '<?= $currentUser['user_login'] ?? 'admin' ?>'
                     })
                 });
 

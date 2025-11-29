@@ -198,9 +198,17 @@ function express_get_json_input() {
 function express_start_secure_session() {
     if (session_status() === PHP_SESSION_NONE) {
         ini_set('session.cookie_httponly', 1);
+        ini_set('session.cookie_secure', isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 1 : 0);
         ini_set('session.use_strict_mode', 1);
-        ini_set('session.cookie_samesite', 'Lax');
+        ini_set('session.cookie_samesite', 'Strict');
         session_name('EXPRESS_SESSION');
+
         session_start();
+
+        // 会话固定防护：首次启动时刷新ID
+        if (!isset($_SESSION['express_session_initiated'])) {
+            session_regenerate_id(true);
+            $_SESSION['express_session_initiated'] = true;
+        }
     }
 }

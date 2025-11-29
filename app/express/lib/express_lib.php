@@ -508,3 +508,144 @@ function express_bulk_import($pdo, $batch_id, $tracking_numbers) {
         ];
     }
 }
+
+// ============================================
+// 用户认证和会话管理函数（对齐MRS）
+// ============================================
+
+/**
+ * 验证用户登录
+ * @param PDO $pdo
+ * @param string $username
+ * @param string $password
+ * @return array|false
+ */
+function express_authenticate_user($pdo, $username, $password) {
+    try {
+        $stmt = $pdo->prepare("SELECT
+                user_id,
+                user_login,
+                user_secret_hash,
+                user_email,
+                user_display_name,
+                user_status
+            FROM sys_users
+            WHERE user_login = :username
+            LIMIT 1");
+
+        $stmt->bindValue(':username', $username);
+        $stmt->execute();
+
+        $user = $stmt->fetch();
+
+        if (!$user) {
+            express_log("登录失败: 用户不存在 - {$username}", 'WARNING');
+            return false;
+        }
+
+        if ($user['user_status'] !== 'active') {
+            express_log("登录失败: 账户未激活 - {$username}", 'WARNING');
+            return false;
+        }
+
+        if (password_verify($password, $user['user_secret_hash'])) {
+            $updateSql = "UPDATE sys_users SET user_last_login_at = NOW(6) WHERE user_id = :user_id";
+            $updateStmt = $pdo->prepare($updateSql);
+            $updateStmt->bindValue(':user_id', $user['user_id'], PDO::PARAM_INT);
+            $updateStmt->execute();
+
+            express_log("登录成功: {$username}", 'INFO');
+            unset($user['user_secret_hash']);
+
+            return $user;
+        }
+
+        express_log("登录失败: 密码错误 - {$username}", 'WARNING');
+        return false;
+    } catch (PDOException $e) {
+        express_log('用户认证失败: ' . $e->getMessage(), 'ERROR');
+        return false;
+    }
+}
+
+/**
+ * 创建用户会话
+ * @param array $user
+ */
+function express_create_user_session($user) {
+    express_start_secure_session();
+
+    $_SESSION['express_user_id'] = $user['user_id'];
+    $_SESSION['express_user_login'] = $user['user_login'];
+    $_SESSION['express_user_display_name'] = $user['user_display_name'];
+    $_SESSION['express_user_email'] = $user['user_email'];
+    $_SESSION['express_logged_in'] = true;
+    $_SESSION['login_time'] = time();
+    $_SESSION['last_activity'] = time();
+
+    // 兼容旧逻辑字段
+    $_SESSION['express_admin_logged_in'] = true;
+    $_SESSION['express_admin_username'] = $user['user_login'];
+}
+
+/**
+ * 检查用户是否已登录并处理超时
+ * @return bool
+ */
+function express_is_user_logged_in() {
+    express_start_secure_session();
+
+    if (!isset($_SESSION['express_logged_in']) || $_SESSION['express_logged_in'] !== true) {
+        return false;
+    }
+
+    $timeout = 1800; // 30分钟
+    if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity']) > $timeout) {
+        express_destroy_user_session();
+        return false;
+    }
+
+    $_SESSION['last_activity'] = time();
+    return true;
+}
+
+/**
+ * 获取当前登录用户信息
+ * @return array|null
+ */
+function express_get_current_user() {
+    if (!express_is_user_logged_in()) {
+        return null;
+    }
+
+    return [
+        'user_id' => $_SESSION['express_user_id'] ?? null,
+        'user_login' => $_SESSION['express_user_login'] ?? null,
+        'user_display_name' => $_SESSION['express_user_display_name'] ?? null,
+        'user_email' => $_SESSION['express_user_email'] ?? null,
+    ];
+}
+
+/**
+ * 销毁用户会话
+ */
+function express_destroy_user_session() {
+    express_start_secure_session();
+
+    $_SESSION = [];
+
+    if (ini_get('session.use_cookies')) {
+        $params = session_get_cookie_params();
+        setcookie(
+            session_name(),
+            '',
+            time() - 42000,
+            $params['path'],
+            $params['domain'],
+            $params['secure'],
+            $params['httponly']
+        );
+    }
+
+    session_destroy();
+}

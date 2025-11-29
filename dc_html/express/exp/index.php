@@ -23,10 +23,9 @@ if (file_exists(PROJECT_ROOT . '/app/express/bootstrap_mock.php')) {
 $action = $_GET['action'] ?? 'batch_list';
 $action = basename($action); // 防止路径遍历
 
-// 简单的身份验证（仅用于测试，生产环境需要更完善的认证）
-// 对于非登录操作，检查会话
+// 对于非登录操作，检查会话（对齐MRS会话规则）
 if ($action !== 'login' && $action !== 'do_login') {
-    if (!isset($_SESSION['express_admin_logged_in']) || $_SESSION['express_admin_logged_in'] !== true) {
+    if (!express_is_user_logged_in()) {
         header('Location: /express/exp/index.php?action=login');
         exit;
     }

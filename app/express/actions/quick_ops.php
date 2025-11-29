@@ -18,7 +18,7 @@ $batches = express_get_batches($pdo, 'active', 50);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>快递单统一操作页面 - Express Package Management</title>
-    <link rel="stylesheet" href="/dc_html/express/css/quick_ops.css">
+    <link rel="stylesheet" href="/express/css/quick_ops.css">
 </head>
 <body>
     <div class="container">
@@ -133,6 +133,6 @@ $batches = express_get_batches($pdo, 'active', 50);
         </section>
     </div>
 
-    <script src="/dc_html/express/js/quick_ops.js"></script>
+    <script src="/express/js/quick_ops.js"></script>
 </body>
 </html>
