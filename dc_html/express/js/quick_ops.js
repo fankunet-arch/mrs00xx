@@ -12,7 +12,8 @@ const state = {
     currentBatchId: null,
     currentOperation: null,
     searchTimeout: null,
-    operationHistory: []
+    operationHistory: [],
+    searchResults: new Map()
 };
 
 // 初始化
@@ -234,6 +235,10 @@ async function performSearch(keyword) {
         const data = await response.json();
 
         if (data.success) {
+            state.searchResults = new Map();
+            data.data.forEach(pkg => {
+                state.searchResults.set(pkg.tracking_number, pkg);
+            });
             displaySearchResults(data.data, keyword);
         }
     } catch (error) {
@@ -281,6 +286,9 @@ function selectTrackingNumber(trackingNumber) {
     document.getElementById('tracking-input').value = trackingNumber;
     hideSearchResults();
 
+    // 根据已存在的包裹信息预填备注
+    updateNotesPrefill(trackingNumber);
+
     // 如果是清点操作，聚焦到内容备注
     if (state.currentOperation === 'count') {
         document.getElementById('content-note').focus();
@@ -297,6 +305,7 @@ function handleDirectInput() {
         return;
     }
 
+    updateNotesPrefill(trackingNumber);
     selectTrackingNumber(trackingNumber);
 }
 
@@ -355,6 +364,13 @@ async function submitOperation() {
             // 更新批次统计
             if (data.data.batch) {
                 updateBatchStats(data.data.batch);
+            }
+
+            if (data.data.package) {
+                if (!(state.searchResults instanceof Map)) {
+                    state.searchResults = new Map();
+                }
+                state.searchResults.set(trackingNumber, data.data.package);
             }
 
             // 添加到操作历史
@@ -498,6 +514,32 @@ function loadHistoryFromStorage() {
         state.operationHistory = [];
         localStorage.removeItem('express_operation_history');
     }
-    
+
     displayHistory();
+}
+
+// 根据当前操作类型预填备注
+function updateNotesPrefill(trackingNumber) {
+    if (!(state.searchResults instanceof Map)) {
+        return;
+    }
+
+    const pkg = state.searchResults.get(trackingNumber);
+    if (!pkg) {
+        return;
+    }
+
+    if (state.currentOperation === 'count') {
+        const noteField = document.getElementById('content-note');
+        if (noteField) {
+            noteField.value = pkg.content_note || '';
+        }
+    }
+
+    if (state.currentOperation === 'adjust') {
+        const adjustField = document.getElementById('adjustment-note');
+        if (adjustField) {
+            adjustField.value = pkg.adjustment_note || '';
+        }
+    }
 }
