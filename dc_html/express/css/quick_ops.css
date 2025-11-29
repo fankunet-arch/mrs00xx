@@ -372,7 +372,7 @@ section h2 {
 
 .history-item {
     display: flex;
-    gap: 15px;
+    gap: 12px;
     padding: 10px;
     border-bottom: 1px solid #f0f0f0;
     font-size: 13px;
@@ -385,13 +385,18 @@ section h2 {
 
 .history-time {
     color: #999;
-    min-width: 80px;
+    min-width: 82px;
+    flex-shrink: 0;
 }
 
 .history-tracking {
     font-weight: bold;
     color: #333;
-    min-width: 120px;
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .history-operation {
@@ -404,7 +409,8 @@ section h2 {
     padding: 2px 6px;
     border-radius: 3px;
     background-color: #e9ecef;
-    
+    flex-shrink: 0;
+
     /* [FIX] 暴力重置所有可能导致旋转或翻转的属性 */
     -webkit-transform: none !important;
     -moz-transform: none !important;
