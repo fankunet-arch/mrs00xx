@@ -21,7 +21,7 @@ $batches = express_get_batches($pdo, 'active', 50);
     <link rel="stylesheet" href="./css/quick_ops.css">
 </head>
 <body>
-    <div class="container">
+    <div class="container compact-layout">
         <header>
             <h1>快递单统一操作页面</h1>
             <div class="header-info">
@@ -51,23 +51,25 @@ $batches = express_get_batches($pdo, 'active', 50);
 
             <!-- 批次统计信息 -->
             <div id="batch-stats" class="batch-stats" style="display: none;">
-                <div class="stat-item">
-                    <span class="stat-label">总数:</span>
-                    <span id="stat-total" class="stat-value">0</span>
+                <div class="stat-grid">
+                    <div class="stat-item">
+                        <span class="stat-label">总数</span>
+                        <span id="stat-total" class="stat-value">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">已核实</span>
+                        <span id="stat-verified" class="stat-value">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">已清点</span>
+                        <span id="stat-counted" class="stat-value">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">已调整</span>
+                        <span id="stat-adjusted" class="stat-value">0</span>
+                    </div>
                 </div>
-                <div class="stat-item">
-                    <span class="stat-label">已核实:</span>
-                    <span id="stat-verified" class="stat-value">0</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-label">已清点:</span>
-                    <span id="stat-counted" class="stat-value">0</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-label">已调整:</span>
-                    <span id="stat-adjusted" class="stat-value">0</span>
-                </div>
-                <div class="stat-item progress-bar">
+                <div class="progress-bar">
                     <div id="progress-fill" class="progress-fill" style="width: 0%"></div>
                     <span id="progress-text" class="progress-text">0%</span>
                 </div>

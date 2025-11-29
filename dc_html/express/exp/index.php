@@ -37,6 +37,9 @@ $allowed_actions = [
     'batch_detail',             // 批次详情
     'batch_create',             // 创建批次页面
     'batch_create_save',        // 保存新批次
+    'batch_edit',               // 编辑批次页面
+    'batch_edit_save',          // 保存批次编辑
+    'batch_delete',             // 删除批次
     'bulk_import',              // 批量导入页面
     'bulk_import_save'          // 保存批量导入
 ];
@@ -48,7 +51,7 @@ if (!in_array($action, $allowed_actions)) {
 }
 
 // API action（返回JSON）
-$api_actions = ['do_login', 'batch_create_save', 'bulk_import_save', 'logout'];
+$api_actions = ['do_login', 'batch_create_save', 'batch_edit_save', 'batch_delete', 'bulk_import_save', 'logout'];
 
 // 路由到对应的action或API文件（在app目录中）
 if (in_array($action, $api_actions)) {
