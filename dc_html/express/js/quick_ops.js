@@ -418,7 +418,15 @@ async function fetchRecentOperations() {
 
     try {
         const response = await fetch(`/express/index.php?action=get_recent_operations_api&batch_id=${state.currentBatchId}&operation_type=${state.currentOperation}`);
-        const data = await response.json();
+        const rawText = await response.text();
+
+        let data;
+        try {
+            data = JSON.parse(rawText);
+        } catch (parseError) {
+            showMessage('获取历史失败: 返回格式错误', 'error');
+            return;
+        }
 
         if (data.success) {
             state.operationHistory = data.data || [];
