@@ -198,9 +198,15 @@ function express_get_json_input() {
 function express_start_secure_session() {
     if (session_status() === PHP_SESSION_NONE) {
         ini_set('session.cookie_httponly', 1);
+        ini_set('session.cookie_secure', isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 1 : 0);
         ini_set('session.use_strict_mode', 1);
-        ini_set('session.cookie_samesite', 'Lax');
-        session_name('EXPRESS_SESSION');
+        ini_set('session.cookie_samesite', 'Strict');
+
         session_start();
+
+        if (!isset($_SESSION['initiated'])) {
+            session_regenerate_id(true);
+            $_SESSION['initiated'] = true;
+        }
     }
 }

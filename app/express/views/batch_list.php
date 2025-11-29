@@ -16,7 +16,7 @@ $batches = express_get_batches($pdo, 'all', 100);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>批次列表 - Express Backend</title>
-    <link rel="stylesheet" href="/dc_html/express/css/backend.css">
+    <link rel="stylesheet" href="../css/backend.css">
 </head>
 <body>
     <?php include EXPRESS_VIEW_PATH . '/shared/sidebar.php'; ?>
