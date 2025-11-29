@@ -1,0 +1,510 @@
+<?php
+/**
+ * Express Package Management System - Core Library
+ * 文件路径: app/express/lib/express_lib.php
+ * 说明: 核心业务逻辑函数
+ */
+
+// ============================================
+// 批次管理函数
+// ============================================
+
+/**
+ * 获取批次列表
+ * @param PDO $pdo
+ * @param string $status 批次状态（'active', 'closed', 'all'）
+ * @param int $limit 限制数量
+ * @return array
+ */
+function express_get_batches($pdo, $status = 'all', $limit = 100) {
+    try {
+        $sql = "SELECT * FROM express_batch";
+
+        if ($status !== 'all') {
+            $sql .= " WHERE status = :status";
+        }
+
+        $sql .= " ORDER BY created_at DESC LIMIT :limit";
+
+        $stmt = $pdo->prepare($sql);
+
+        if ($status !== 'all') {
+            $stmt->bindValue(':status', $status, PDO::PARAM_STR);
+        }
+
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->execute();
+
+        return $stmt->fetchAll();
+    } catch (PDOException $e) {
+        express_log('Failed to get batches: ' . $e->getMessage(), 'ERROR');
+        return [];
+    }
+}
+
+/**
+ * 根据批次ID获取批次详情
+ * @param PDO $pdo
+ * @param int $batch_id
+ * @return array|null
+ */
+function express_get_batch_by_id($pdo, $batch_id) {
+    try {
+        $stmt = $pdo->prepare("SELECT * FROM express_batch WHERE batch_id = :batch_id");
+        $stmt->execute(['batch_id' => $batch_id]);
+        return $stmt->fetch();
+    } catch (PDOException $e) {
+        express_log('Failed to get batch: ' . $e->getMessage(), 'ERROR');
+        return null;
+    }
+}
+
+/**
+ * 创建新批次
+ * @param PDO $pdo
+ * @param string $batch_name
+ * @param string $created_by
+ * @param string $notes
+ * @return int|false 返回新批次ID或false
+ */
+function express_create_batch($pdo, $batch_name, $created_by = null, $notes = null) {
+    try {
+        $stmt = $pdo->prepare("
+            INSERT INTO express_batch (batch_name, created_by, notes)
+            VALUES (:batch_name, :created_by, :notes)
+        ");
+
+        $stmt->execute([
+            'batch_name' => trim($batch_name),
+            'created_by' => $created_by,
+            'notes' => $notes
+        ]);
+
+        express_log('Batch created: ' . $batch_name, 'INFO');
+        return $pdo->lastInsertId();
+    } catch (PDOException $e) {
+        express_log('Failed to create batch: ' . $e->getMessage(), 'ERROR');
+        return false;
+    }
+}
+
+/**
+ * 更新批次统计数据
+ * @param PDO $pdo
+ * @param int $batch_id
+ * @return bool
+ */
+function express_update_batch_statistics($pdo, $batch_id) {
+    try {
+        $stmt = $pdo->prepare("
+            UPDATE express_batch SET
+                total_count = (SELECT COUNT(*) FROM express_package WHERE batch_id = :batch_id1),
+                verified_count = (SELECT COUNT(*) FROM express_package WHERE batch_id = :batch_id2 AND package_status IN ('verified', 'counted', 'adjusted')),
+                counted_count = (SELECT COUNT(*) FROM express_package WHERE batch_id = :batch_id3 AND package_status IN ('counted', 'adjusted')),
+                adjusted_count = (SELECT COUNT(*) FROM express_package WHERE batch_id = :batch_id4 AND package_status = 'adjusted')
+            WHERE batch_id = :batch_id5
+        ");
+
+        $stmt->execute([
+            'batch_id1' => $batch_id,
+            'batch_id2' => $batch_id,
+            'batch_id3' => $batch_id,
+            'batch_id4' => $batch_id,
+            'batch_id5' => $batch_id
+        ]);
+
+        return true;
+    } catch (PDOException $e) {
+        express_log('Failed to update batch statistics: ' . $e->getMessage(), 'ERROR');
+        return false;
+    }
+}
+
+// ============================================
+// 包裹管理函数
+// ============================================
+
+/**
+ * 模糊搜索快递单号
+ * @param PDO $pdo
+ * @param int $batch_id
+ * @param string $keyword
+ * @param int $limit
+ * @return array
+ */
+function express_search_tracking($pdo, $batch_id, $keyword, $limit = 20) {
+    try {
+        $stmt = $pdo->prepare("
+            SELECT * FROM express_package
+            WHERE batch_id = :batch_id AND tracking_number LIKE :keyword
+            ORDER BY tracking_number ASC
+            LIMIT :limit
+        ");
+
+        $stmt->bindValue(':batch_id', $batch_id, PDO::PARAM_INT);
+        $stmt->bindValue(':keyword', '%' . $keyword . '%', PDO::PARAM_STR);
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->execute();
+
+        return $stmt->fetchAll();
+    } catch (PDOException $e) {
+        express_log('Failed to search tracking: ' . $e->getMessage(), 'ERROR');
+        return [];
+    }
+}
+
+/**
+ * 获取包裹详情
+ * @param PDO $pdo
+ * @param int $package_id
+ * @return array|null
+ */
+function express_get_package_by_id($pdo, $package_id) {
+    try {
+        $stmt = $pdo->prepare("SELECT * FROM express_package WHERE package_id = :package_id");
+        $stmt->execute(['package_id' => $package_id]);
+        return $stmt->fetch();
+    } catch (PDOException $e) {
+        express_log('Failed to get package: ' . $e->getMessage(), 'ERROR');
+        return null;
+    }
+}
+
+/**
+ * 获取批次下的所有包裹
+ * @param PDO $pdo
+ * @param int $batch_id
+ * @param string $status 过滤状态（'all' 或具体状态）
+ * @return array
+ */
+function express_get_packages_by_batch($pdo, $batch_id, $status = 'all') {
+    try {
+        $sql = "SELECT * FROM express_package WHERE batch_id = :batch_id";
+
+        if ($status !== 'all') {
+            $sql .= " AND package_status = :status";
+        }
+
+        $sql .= " ORDER BY created_at DESC";
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->bindValue(':batch_id', $batch_id, PDO::PARAM_INT);
+
+        if ($status !== 'all') {
+            $stmt->bindValue(':status', $status, PDO::PARAM_STR);
+        }
+
+        $stmt->execute();
+        return $stmt->fetchAll();
+    } catch (PDOException $e) {
+        express_log('Failed to get packages: ' . $e->getMessage(), 'ERROR');
+        return [];
+    }
+}
+
+/**
+ * 创建新包裹记录（仅用于批量导入）
+ * @param PDO $pdo
+ * @param int $batch_id
+ * @param string $tracking_number
+ * @return int|false
+ */
+function express_create_package($pdo, $batch_id, $tracking_number) {
+    try {
+        $stmt = $pdo->prepare("
+            INSERT INTO express_package (batch_id, tracking_number)
+            VALUES (:batch_id, :tracking_number)
+        ");
+
+        $stmt->execute([
+            'batch_id' => $batch_id,
+            'tracking_number' => trim($tracking_number)
+        ]);
+
+        return $pdo->lastInsertId();
+    } catch (PDOException $e) {
+        // 重复单号不报错，只记录日志
+        if ($e->getCode() == 23000) {
+            express_log('Duplicate tracking number: ' . $tracking_number, 'WARNING');
+        } else {
+            express_log('Failed to create package: ' . $e->getMessage(), 'ERROR');
+        }
+        return false;
+    }
+}
+
+// ============================================
+// 业务操作函数
+// ============================================
+
+/**
+ * 处理包裹操作（核实/清点/调整）
+ * @param PDO $pdo
+ * @param int $batch_id
+ * @param string $tracking_number
+ * @param string $operation_type 'verify', 'count', 'adjust'
+ * @param string $operator
+ * @param string $content_note 内容备注（清点时使用）
+ * @param string $adjustment_note 调整备注（调整时使用）
+ * @return array ['success' => bool, 'message' => string, 'package' => array]
+ */
+function express_process_package($pdo, $batch_id, $tracking_number, $operation_type, $operator, $content_note = null, $adjustment_note = null) {
+    try {
+        $pdo->beginTransaction();
+
+        // 1. 查找或创建包裹记录
+        $stmt = $pdo->prepare("
+            SELECT * FROM express_package
+            WHERE batch_id = :batch_id AND tracking_number = :tracking_number
+        ");
+        $stmt->execute([
+            'batch_id' => $batch_id,
+            'tracking_number' => trim($tracking_number)
+        ]);
+        $package = $stmt->fetch();
+
+        // 如果不存在，创建新包裹（状态为pending）
+        if (!$package) {
+            $package_id = express_create_package($pdo, $batch_id, $tracking_number);
+            if (!$package_id) {
+                $pdo->rollBack();
+                return ['success' => false, 'message' => '创建包裹记录失败'];
+            }
+            $package = express_get_package_by_id($pdo, $package_id);
+        }
+
+        $old_status = $package['package_status'];
+        $package_id = $package['package_id'];
+
+        // 2. 根据操作类型处理
+        $result = null;
+        switch ($operation_type) {
+            case 'verify':
+                $result = express_process_verify($pdo, $package_id, $old_status, $operator);
+                break;
+            case 'count':
+                $result = express_process_count($pdo, $package_id, $old_status, $operator, $content_note);
+                break;
+            case 'adjust':
+                $result = express_process_adjust($pdo, $package_id, $old_status, $operator, $adjustment_note);
+                break;
+            default:
+                $pdo->rollBack();
+                return ['success' => false, 'message' => '无效的操作类型'];
+        }
+
+        if (!$result['success']) {
+            $pdo->rollBack();
+            return $result;
+        }
+
+        // 3. 记录操作日志
+        $stmt = $pdo->prepare("
+            INSERT INTO express_operation_log (package_id, operation_type, operator, old_status, new_status, notes)
+            VALUES (:package_id, :operation_type, :operator, :old_status, :new_status, :notes)
+        ");
+        $stmt->execute([
+            'package_id' => $package_id,
+            'operation_type' => $operation_type,
+            'operator' => $operator,
+            'old_status' => $old_status,
+            'new_status' => $result['new_status'],
+            'notes' => $content_note ?? $adjustment_note
+        ]);
+
+        // 4. 更新批次统计
+        express_update_batch_statistics($pdo, $batch_id);
+
+        $pdo->commit();
+
+        // 获取更新后的包裹信息
+        $updated_package = express_get_package_by_id($pdo, $package_id);
+
+        return [
+            'success' => true,
+            'message' => $result['message'],
+            'package' => $updated_package
+        ];
+
+    } catch (PDOException $e) {
+        $pdo->rollBack();
+        express_log('Failed to process package: ' . $e->getMessage(), 'ERROR');
+        return ['success' => false, 'message' => '操作失败: ' . $e->getMessage()];
+    }
+}
+
+/**
+ * 处理核实操作
+ * @param PDO $pdo
+ * @param int $package_id
+ * @param string $old_status
+ * @param string $operator
+ * @return array
+ */
+function express_process_verify($pdo, $package_id, $old_status, $operator) {
+    // 任何状态都可以核实
+    $stmt = $pdo->prepare("
+        UPDATE express_package SET
+            package_status = 'verified',
+            verified_at = NOW(),
+            verified_by = :operator
+        WHERE package_id = :package_id
+    ");
+
+    $stmt->execute([
+        'package_id' => $package_id,
+        'operator' => $operator
+    ]);
+
+    return [
+        'success' => true,
+        'message' => '核实成功',
+        'new_status' => 'verified'
+    ];
+}
+
+/**
+ * 处理清点操作
+ * @param PDO $pdo
+ * @param int $package_id
+ * @param string $old_status
+ * @param string $operator
+ * @param string $content_note
+ * @return array
+ */
+function express_process_count($pdo, $package_id, $old_status, $operator, $content_note) {
+    // 清点操作自动包含核实，同时更新两个时间戳
+    $stmt = $pdo->prepare("
+        UPDATE express_package SET
+            package_status = 'counted',
+            verified_at = COALESCE(verified_at, NOW()),
+            verified_by = COALESCE(verified_by, :operator),
+            counted_at = NOW(),
+            counted_by = :operator,
+            content_note = :content_note
+        WHERE package_id = :package_id
+    ");
+
+    $stmt->execute([
+        'package_id' => $package_id,
+        'operator' => $operator,
+        'content_note' => $content_note
+    ]);
+
+    return [
+        'success' => true,
+        'message' => '清点成功',
+        'new_status' => 'counted'
+    ];
+}
+
+/**
+ * 处理调整操作
+ * @param PDO $pdo
+ * @param int $package_id
+ * @param string $old_status
+ * @param string $operator
+ * @param string $adjustment_note
+ * @return array
+ */
+function express_process_adjust($pdo, $package_id, $old_status, $operator, $adjustment_note) {
+    // 调整操作需要先经过清点
+    if ($old_status !== 'counted' && $old_status !== 'adjusted') {
+        return [
+            'success' => false,
+            'message' => '包裹必须先完成清点才能调整',
+            'new_status' => $old_status
+        ];
+    }
+
+    $stmt = $pdo->prepare("
+        UPDATE express_package SET
+            package_status = 'adjusted',
+            adjusted_at = NOW(),
+            adjusted_by = :operator,
+            adjustment_note = :adjustment_note
+        WHERE package_id = :package_id
+    ");
+
+    $stmt->execute([
+        'package_id' => $package_id,
+        'operator' => $operator,
+        'adjustment_note' => $adjustment_note
+    ]);
+
+    return [
+        'success' => true,
+        'message' => '调整成功',
+        'new_status' => 'adjusted'
+    ];
+}
+
+/**
+ * 批量导入快递单号
+ * @param PDO $pdo
+ * @param int $batch_id
+ * @param array $tracking_numbers
+ * @return array ['success' => bool, 'imported' => int, 'duplicates' => int, 'errors' => array]
+ */
+function express_bulk_import($pdo, $batch_id, $tracking_numbers) {
+    $imported = 0;
+    $duplicates = 0;
+    $errors = [];
+
+    try {
+        $pdo->beginTransaction();
+
+        foreach ($tracking_numbers as $tracking_number) {
+            $tracking_number = trim($tracking_number);
+
+            // 跳过空行
+            if (empty($tracking_number)) {
+                continue;
+            }
+
+            $result = express_create_package($pdo, $batch_id, $tracking_number);
+
+            if ($result) {
+                $imported++;
+            } else {
+                // 检查是否是重复单号
+                $stmt = $pdo->prepare("
+                    SELECT package_id FROM express_package
+                    WHERE batch_id = :batch_id AND tracking_number = :tracking_number
+                ");
+                $stmt->execute([
+                    'batch_id' => $batch_id,
+                    'tracking_number' => $tracking_number
+                ]);
+
+                if ($stmt->fetch()) {
+                    $duplicates++;
+                } else {
+                    $errors[] = $tracking_number;
+                }
+            }
+        }
+
+        // 更新批次统计
+        express_update_batch_statistics($pdo, $batch_id);
+
+        $pdo->commit();
+
+        express_log("Bulk import completed: imported=$imported, duplicates=$duplicates", 'INFO');
+
+        return [
+            'success' => true,
+            'imported' => $imported,
+            'duplicates' => $duplicates,
+            'errors' => $errors
+        ];
+
+    } catch (PDOException $e) {
+        $pdo->rollBack();
+        express_log('Failed to bulk import: ' . $e->getMessage(), 'ERROR');
+        return [
+            'success' => false,
+            'message' => '批量导入失败: ' . $e->getMessage()
+        ];
+    }
+}
