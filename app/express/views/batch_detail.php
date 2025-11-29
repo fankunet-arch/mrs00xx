@@ -38,6 +38,7 @@ $content_summary = express_get_content_summary($pdo, $batch_id);
         <header class="page-header">
             <h1>批次详情: <?= htmlspecialchars($batch['batch_name']) ?></h1>
             <div class="header-actions">
+                <a href="/express/exp/index.php?action=batch_edit&batch_id=<?= $batch_id ?>" class="btn btn-primary">编辑批次</a>
                 <a href="/express/exp/index.php?action=batch_list" class="btn btn-secondary">返回列表</a>
             </div>
         </header>
