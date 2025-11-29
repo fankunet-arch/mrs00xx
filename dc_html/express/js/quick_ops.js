@@ -460,6 +460,28 @@ function getStatusText(status) {
     return statusMap[status] || status;
 }
 
+function escapeHtml(text) {
+    return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function renderTrackingNumber(trackingNumber) {
+    const tracking = escapeHtml(trackingNumber || '');
+
+    if (tracking.length <= 4) {
+        return `<span class="tracking-suffix">${tracking}</span>`;
+    }
+
+    const prefix = tracking.slice(0, -4);
+    const suffix = tracking.slice(-4);
+
+    return `<span class="tracking-prefix">${prefix}</span><span class="tracking-suffix">${suffix}</span>`;
+}
+
 // [FIX] 显示历史记录（重构：增加筛选和去重逻辑）
 function displayHistory() {
     const historyDiv = document.getElementById('operation-history');
@@ -494,9 +516,11 @@ function displayHistory() {
 
     historyDiv.innerHTML = displayRecords.map(record => `
         <div class="history-item">
-            <span class="history-time">${record.time}</span>
-            <span class="history-tracking">${record.tracking_number}</span>
-            <span class="history-status status-${record.status}">${getStatusText(record.status)}</span>
+            <div class="history-meta">
+                <span class="history-time">${record.time}</span>
+                <span class="history-status status-${record.status}">${getStatusText(record.status)}</span>
+            </div>
+            <div class="history-tracking">${renderTrackingNumber(record.tracking_number)}</div>
         </div>
     `).join('');
 }

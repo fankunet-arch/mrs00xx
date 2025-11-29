@@ -372,15 +372,24 @@ section h2 {
 
 .history-item {
     display: flex;
-    gap: 12px;
+    flex-direction: column;
+    gap: 8px;
     padding: 10px;
     border-bottom: 1px solid #f0f0f0;
     font-size: 13px;
-    align-items: center;
+    align-items: flex-start;
 }
 
 .history-item:hover {
     background-color: #f8f9fa;
+}
+
+.history-meta {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
 }
 
 .history-time {
@@ -392,11 +401,14 @@ section h2 {
 .history-tracking {
     font-weight: bold;
     color: #333;
-    flex: 1;
-    min-width: 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    width: 100%;
+    word-break: break-all;
+    white-space: normal;
+}
+
+.tracking-suffix {
+    color: #e74c3c;
+    font-weight: bold;
 }
 
 .history-operation {
