@@ -38,7 +38,10 @@ $allowed_actions = [
     'batch_create',             // 创建批次页面
     'batch_create_save',        // 保存新批次
     'bulk_import',              // 批量导入页面
-    'bulk_import_save'          // 保存批量导入
+    'bulk_import_save',         // 保存批量导入
+    'content_search',           // 内容备注搜索页面
+    'content_search_api',       // 内容备注搜索API
+    'update_content_note'       // 更新内容备注API
 ];
 
 // 验证action是否允许
@@ -48,7 +51,14 @@ if (!in_array($action, $allowed_actions)) {
 }
 
 // API action（返回JSON）
-$api_actions = ['do_login', 'batch_create_save', 'bulk_import_save', 'logout'];
+$api_actions = [
+    'do_login',
+    'batch_create_save',
+    'bulk_import_save',
+    'logout',
+    'content_search_api',
+    'update_content_note'
+];
 
 // 路由到对应的action或API文件（在app目录中）
 if (in_array($action, $api_actions)) {
