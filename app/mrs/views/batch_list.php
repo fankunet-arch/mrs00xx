@@ -100,7 +100,7 @@ function get_batch_display_properties($batch)
             <div class="card">
                 <div class="card-header">
                     <h4 class="card-title">收货批次列表</h4>
-                    <a href="?action=batch_new" class="btn btn-primary btn-sm float-right">创建新批次</a>
+                    <a href="?action=batch_create" class="btn btn-primary btn-sm float-right">创建新批次</a>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">

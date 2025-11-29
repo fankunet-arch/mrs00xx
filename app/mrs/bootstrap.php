@@ -18,7 +18,13 @@ define('MRS_LOG_PATH', dirname(MRS_PROJECT_ROOT) . '/logs/mrs');
 ini_set('error_log', MRS_LOG_PATH . '/error.log');
 
 // 3. Database Connection
-require_once MRS_APP_ROOT . '/config_mrs/env_mrs.php';
+// Support runtime switch to the SQLite test configuration via MRS_ENV=test
+$config_env = getenv('MRS_ENV') ?: 'prod';
+$config_file = $config_env === 'test'
+    ? MRS_APP_ROOT . '/config_mrs/env_mrs_test.php'
+    : MRS_APP_ROOT . '/config_mrs/env_mrs.php';
+
+require_once $config_file;
 
 // Global PDO instance with error handling
 try {
