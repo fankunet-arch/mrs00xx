@@ -2,7 +2,7 @@
 /**
  * Express Package Management System - Quick Operations Page
  * 文件路径: app/express/actions/quick_ops.php
- * 说明: 前台统一操作页面
+ * 修复说明: 增加 CSS 版本号 (时间戳)，强制手机浏览器刷新缓存
  */
 
 if (!defined('EXPRESS_ENTRY')) {
@@ -18,7 +18,7 @@ $batches = express_get_batches($pdo, 'active', 50);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>快递单统一操作页面 - Express Package Management</title>
-    <link rel="stylesheet" href="./css/quick_ops.css">
+    <link rel="stylesheet" href="./css/quick_ops.css?v=<?php echo time(); ?>">
 </head>
 <body>
     <div class="container">
@@ -29,7 +29,6 @@ $batches = express_get_batches($pdo, 'active', 50);
             </div>
         </header>
 
-        <!-- 批次选择区域 -->
         <section class="batch-section">
             <h2>选择批次</h2>
             <div class="batch-selector">
@@ -49,7 +48,6 @@ $batches = express_get_batches($pdo, 'active', 50);
                 <button id="refresh-batches" class="btn btn-secondary">刷新批次</button>
             </div>
 
-            <!-- 批次统计信息 -->
             <div id="batch-stats" class="batch-stats" style="display: none;">
                 <div class="stat-item">
                     <span class="stat-label">总数:</span>
@@ -74,7 +72,6 @@ $batches = express_get_batches($pdo, 'active', 50);
             </div>
         </section>
 
-        <!-- 操作类型选择 -->
         <section class="operation-section" id="operation-section" style="display: none;">
             <h2>选择操作类型</h2>
             <div class="operation-buttons">
@@ -84,7 +81,6 @@ $batches = express_get_batches($pdo, 'active', 50);
             </div>
         </section>
 
-        <!-- 快递单号输入区域 -->
         <section class="input-section" id="input-section" style="display: none;">
             <h2 id="operation-title">操作：<span id="operation-name">--</span></h2>
 
@@ -95,17 +91,14 @@ $batches = express_get_batches($pdo, 'active', 50);
                 <button id="btn-clear-input" class="btn btn-clear">清空</button>
             </div>
 
-            <!-- 搜索结果候选列表 -->
             <div id="search-results" class="search-results" style="display: none;"></div>
 
-            <!-- 内容备注（清点时显示） -->
             <div id="content-note-group" class="input-group" style="display: none;">
                 <label for="content-note">内容备注:</label>
                 <textarea id="content-note" class="form-control" rows="3"
                           placeholder="例如：番茄酱×2"></textarea>
             </div>
 
-            <!-- 调整备注（调整时显示） -->
             <div id="adjustment-note-group" class="input-group" style="display: none;">
                 <label for="adjustment-note">调整备注:</label>
                 <textarea id="adjustment-note" class="form-control" rows="3"
@@ -119,12 +112,10 @@ $batches = express_get_batches($pdo, 'active', 50);
             </div>
         </section>
 
-        <!-- 操作反馈区域 -->
         <section class="feedback-section">
             <div id="message-box" class="message-box" style="display: none;"></div>
         </section>
 
-        <!-- 最近操作记录 -->
         <section class="history-section">
             <h2>最近操作记录</h2>
             <div id="operation-history" class="operation-history">
@@ -133,6 +124,6 @@ $batches = express_get_batches($pdo, 'active', 50);
         </section>
     </div>
 
-    <script src="./js/quick_ops.js"></script>
+    <script src="./js/quick_ops.js?v=<?php echo time(); ?>"></script>
 </body>
 </html>
