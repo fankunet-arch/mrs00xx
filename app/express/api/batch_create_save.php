@@ -12,7 +12,7 @@ $input = express_get_json_input();
 
 $batch_name = $input['batch_name'] ?? '';
 $notes = $input['notes'] ?? null;
-$created_by = $input['created_by'] ?? $_SESSION['express_admin_username'] ?? 'admin';
+$created_by = $input['created_by'] ?? $_SESSION['user_login'] ?? 'admin';
 
 if (empty($batch_name)) {
     express_json_response(false, null, '批次名称不能为空');

@@ -6,6 +6,124 @@
  */
 
 // ============================================
+// 认证相关函数（与MRS一致的逻辑）
+// ============================================
+
+/**
+ * 验证用户登录
+ * @param PDO $pdo
+ * @param string $username
+ * @param string $password
+ * @return array|false
+ */
+function express_authenticate_user($pdo, $username, $password) {
+    try {
+        $stmt = $pdo->prepare("SELECT user_id, user_login, user_secret_hash, user_email, user_display_name, user_status FROM sys_users WHERE user_login = :username LIMIT 1");
+        $stmt->bindValue(':username', $username);
+        $stmt->execute();
+
+        $user = $stmt->fetch();
+
+        if (!$user) {
+            express_log("登录失败: 用户不存在 - {$username}", 'WARNING');
+            return false;
+        }
+
+        if ($user['user_status'] !== 'active') {
+            express_log("登录失败: 账户未激活 - {$username}", 'WARNING');
+            return false;
+        }
+
+        if (password_verify($password, $user['user_secret_hash'])) {
+            $update = $pdo->prepare("UPDATE sys_users SET user_last_login_at = NOW(6) WHERE user_id = :user_id");
+            $update->bindValue(':user_id', $user['user_id'], PDO::PARAM_INT);
+            $update->execute();
+
+            unset($user['user_secret_hash']);
+            express_log("登录成功: {$username}", 'INFO');
+            return $user;
+        }
+
+        express_log("登录失败: 密码错误 - {$username}", 'WARNING');
+        return false;
+    } catch (PDOException $e) {
+        express_log('用户认证失败: ' . $e->getMessage(), 'ERROR');
+        return false;
+    }
+}
+
+/**
+ * 创建用户会话
+ * @param array $user
+ */
+function express_create_user_session($user) {
+    express_start_secure_session();
+
+    $_SESSION['user_id'] = $user['user_id'];
+    $_SESSION['user_login'] = $user['user_login'];
+    $_SESSION['user_display_name'] = $user['user_display_name'];
+    $_SESSION['user_email'] = $user['user_email'];
+    $_SESSION['logged_in'] = true;
+    $_SESSION['login_time'] = time();
+    $_SESSION['last_activity'] = time();
+}
+
+/**
+ * 检查用户是否登录
+ * @return bool
+ */
+function express_is_user_logged_in() {
+    express_start_secure_session();
+
+    if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
+        return false;
+    }
+
+    $timeout = 1800;
+    if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity']) > $timeout) {
+        express_destroy_user_session();
+        return false;
+    }
+
+    $_SESSION['last_activity'] = time();
+    return true;
+}
+
+/**
+ * 销毁会话
+ */
+function express_destroy_user_session() {
+    express_start_secure_session();
+
+    $_SESSION = [];
+
+    if (ini_get('session.use_cookies')) {
+        $params = session_get_cookie_params();
+        setcookie(
+            session_name(),
+            '',
+            time() - 42000,
+            $params['path'],
+            $params['domain'],
+            $params['secure'],
+            $params['httponly']
+        );
+    }
+
+    session_destroy();
+}
+
+/**
+ * 登录保护
+ */
+function express_require_login() {
+    if (!express_is_user_logged_in()) {
+        header('Location: /express/exp/index.php?action=login');
+        exit;
+    }
+}
+
+// ============================================
 // 批次管理函数
 // ============================================
 

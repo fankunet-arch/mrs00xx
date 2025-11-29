@@ -1,83 +1,97 @@
 <?php
 /**
- * Backend Login Page
+ * Backend Login Page (SaaS style)
  * 文件路径: app/express/views/login.php
  */
 
 if (!defined('EXPRESS_ENTRY')) {
     die('Access denied');
 }
+
+$message = '';
+if (isset($_GET['error'])) {
+    switch ($_GET['error']) {
+        case 'invalid':
+            $message = '用户名或密码错误';
+            break;
+        case 'too_many_attempts':
+            $message = '尝试次数过多，请稍后再试';
+            break;
+        case 'system':
+            $message = '系统错误，请稍后再试';
+            break;
+        case 'logout':
+            $message = '已安全注销';
+            break;
+        default:
+            $message = '登录失败，请重试';
+    }
+}
 ?>
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>登录 - Express Backend</title>
-    <link rel="stylesheet" href="/dc_html/express/css/backend.css">
+    <title>SaaS 登录 - EXPRESS 系统</title>
+    <link rel="stylesheet" href="/express/css/login-v2.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
-<body class="login-page">
-    <div class="login-container">
-        <h1>快递单管理系统</h1>
-        <h2>后台登录</h2>
-
-        <form id="login-form">
-            <div class="form-group">
-                <label for="username">用户名:</label>
-                <input type="text" id="username" name="username" class="form-control" required>
+<body>
+    <div class="split-container">
+        <div class="marketing-panel">
+            <div class="marketing-content">
+                <h1>提升您的工作效率</h1>
+                <p>一个平台，管理您的所有数据和协作流程。安全、快速、可靠。</p>
+                <div class="feature-list">
+                    <div><i class="fas fa-chart-line"></i> 实时数据分析</div>
+                    <div><i class="fas fa-users"></i> 无缝团队协作</div>
+                    <div><i class="fas fa-lock"></i> 顶级安全保障</div>
+                </div>
             </div>
+        </div>
 
-            <div class="form-group">
-                <label for="password">密码:</label>
-                <input type="password" id="password" name="password" class="form-control" required>
+        <div class="login-panel">
+            <div class="login-card">
+                <div class="logo-top">EXPRESS</div>
+                <h2>欢迎登录</h2>
+                <p class="subtitle">使用您的账户访问系统。</p>
+
+                <?php if (!empty($message)): ?>
+                    <div class="alert"><?= htmlspecialchars($message) ?></div>
+                <?php endif; ?>
+
+                <form action="/express/exp/index.php?action=do_login" method="post">
+                    <div class="input-group">
+                        <input type="text" id="username" name="username" placeholder=" " required autofocus>
+                        <label for="username">登录账号</label>
+                    </div>
+
+                    <div class="input-group">
+                        <input type="password" id="password" name="password" placeholder=" " required>
+                        <label for="password">密码</label>
+                    </div>
+
+                    <div class="options">
+                        <!-- 保留布局，未来可接入“忘记密码”链接 -->
+                    </div>
+
+                    <button type="submit" class="login-button">
+                        登录系统
+                    </button>
+
+                    <div class="divider">
+                        <span>或使用</span>
+                    </div>
+
+                    <button type="button" class="social-button google-btn" disabled>
+                        <i class="fa-solid fa-circle-info"></i> 没其他办法了
+                    </button>
+                </form>
+
+                <div class="register-link"></div>
             </div>
-
-            <button type="submit" class="btn btn-primary btn-block">登录</button>
-        </form>
-
-        <div id="message" class="message" style="display: none;"></div>
-
-        <p class="login-note">测试账号: admin / admin123</p>
+        </div>
     </div>
-
-    <script>
-        document.getElementById('login-form').addEventListener('submit', async function(e) {
-            e.preventDefault();
-
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            const messageDiv = document.getElementById('message');
-
-            try {
-                const response = await fetch('/express/exp/index.php?action=do_login', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ username, password })
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    messageDiv.className = 'message success';
-                    messageDiv.textContent = '登录成功，正在跳转...';
-                    messageDiv.style.display = 'block';
-
-                    setTimeout(() => {
-                        window.location.href = '/express/exp/index.php?action=batch_list';
-                    }, 500);
-                } else {
-                    messageDiv.className = 'message error';
-                    messageDiv.textContent = data.message || '登录失败';
-                    messageDiv.style.display = 'block';
-                }
-            } catch (error) {
-                messageDiv.className = 'message error';
-                messageDiv.textContent = '网络错误，请重试';
-                messageDiv.style.display = 'block';
-            }
-        });
-    </script>
 </body>
 </html>
