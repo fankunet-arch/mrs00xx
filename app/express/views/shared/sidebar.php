@@ -13,7 +13,7 @@ $current_action = $_GET['action'] ?? 'batch_list';
 <div class="sidebar">
     <div class="sidebar-header">
         <h2>Express 后台</h2>
-        <p>欢迎, <?= htmlspecialchars($_SESSION['express_admin_username'] ?? 'Admin') ?></p>
+        <p>欢迎, <?= htmlspecialchars($_SESSION['user_display_name'] ?? $_SESSION['user_login'] ?? 'Admin') ?></p>
     </div>
 
     <nav class="sidebar-nav">
@@ -28,7 +28,7 @@ $current_action = $_GET['action'] ?? 'batch_list';
         <a href="/express/index.php?action=quick_ops" class="nav-link" target="_blank">
             前台操作页面
         </a>
-        <a href="/express/exp/index.php?action=logout" class="nav-link" target="_blank">
+        <a href="/express/exp/index.php?action=logout" class="nav-link">
             退出登录
         </a>
     </nav>

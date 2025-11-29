@@ -28,7 +28,7 @@ $packages = express_get_packages_by_batch($pdo, $batch_id, 'all');
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>批次详情 - <?= htmlspecialchars($batch['batch_name']) ?></title>
-    <link rel="stylesheet" href="/dc_html/express/css/backend.css">
+    <link rel="stylesheet" href="../css/backend.css">
 </head>
 <body>
     <?php include EXPRESS_VIEW_PATH . '/shared/sidebar.php'; ?>
