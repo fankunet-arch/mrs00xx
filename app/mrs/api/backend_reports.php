@@ -113,6 +113,74 @@ try {
             $data = $stmt->fetchAll();
             break;
 
+        case 'sku_shipment':
+            // SKU出库汇总
+            $sql = "SELECT
+                        s.sku_name,
+                        s.brand_name,
+                        c.category_name,
+                        SUM(oi.total_standard_qty) as total_qty,
+                        s.standard_unit,
+                        COUNT(DISTINCT oi.outbound_order_id) as order_count
+                    FROM mrs_outbound_order_item oi
+                    INNER JOIN mrs_sku s ON oi.sku_id = s.sku_id
+                    LEFT JOIN mrs_category c ON s.category_id = c.category_id
+                    INNER JOIN mrs_outbound_order o ON oi.outbound_order_id = o.outbound_order_id
+                    WHERE o.outbound_date BETWEEN :date_start AND :date_end
+                    AND o.status IN ('confirmed', 'posted')
+                    GROUP BY oi.sku_id
+                    ORDER BY total_qty DESC
+                    LIMIT 100";
+
+            $stmt = $pdo->prepare($sql);
+            $stmt->bindValue(':date_start', $dateStart);
+            $stmt->bindValue(':date_end', $dateEnd);
+            $stmt->execute();
+            $data = $stmt->fetchAll();
+            break;
+
+        case 'category_shipment':
+            // 品类出库汇总
+            $sql = "SELECT
+                        c.category_name,
+                        COUNT(DISTINCT oi.sku_id) as sku_count,
+                        SUM(oi.total_standard_qty) as total_qty,
+                        COUNT(DISTINCT oi.outbound_order_id) as order_count
+                    FROM mrs_outbound_order_item oi
+                    INNER JOIN mrs_sku s ON oi.sku_id = s.sku_id
+                    LEFT JOIN mrs_category c ON s.category_id = c.category_id
+                    INNER JOIN mrs_outbound_order o ON oi.outbound_order_id = o.outbound_order_id
+                    WHERE o.outbound_date BETWEEN :date_start AND :date_end
+                    AND o.status IN ('confirmed', 'posted')
+                    GROUP BY c.category_id
+                    ORDER BY total_qty DESC";
+
+            $stmt = $pdo->prepare($sql);
+            $stmt->bindValue(':date_start', $dateStart);
+            $stmt->bindValue(':date_end', $dateEnd);
+            $stmt->execute();
+            $data = $stmt->fetchAll();
+            break;
+
+        case 'daily_shipment':
+            // 每日出库统计
+            $sql = "SELECT
+                        DATE(outbound_date) as date,
+                        COUNT(DISTINCT outbound_order_id) as order_count,
+                        status,
+                        location_name
+                    FROM mrs_outbound_order
+                    WHERE outbound_date BETWEEN :date_start AND :date_end
+                    GROUP BY DATE(outbound_date), status, location_name
+                    ORDER BY date DESC";
+
+            $stmt = $pdo->prepare($sql);
+            $stmt->bindValue(':date_start', $dateStart);
+            $stmt->bindValue(':date_end', $dateEnd);
+            $stmt->execute();
+            $data = $stmt->fetchAll();
+            break;
+
         default:
             json_response(false, null, '不支持的报表类型');
     }

@@ -138,7 +138,19 @@ function search_sku($keyword, $limit = 20) {
         $stmt->bindValue(':limit', (int)$limit, PDO::PARAM_INT);
         $stmt->execute();
 
-        return $stmt->fetchAll();
+        $results = $stmt->fetchAll();
+
+        // 格式化数字字段，去除不必要的小数点后的0
+        foreach ($results as &$row) {
+            if (isset($row['case_to_standard_qty'])) {
+                $row['case_to_standard_qty'] = format_number($row['case_to_standard_qty'], 4);
+            }
+            if (isset($row['pack_to_standard_qty'])) {
+                $row['pack_to_standard_qty'] = format_number($row['pack_to_standard_qty'], 4);
+            }
+        }
+
+        return $results;
 
     } catch (PDOException $e) {
         mrs_log('搜索SKU失败: ' . $e->getMessage(), 'ERROR', ['keyword' => $keyword]);
@@ -177,7 +189,19 @@ function get_sku_by_id($sku_id) {
         $stmt->bindValue(':sku_id', $sku_id, PDO::PARAM_INT);
         $stmt->execute();
 
-        return $stmt->fetch();
+        $result = $stmt->fetch();
+
+        // 格式化数字字段
+        if ($result) {
+            if (isset($result['case_to_standard_qty'])) {
+                $result['case_to_standard_qty'] = format_number($result['case_to_standard_qty'], 4);
+            }
+            if (isset($result['pack_to_standard_qty'])) {
+                $result['pack_to_standard_qty'] = format_number($result['pack_to_standard_qty'], 4);
+            }
+        }
+
+        return $result;
 
     } catch (PDOException $e) {
         mrs_log('获取SKU信息失败: ' . $e->getMessage(), 'ERROR');
@@ -735,3 +759,32 @@ function require_login() {
     }
 }
 
+
+/**
+ * 格式化数字显示：去除无意义的小数0
+ * @param float|int $number 数字
+ * @param int $decimals 最多保留的小数位数（默认2位）
+ * @return string 格式化后的数字字符串
+ */
+function format_number($number, $decimals = 2) {
+    if ($number === null || $number === '') {
+        return '0';
+    }
+    
+    // 转换为浮点数
+    $num = floatval($number);
+    
+    // 如果是整数或小数部分为0，返回整数形式
+    if ($num == floor($num)) {
+        return number_format($num, 0, '.', '');
+    }
+    
+    // 格式化为指定小数位
+    $formatted = number_format($num, $decimals, '.', '');
+    
+    // 去除末尾的0
+    $formatted = rtrim($formatted, '0');
+    $formatted = rtrim($formatted, '.');
+    
+    return $formatted;
+}
