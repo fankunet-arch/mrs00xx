@@ -97,6 +97,11 @@ $batches = express_get_batches($pdo, 'active', 50);
                 <label for="content-note">内容备注:</label>
                 <textarea id="content-note" class="form-control" rows="3"
                           placeholder="例如：番茄酱×2"></textarea>
+                <div id="last-count-suggestion" class="note-suggestion" style="display: none;">
+                    <span class="suggestion-label">上次清点:</span>
+                    <button type="button" id="btn-apply-last-count" class="suggestion-chip"
+                            title="点击将上次内容填入备注"></button>
+                </div>
             </div>
 
             <div id="adjustment-note-group" class="input-group" style="display: none;">

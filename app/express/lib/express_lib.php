@@ -640,16 +640,17 @@ function express_process_count($pdo, $package_id, $old_status, $operator, $conte
         UPDATE express_package SET
             package_status = 'counted',
             verified_at = COALESCE(verified_at, NOW()),
-            verified_by = COALESCE(verified_by, :operator),
+            verified_by = COALESCE(verified_by, :verified_by),
             counted_at = NOW(),
-            counted_by = :operator,
+            counted_by = :counted_by,
             content_note = :content_note
         WHERE package_id = :package_id
     ");
 
     $stmt->execute([
         'package_id' => $package_id,
-        'operator' => $operator,
+        'verified_by' => $operator,
+        'counted_by' => $operator,
         'content_note' => $content_note
     ]);
 

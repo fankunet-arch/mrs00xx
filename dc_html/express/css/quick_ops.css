@@ -213,6 +213,38 @@ section h2 {
     min-height: 80px;
 }
 
+.note-suggestion {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+}
+
+.suggestion-label {
+    font-size: 13px;
+    color: #666;
+}
+
+.suggestion-chip {
+    border: 1px dashed #667eea;
+    background: #f3f5ff;
+    color: #4750c6;
+    padding: 6px 10px;
+    border-radius: 16px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    max-width: 100%;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.suggestion-chip:hover {
+    background: #e6e9ff;
+    border-color: #4750c6;
+}
+
 #operation-title {
     color: #667eea;
 }
