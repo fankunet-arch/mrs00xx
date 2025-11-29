@@ -593,6 +593,10 @@ header .user {
     box-shadow: 0 1px 3px rgba(0,0,0,0.08);
 }
 
+.card > :not(.card-header):not(.card-footer):not(.card-body) {
+    padding: 16px 20px;
+}
+
 .card-header,
 .card-body,
 .card-footer {
