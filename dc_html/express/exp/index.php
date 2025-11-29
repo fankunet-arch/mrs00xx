@@ -38,17 +38,40 @@ $allowed_actions = [
     'batch_create',             // 创建批次页面
     'batch_create_save',        // 保存新批次
     'bulk_import',              // 批量导入页面
-    'bulk_import_save'          // 保存批量导入
+    'bulk_import_save',         // 保存批量导入
+    'content_search',           // 内容备注搜索页面
+    'content_search_api',       // 内容备注搜索API
+    'update_content_note'       // 更新内容备注API
 ];
 
 // 验证action是否允许
 if (!in_array($action, $allowed_actions)) {
+    $accepts_json = isset($_SERVER['HTTP_ACCEPT']) && stripos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false;
+    $is_ajax = isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+
+    if ($accepts_json || $is_ajax) {
+        express_json_response(false, null, 'Invalid action');
+    }
+
     http_response_code(404);
-    die('Invalid action');
+    echo '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>404 - Page Not Found</title>';
+    echo '<style>body{font-family:Arial,Helvetica,sans-serif;background:#f5f5f5;margin:0;padding:40px;}';
+    echo '.card{max-width:520px;margin:0 auto;background:#fff;border:1px solid #e0e0e0;border-radius:8px;padding:24px;box-shadow:0 2px 8px rgba(0,0,0,0.08);}';
+    echo '.card h1{margin-top:0;font-size:22px;color:#c62828;} .card p{color:#444;line-height:1.6;} .card a{color:#1565c0;text-decoration:none;font-weight:600;}</style>';
+    echo '</head><body><div class="card"><h1>404 - 无效的后台入口</h1><p>请求的操作未被允许或链接已失效。</p>';
+    echo '<p><a href="/express/exp/index.php?action=batch_list">返回后台首页</a></p></div></body></html>';
+    exit;
 }
 
 // API action（返回JSON）
-$api_actions = ['do_login', 'batch_create_save', 'bulk_import_save', 'logout'];
+$api_actions = [
+    'do_login',
+    'batch_create_save',
+    'bulk_import_save',
+    'logout',
+    'content_search_api',
+    'update_content_note'
+];
 
 // 路由到对应的action或API文件（在app目录中）
 if (in_array($action, $api_actions)) {

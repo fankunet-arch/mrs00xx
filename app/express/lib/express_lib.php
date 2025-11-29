@@ -344,6 +344,45 @@ function express_search_tracking($pdo, $batch_id, $keyword, $limit = 20) {
 }
 
 /**
+ * 按内容备注搜索包裹（跨批次）
+ * @param PDO $pdo
+ * @param string $keyword
+ * @param int $limit
+ * @return array
+ */
+function express_search_content_note($pdo, $keyword, $limit = 50) {
+    try {
+        $stmt = $pdo->prepare("
+            SELECT
+                pkg.package_id,
+                pkg.batch_id,
+                pkg.tracking_number,
+                pkg.content_note,
+                pkg.package_status,
+                pkg.counted_at,
+                pkg.created_at,
+                batch.batch_name
+            FROM express_package pkg
+            INNER JOIN express_batch batch ON pkg.batch_id = batch.batch_id
+            WHERE pkg.content_note IS NOT NULL
+              AND pkg.content_note <> ''
+              AND pkg.content_note LIKE :keyword
+            ORDER BY pkg.counted_at DESC, pkg.created_at DESC
+            LIMIT :limit
+        ");
+
+        $stmt->bindValue(':keyword', '%' . $keyword . '%', PDO::PARAM_STR);
+        $stmt->bindValue(':limit', (int)$limit, PDO::PARAM_INT);
+        $stmt->execute();
+
+        return $stmt->fetchAll();
+    } catch (PDOException $e) {
+        express_log('Failed to search content note: ' . $e->getMessage(), 'ERROR');
+        return [];
+    }
+}
+
+/**
  * 获取包裹详情
  * @param PDO $pdo
  * @param int $package_id
@@ -388,6 +427,34 @@ function express_get_packages_by_batch($pdo, $batch_id, $status = 'all') {
         return $stmt->fetchAll();
     } catch (PDOException $e) {
         express_log('Failed to get packages: ' . $e->getMessage(), 'ERROR');
+        return [];
+    }
+}
+
+/**
+ * 获取批次内的内容备注统计
+ * @param PDO $pdo
+ * @param int $batch_id
+ * @return array
+ */
+function express_get_content_summary($pdo, $batch_id) {
+    try {
+        $stmt = $pdo->prepare("
+            SELECT content_note, COUNT(*) AS package_count
+            FROM express_package
+            WHERE batch_id = :batch_id
+              AND content_note IS NOT NULL
+              AND content_note <> ''
+            GROUP BY content_note
+            ORDER BY package_count DESC, content_note ASC
+        ");
+
+        $stmt->bindValue(':batch_id', $batch_id, PDO::PARAM_INT);
+        $stmt->execute();
+
+        return $stmt->fetchAll();
+    } catch (PDOException $e) {
+        express_log('Failed to get content summary: ' . $e->getMessage(), 'ERROR');
         return [];
     }
 }
@@ -592,6 +659,67 @@ function express_process_package($pdo, $batch_id, $tracking_number, $operation_t
         $pdo->rollBack();
         express_log('Failed to process package: ' . $e->getMessage(), 'ERROR');
         return ['success' => false, 'message' => '操作失败: ' . $e->getMessage()];
+    }
+}
+
+/**
+ * 更新包裹的内容备注
+ * @param PDO $pdo
+ * @param int $package_id
+ * @param string $operator
+ * @param string $content_note
+ * @return array
+ */
+function express_update_content_note($pdo, $package_id, $operator, $content_note) {
+    try {
+        $pdo->beginTransaction();
+
+        $stmt = $pdo->prepare("SELECT package_id, package_status FROM express_package WHERE package_id = :package_id");
+        $stmt->execute(['package_id' => $package_id]);
+        $package = $stmt->fetch();
+
+        if (!$package) {
+            $pdo->rollBack();
+            return ['success' => false, 'message' => '包裹不存在'];
+        }
+
+        $update = $pdo->prepare("
+            UPDATE express_package
+            SET content_note = :content_note
+            WHERE package_id = :package_id
+        ");
+
+        $update->execute([
+            'package_id' => $package_id,
+            'content_note' => $content_note
+        ]);
+
+        $log = $pdo->prepare("
+            INSERT INTO express_operation_log (package_id, operation_type, operator, old_status, new_status, notes)
+            VALUES (:package_id, 'update_content', :operator, :old_status, :new_status, :notes)
+        ");
+
+        $log->execute([
+            'package_id' => $package_id,
+            'operator' => $operator,
+            'old_status' => $package['package_status'],
+            'new_status' => $package['package_status'],
+            'notes' => $content_note
+        ]);
+
+        $pdo->commit();
+
+        return [
+            'success' => true,
+            'message' => '内容备注已更新',
+            'package' => express_get_package_by_id($pdo, $package_id)
+        ];
+    } catch (PDOException $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        express_log('Failed to update content note: ' . $e->getMessage(), 'ERROR');
+        return ['success' => false, 'message' => '更新内容备注失败'];
     }
 }
 

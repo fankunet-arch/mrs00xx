@@ -25,6 +25,10 @@ $current_action = $_GET['action'] ?? 'batch_list';
            class="nav-link <?= $current_action === 'batch_create' ? 'active' : '' ?>">
             创建批次
         </a>
+        <a href="/express/exp/index.php?action=content_search"
+           class="nav-link <?= $current_action === 'content_search' ? 'active' : '' ?>">
+            物品内容搜索
+        </a>
         <a href="/express/index.php?action=quick_ops" class="nav-link" target="_blank">
             前台操作页面
         </a>

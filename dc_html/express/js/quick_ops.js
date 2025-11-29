@@ -13,7 +13,8 @@ const state = {
     currentOperation: null,
     searchTimeout: null,
     operationHistory: [],
-    searchResults: new Map()
+    searchResults: new Map(),
+    lastCountNote: ''
 };
 
 // 初始化
@@ -29,8 +30,8 @@ function initializeApp() {
     // 绑定事件
     bindEvents();
 
-    // 从历史记录加载操作记录
-    loadHistoryFromStorage();
+    // 初始显示空的历史区域
+    displayHistory();
 }
 
 function bindEvents() {
@@ -70,12 +71,27 @@ function bindEvents() {
     
     const btnSubmit = document.getElementById('btn-submit');
     if (btnSubmit) btnSubmit.addEventListener('click', submitOperation);
-    
+
     const btnReset = document.getElementById('btn-reset');
     if (btnReset) btnReset.addEventListener('click', resetForm);
-    
+
     const btnChangeOp = document.getElementById('btn-change-operation');
     if (btnChangeOp) btnChangeOp.addEventListener('click', changeOperation);
+
+    const lastCountButton = document.getElementById('btn-apply-last-count');
+    if (lastCountButton) {
+        lastCountButton.addEventListener('click', function() {
+            const noteField = document.getElementById('content-note');
+            const content = this.dataset.content || '';
+
+            if (noteField && content) {
+                noteField.value = content;
+                noteField.focus();
+                const length = content.length;
+                noteField.setSelectionRange(length, length);
+            }
+        });
+    }
 }
 
 // 时间更新
@@ -120,6 +136,8 @@ async function onBatchChange(e) {
     document.getElementById('batch-stats').style.display = 'flex';
     document.getElementById('operation-section').style.display = 'block';
     document.getElementById('input-section').style.display = 'none';
+
+    await refreshHistoryFromServer();
 }
 
 // 更新批次统计
@@ -176,6 +194,10 @@ async function refreshBatches() {
 // 选择操作类型
 function selectOperation(operation) {
     state.currentOperation = operation;
+
+    if (operation !== 'count') {
+        hideLastCountSuggestion();
+    }
 
     // 更新操作名称显示
     const operationNames = {
@@ -239,6 +261,15 @@ async function performSearch(keyword) {
             data.data.forEach(pkg => {
                 state.searchResults.set(pkg.tracking_number, pkg);
             });
+
+            const currentInput = document.getElementById('tracking-input');
+            if (currentInput) {
+                const currentValue = currentInput.value.trim();
+                if (currentValue && state.searchResults.has(currentValue)) {
+                    updateNotesPrefill(currentValue);
+                }
+            }
+
             displaySearchResults(data.data, keyword);
         }
     } catch (error) {
@@ -315,6 +346,7 @@ function clearInput() {
     document.getElementById('content-note').value = '';
     document.getElementById('adjustment-note').value = '';
     hideSearchResults();
+    hideLastCountSuggestion();
     document.getElementById('tracking-input').focus();
 }
 
@@ -361,6 +393,10 @@ async function submitOperation() {
         if (data.success) {
             showMessage(data.message, 'success');
 
+            if (state.currentOperation === 'count') {
+                state.lastCountNote = (payload.content_note || '').trim();
+            }
+
             // 更新批次统计
             if (data.data.batch) {
                 updateBatchStats(data.data.batch);
@@ -373,13 +409,7 @@ async function submitOperation() {
                 state.searchResults.set(trackingNumber, data.data.package);
             }
 
-            // 添加到操作历史
-            addToHistory({
-                tracking_number: trackingNumber,
-                operation: state.currentOperation,
-                status: data.data.package.package_status,
-                time: new Date().toLocaleTimeString()
-            });
+            await refreshHistoryFromServer();
 
             // 清空输入，准备下一个
             clearInput();
@@ -430,20 +460,26 @@ function getStatusText(status) {
     return statusMap[status] || status;
 }
 
-// 添加到操作历史
-function addToHistory(record) {
-    state.operationHistory.unshift(record);
+function escapeHtml(text) {
+    return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
 
-    // [FIX] 增加存储上限到100条，以便在筛选后仍有足够数据展示
-    if (state.operationHistory.length > 100) {
-        state.operationHistory = state.operationHistory.slice(0, 100);
+function renderTrackingNumber(trackingNumber) {
+    const tracking = escapeHtml(trackingNumber || '');
+
+    if (tracking.length <= 4) {
+        return `<span class="tracking-suffix">${tracking}</span>`;
     }
 
-    // 保存到localStorage
-    saveHistoryToStorage();
+    const prefix = tracking.slice(0, -4);
+    const suffix = tracking.slice(-4);
 
-    // 更新显示
-    displayHistory();
+    return `<span class="tracking-prefix">${prefix}</span><span class="tracking-suffix">${suffix}</span>`;
 }
 
 // [FIX] 显示历史记录（重构：增加筛选和去重逻辑）
@@ -480,60 +516,46 @@ function displayHistory() {
 
     historyDiv.innerHTML = displayRecords.map(record => `
         <div class="history-item">
-            <span class="history-time">${record.time}</span>
-            <span class="history-tracking">${record.tracking_number}</span>
-            <span class="history-status status-${record.status}">${getStatusText(record.status)}</span>
+            <div class="history-meta">
+                <span class="history-time">${record.time}</span>
+                <span class="history-status status-${record.status}">${getStatusText(record.status)}</span>
+            </div>
+            <div class="history-tracking">${renderTrackingNumber(record.tracking_number)}</div>
         </div>
     `).join('');
-}
-
-// 保存历史到localStorage
-function saveHistoryToStorage() {
-    try {
-        localStorage.setItem('express_operation_history', JSON.stringify(state.operationHistory));
-    } catch (e) {
-        console.error('Failed to save history:', e);
-    }
-}
-
-// 从localStorage加载历史
-function loadHistoryFromStorage() {
-    try {
-        const stored = localStorage.getItem('express_operation_history');
-        if (stored) {
-            const parsed = JSON.parse(stored);
-            if (Array.isArray(parsed)) {
-                state.operationHistory = parsed;
-            } else {
-                state.operationHistory = [];
-                localStorage.removeItem('express_operation_history');
-            }
-        }
-    } catch (e) {
-        console.error('Failed to load history:', e);
-        state.operationHistory = [];
-        localStorage.removeItem('express_operation_history');
-    }
-
-    displayHistory();
 }
 
 // 根据当前操作类型预填备注
 function updateNotesPrefill(trackingNumber) {
     if (!(state.searchResults instanceof Map)) {
+        hideLastCountSuggestion();
         return;
     }
 
     const pkg = state.searchResults.get(trackingNumber);
-    if (!pkg) {
-        return;
-    }
-
     if (state.currentOperation === 'count') {
         const noteField = document.getElementById('content-note');
-        if (noteField) {
-            noteField.value = pkg.content_note || '';
+        const savedContent = pkg && pkg.content_note ? pkg.content_note : '';
+
+        if (pkg && savedContent) {
+            hideLastCountSuggestion();
+            if (noteField) {
+                noteField.value = savedContent;
+            }
+            return;
         }
+
+        if (noteField) {
+            noteField.value = '';
+        }
+
+        showLastCountSuggestion(state.lastCountNote);
+    } else {
+        hideLastCountSuggestion();
+    }
+
+    if (!pkg) {
+        return;
     }
 
     if (state.currentOperation === 'adjust') {
@@ -541,5 +563,107 @@ function updateNotesPrefill(trackingNumber) {
         if (adjustField) {
             adjustField.value = pkg.adjustment_note || '';
         }
+    }
+}
+
+// 从服务端刷新最新历史，保证不同设备展示一致
+async function refreshHistoryFromServer() {
+    if (!state.currentBatchId) {
+        state.operationHistory = [];
+        displayHistory();
+        return;
+    }
+
+    const params = new URLSearchParams({
+        batch_id: state.currentBatchId,
+        limit: 100
+    });
+
+    try {
+        const response = await fetch(`/express/index.php?action=get_recent_operations_api&${params.toString()}`);
+        const data = await response.json();
+
+        if (data.success && Array.isArray(data.data)) {
+            state.operationHistory = data.data.map(item => ({
+                tracking_number: item.tracking_number,
+                operation: item.operation_type,
+                status: item.new_status || item.package_status || item.old_status,
+                time: formatOperationTime(item.operation_time),
+                notes: item.notes || ''
+            }));
+
+            syncLastCountNote(state.operationHistory);
+            displayHistory();
+        } else {
+            showMessage(data.message || '获取历史失败', 'error');
+        }
+    } catch (error) {
+        showMessage('获取历史失败: ' + error.message, 'error');
+    }
+}
+
+function formatOperationTime(value) {
+    if (!value) return '';
+
+    const parsed = new Date(value.replace(/-/g, '/'));
+    if (!Number.isNaN(parsed.getTime())) {
+        return parsed.toLocaleString('zh-CN', {
+            hour12: false,
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+    }
+
+    return value;
+}
+
+// 显示/隐藏上次清点内容提示
+function showLastCountSuggestion(contentNote) {
+    const container = document.getElementById('last-count-suggestion');
+    const button = document.getElementById('btn-apply-last-count');
+
+    if (!container || !button) {
+        return;
+    }
+
+    const text = (contentNote || '').trim();
+    if (state.currentOperation !== 'count' || !text) {
+        hideLastCountSuggestion();
+        return;
+    }
+
+    button.textContent = text;
+    button.dataset.content = text;
+    container.style.display = 'flex';
+}
+
+function hideLastCountSuggestion() {
+    const container = document.getElementById('last-count-suggestion');
+    const button = document.getElementById('btn-apply-last-count');
+
+    if (!container || !button) {
+        return;
+    }
+
+    container.style.display = 'none';
+    button.textContent = '';
+    button.dataset.content = '';
+}
+
+// 从历史记录提取最近一次清点的备注，用于新单号提示（跨设备持久）
+function syncLastCountNote(records) {
+    state.lastCountNote = '';
+
+    if (!Array.isArray(records)) {
+        return;
+    }
+
+    const latestCountRecord = records.find(rec => rec.operation === 'count' && rec.notes);
+    if (latestCountRecord) {
+        state.lastCountNote = latestCountRecord.notes.trim();
     }
 }

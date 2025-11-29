@@ -69,13 +69,61 @@ $batches = express_get_batches($pdo, 'all', 100);
                                 <td>
                                     <a href="/express/exp/index.php?action=batch_detail&batch_id=<?= $batch['batch_id'] ?>"
                                        class="btn btn-sm btn-info">详情</a>
+                                    <a href="/express/exp/index.php?action=batch_edit&batch_id=<?= $batch['batch_id'] ?>"
+                                       class="btn btn-sm btn-primary">编辑</a>
+                                    <button type="button"
+                                            class="btn btn-sm btn-danger btn-delete-batch"
+                                            data-batch-id="<?= $batch['batch_id'] ?>">
+                                        删除
+                                    </button>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
                     <?php endif; ?>
                 </tbody>
             </table>
+            <div id="list-message" class="message" style="display: none;"></div>
         </div>
     </div>
+
+    <script>
+        document.querySelectorAll('.btn-delete-batch').forEach(button => {
+            button.addEventListener('click', async function() {
+                const batchId = this.dataset.batchId;
+
+                if (!confirm('确认删除该批次及其所有包裹记录？')) {
+                    return;
+                }
+
+                const messageBox = document.getElementById('list-message');
+
+                try {
+                    const response = await fetch('/express/exp/index.php?action=batch_delete', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ batch_id: batchId })
+                    });
+
+                    const data = await response.json();
+
+                    messageBox.className = 'message ' + (data.success ? 'success' : 'error');
+                    messageBox.textContent = data.message || (data.success ? '删除成功' : '删除失败');
+                    messageBox.style.display = 'block';
+
+                    if (data.success) {
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 800);
+                    }
+                } catch (error) {
+                    messageBox.className = 'message error';
+                    messageBox.textContent = '删除失败：' + error.message;
+                    messageBox.style.display = 'block';
+                }
+            });
+        });
+    </script>
 </body>
 </html>

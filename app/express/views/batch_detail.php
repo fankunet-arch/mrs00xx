@@ -21,6 +21,7 @@ if (!$batch) {
 }
 
 $packages = express_get_packages_by_batch($pdo, $batch_id, 'all');
+$content_summary = express_get_content_summary($pdo, $batch_id);
 ?>
 <!DOCTYPE html>
 <html lang="zh-CN">
@@ -116,6 +117,7 @@ $packages = express_get_packages_by_batch($pdo, $batch_id, 'all');
             <!-- 包裹列表 -->
             <div class="packages-section">
                 <h2>包裹列表 (共 <?= count($packages) ?> 个)</h2>
+                <div id="update-message" class="message" style="display: none;"></div>
                 <table class="data-table">
                     <thead>
                         <tr>
@@ -128,6 +130,7 @@ $packages = express_get_packages_by_batch($pdo, $batch_id, 'all');
                             <th>核实时间</th>
                             <th>清点时间</th>
                             <th>调整时间</th>
+                            <th>操作</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -159,9 +162,43 @@ $packages = express_get_packages_by_batch($pdo, $batch_id, 'all');
                                     <td><?= $package['verified_at'] ? date('Y-m-d H:i', strtotime($package['verified_at'])) : '-' ?></td>
                                     <td><?= $package['counted_at'] ? date('Y-m-d H:i', strtotime($package['counted_at'])) : '-' ?></td>
                                     <td><?= $package['adjusted_at'] ? date('Y-m-d H:i', strtotime($package['adjusted_at'])) : '-' ?></td>
+                                    <td>
+                                        <button class="btn btn-sm btn-primary btn-edit-content"
+                                                data-package-id="<?= $package['package_id'] ?>"
+                                                data-current-note="<?= htmlspecialchars($package['content_note'] ?? '', ENT_QUOTES) ?>">
+                                            修改内容
+                                        </button>
+                                    </td>
                                 </tr>
                             <?php endforeach; ?>
                         <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 内容备注统计 -->
+            <div class="packages-section" style="margin-top: 20px;">
+                <h2>批次内物品内容统计</h2>
+                <table class="data-table">
+                    <thead>
+                    <tr>
+                        <th style="width: 70%;">内容备注</th>
+                        <th style="width: 30%;">数量（单）</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <?php if (empty($content_summary)): ?>
+                        <tr>
+                            <td colspan="2" class="text-center">暂无内容备注数据</td>
+                        </tr>
+                    <?php else: ?>
+                        <?php foreach ($content_summary as $item): ?>
+                            <tr>
+                                <td><?= htmlspecialchars($item['content_note']) ?></td>
+                                <td><?= $item['package_count'] ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
                     </tbody>
                 </table>
             </div>
@@ -221,6 +258,69 @@ $packages = express_get_packages_by_batch($pdo, $batch_id, 'all');
                 messageDiv.textContent = '网络错误：' + error.message;
                 messageDiv.style.display = 'block';
             }
+        });
+
+        // 修改内容备注
+        document.querySelectorAll('.btn-edit-content').forEach(button => {
+            button.addEventListener('click', async () => {
+                const packageId = button.getAttribute('data-package-id');
+                const currentNote = button.getAttribute('data-current-note') || '';
+                const newNote = prompt('请输入新的内容备注', currentNote);
+
+                const messageDiv = document.getElementById('update-message');
+                messageDiv.style.display = 'none';
+
+                if (newNote === null) {
+                    return;
+                }
+
+                if (newNote.trim() === '') {
+                    messageDiv.className = 'message error';
+                    messageDiv.textContent = '内容备注不能为空';
+                    messageDiv.style.display = 'block';
+                    return;
+                }
+
+                try {
+                    const resp = await fetch('/express/exp/index.php?action=update_content_note', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            package_id: packageId,
+                            content_note: newNote.trim()
+                        })
+                    });
+
+                    const data = await resp.json();
+
+                    if (!data.success) {
+                        messageDiv.className = 'message error';
+                        messageDiv.textContent = data.message || '更新失败';
+                        messageDiv.style.display = 'block';
+                        return;
+                    }
+
+                    // 更新行内容
+                    const row = button.closest('tr');
+                    if (row) {
+                        row.querySelectorAll('td')[3].textContent = newNote.trim();
+                        button.setAttribute('data-current-note', newNote.trim());
+                    }
+
+                    messageDiv.className = 'message success';
+                    messageDiv.textContent = data.message;
+                    messageDiv.style.display = 'block';
+
+                    // 刷新统计信息
+                    setTimeout(() => window.location.reload(), 800);
+                } catch (error) {
+                    messageDiv.className = 'message error';
+                    messageDiv.textContent = '网络错误：' + error.message;
+                    messageDiv.style.display = 'block';
+                }
+            });
         });
     </script>
 </body>

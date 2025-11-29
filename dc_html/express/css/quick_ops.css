@@ -133,6 +133,9 @@ section h2 {
 
 .batch-selector select {
     flex: 1;
+    padding: 12px 14px;
+    font-size: 15px;
+    min-height: 44px;
 }
 
 .batch-stats {
@@ -211,6 +214,38 @@ section h2 {
 .input-group textarea {
     resize: vertical;
     min-height: 80px;
+}
+
+.note-suggestion {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+}
+
+.suggestion-label {
+    font-size: 13px;
+    color: #666;
+}
+
+.suggestion-chip {
+    border: 1px dashed #667eea;
+    background: #f3f5ff;
+    color: #4750c6;
+    padding: 6px 10px;
+    border-radius: 16px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    max-width: 100%;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.suggestion-chip:hover {
+    background: #e6e9ff;
+    border-color: #4750c6;
 }
 
 #operation-title {
@@ -337,26 +372,43 @@ section h2 {
 
 .history-item {
     display: flex;
-    gap: 15px;
+    flex-direction: column;
+    gap: 8px;
     padding: 10px;
     border-bottom: 1px solid #f0f0f0;
     font-size: 13px;
-    align-items: center;
+    align-items: flex-start;
 }
 
 .history-item:hover {
     background-color: #f8f9fa;
 }
 
+.history-meta {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
 .history-time {
     color: #999;
-    min-width: 80px;
+    min-width: 82px;
+    flex-shrink: 0;
 }
 
 .history-tracking {
     font-weight: bold;
     color: #333;
-    min-width: 120px;
+    width: 100%;
+    word-break: break-all;
+    white-space: normal;
+}
+
+.tracking-suffix {
+    color: #e74c3c;
+    font-weight: bold;
 }
 
 .history-operation {
@@ -369,7 +421,8 @@ section h2 {
     padding: 2px 6px;
     border-radius: 3px;
     background-color: #e9ecef;
-    
+    flex-shrink: 0;
+
     /* [FIX] 暴力重置所有可能导致旋转或翻转的属性 */
     -webkit-transform: none !important;
     -moz-transform: none !important;
@@ -401,21 +454,25 @@ section h2 {
         flex-direction: column;
     }
 
+    .batch-stats {
+        flex-direction: row;
+        flex-wrap: nowrap;
+        gap: 10px;
+        overflow-x: auto;
+        align-items: center;
+    }
+
+    .batch-stats .stat-item {
+        width: auto;
+        white-space: nowrap;
+    }
+
     .operation-buttons {
         flex-direction: column;
     }
 
     .btn-operation {
         margin: 5px 0;
-    }
-
-    .batch-stats {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    .stat-item {
-        width: 100%;
     }
 
     .action-buttons {
