@@ -564,8 +564,11 @@ async function refreshHistoryFromServer() {
                 tracking_number: item.tracking_number,
                 operation: item.operation_type,
                 status: item.new_status || item.package_status || item.old_status,
-                time: formatOperationTime(item.operation_time)
+                time: formatOperationTime(item.operation_time),
+                notes: item.notes || ''
             }));
+
+            syncLastCountNote(state.operationHistory);
             displayHistory();
         } else {
             showMessage(data.message || '获取历史失败', 'error');
@@ -625,4 +628,18 @@ function hideLastCountSuggestion() {
     container.style.display = 'none';
     button.textContent = '';
     button.dataset.content = '';
+}
+
+// 从历史记录提取最近一次清点的备注，用于新单号提示（跨设备持久）
+function syncLastCountNote(records) {
+    state.lastCountNote = '';
+
+    if (!Array.isArray(records)) {
+        return;
+    }
+
+    const latestCountRecord = records.find(rec => rec.operation === 'count' && rec.notes);
+    if (latestCountRecord) {
+        state.lastCountNote = latestCountRecord.notes.trim();
+    }
 }
