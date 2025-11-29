@@ -393,6 +393,78 @@ function express_get_packages_by_batch($pdo, $batch_id, $status = 'all') {
 }
 
 /**
+ * 获取批次的最近操作记录（按类型过滤后再去重单号）
+ * @param PDO $pdo
+ * @param int $batch_id
+ * @param string|null $operation_type
+ * @param int $limit
+ * @return array
+ */
+function express_get_recent_operations($pdo, $batch_id, $operation_type = null, $limit = 50) {
+    try {
+        $sql = "
+            SELECT
+                log.log_id,
+                log.operation_type,
+                log.operation_time,
+                log.operator,
+                log.old_status,
+                log.new_status,
+                log.notes,
+                pkg.tracking_number,
+                pkg.package_status
+            FROM express_operation_log log
+            INNER JOIN express_package pkg ON log.package_id = pkg.package_id
+            WHERE pkg.batch_id = :batch_id
+        ";
+
+        if (!empty($operation_type)) {
+            $sql .= " AND log.operation_type = :operation_type";
+        }
+
+        $sql .= " ORDER BY log.operation_time DESC, log.log_id DESC LIMIT :limit";
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->bindValue(':batch_id', $batch_id, PDO::PARAM_INT);
+        if (!empty($operation_type)) {
+            $stmt->bindValue(':operation_type', $operation_type, PDO::PARAM_STR);
+        }
+        $stmt->bindValue(':limit', (int)$limit, PDO::PARAM_INT);
+        $stmt->execute();
+
+        $rows = $stmt->fetchAll();
+
+        // 按单号去重，仅保留时间最新一条（当前结果已按时间倒序）
+        $seen = [];
+        $deduped = [];
+
+        foreach ($rows as $row) {
+            $tracking = $row['tracking_number'];
+            if (isset($seen[$tracking])) {
+                continue;
+            }
+
+            $seen[$tracking] = true;
+            $deduped[] = [
+                'tracking_number' => $row['tracking_number'],
+                'operation_type' => $row['operation_type'],
+                'operation_time' => $row['operation_time'],
+                'operator' => $row['operator'],
+                'old_status' => $row['old_status'],
+                'new_status' => $row['new_status'],
+                'package_status' => $row['package_status'],
+                'notes' => $row['notes'],
+            ];
+        }
+
+        return $deduped;
+    } catch (PDOException $e) {
+        express_log('Failed to get recent operations: ' . $e->getMessage(), 'ERROR');
+        return [];
+    }
+}
+
+/**
  * 创建新包裹记录（仅用于批量导入）
  * @param PDO $pdo
  * @param int $batch_id

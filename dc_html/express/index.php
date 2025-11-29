@@ -30,7 +30,8 @@ $allowed_actions = [
     'search_tracking_api',      // 搜索快递单号API
     'save_record_api',          // 保存操作记录API
     'get_packages_api',         // 获取包裹列表API
-    'get_batch_detail_api'      // 获取批次详情API
+    'get_batch_detail_api',     // 获取批次详情API
+    'get_recent_operations_api' // 获取最近操作记录API（按类型过滤+去重）
 ];
 
 // 验证action是否允许

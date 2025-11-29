@@ -24,8 +24,8 @@ function initializeApp() {
     // 绑定事件
     bindEvents();
 
-    // 从历史记录加载操作记录
-    loadHistoryFromStorage();
+    // 初始化历史区域
+    displayHistory();
 }
 
 function bindEvents() {
@@ -98,6 +98,10 @@ async function onBatchChange(e) {
     document.getElementById('batch-stats').style.display = 'flex';
     document.getElementById('operation-section').style.display = 'block';
     document.getElementById('input-section').style.display = 'none';
+
+    // 清空并刷新历史区域（等待选择操作类型）
+    state.operationHistory = [];
+    displayHistory();
 }
 
 // 更新批次统计
@@ -175,6 +179,9 @@ function selectOperation(operation) {
 
     // 聚焦到输入框
     document.getElementById('tracking-input').focus();
+
+    // 按类型过滤后加载最近记录
+    fetchRecentOperations();
 }
 
 // 快递单号输入事件（模糊搜索）
@@ -333,13 +340,8 @@ async function submitOperation() {
                 updateBatchStats(data.data.batch);
             }
 
-            // 添加到操作历史
-            addToHistory({
-                tracking_number: trackingNumber,
-                operation: state.currentOperation,
-                status: data.data.package.package_status,
-                time: new Date().toLocaleTimeString()
-            });
+            // 按最新逻辑重新获取历史（类型过滤 + 去重）
+            fetchRecentOperations();
 
             // 清空输入，准备下一个
             clearInput();
@@ -386,22 +388,6 @@ function getStatusText(status) {
     return statusMap[status] || status;
 }
 
-// 添加到操作历史
-function addToHistory(record) {
-    state.operationHistory.unshift(record);
-
-    // 只保留最近10条
-    if (state.operationHistory.length > 10) {
-        state.operationHistory = state.operationHistory.slice(0, 10);
-    }
-
-    // 保存到localStorage
-    saveHistoryToStorage();
-
-    // 更新显示
-    displayHistory();
-}
-
 // 显示历史记录
 function displayHistory() {
     const historyDiv = document.getElementById('operation-history');
@@ -411,40 +397,36 @@ function displayHistory() {
         return;
     }
 
-    const operationNames = {
-        'verify': '核实',
-        'count': '清点',
-        'adjust': '调整'
-    };
-
     historyDiv.innerHTML = state.operationHistory.map(record => `
         <div class="history-item">
-            <span class="history-time">${record.time}</span>
-            <span class="history-tracking">${record.tracking_number}</span>
-            <span class="history-operation">${operationNames[record.operation]}</span>
-            <span class="history-status status-${record.status}">${getStatusText(record.status)}</span>
+            <div class="history-main">
+                <span class="history-tracking">${record.tracking_number}</span>
+                <span class="history-time">${record.operation_time || ''}</span>
+            </div>
+            <span class="history-status status-${record.package_status}">${getStatusText(record.package_status)}</span>
         </div>
     `).join('');
 }
 
-// 保存历史到localStorage
-function saveHistoryToStorage() {
-    try {
-        localStorage.setItem('express_operation_history', JSON.stringify(state.operationHistory));
-    } catch (e) {
-        console.error('Failed to save history:', e);
+// 获取最近操作记录（类型过滤 + 单号去重）
+async function fetchRecentOperations() {
+    if (!state.currentBatchId || !state.currentOperation) {
+        state.operationHistory = [];
+        displayHistory();
+        return;
     }
-}
 
-// 从localStorage加载历史
-function loadHistoryFromStorage() {
     try {
-        const stored = localStorage.getItem('express_operation_history');
-        if (stored) {
-            state.operationHistory = JSON.parse(stored);
+        const response = await fetch(`/express/index.php?action=get_recent_operations_api&batch_id=${state.currentBatchId}&operation_type=${state.currentOperation}`);
+        const data = await response.json();
+
+        if (data.success) {
+            state.operationHistory = data.data || [];
             displayHistory();
+        } else {
+            showMessage(data.message || '获取历史失败', 'error');
         }
-    } catch (e) {
-        console.error('Failed to load history:', e);
+    } catch (error) {
+        showMessage('获取历史失败: ' + error.message, 'error');
     }
 }
