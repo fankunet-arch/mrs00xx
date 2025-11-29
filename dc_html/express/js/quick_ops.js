@@ -30,8 +30,8 @@ function initializeApp() {
     // 绑定事件
     bindEvents();
 
-    // 从历史记录加载操作记录
-    loadHistoryFromStorage();
+    // 初始显示空的历史区域
+    displayHistory();
 }
 
 function bindEvents() {
@@ -136,6 +136,8 @@ async function onBatchChange(e) {
     document.getElementById('batch-stats').style.display = 'flex';
     document.getElementById('operation-section').style.display = 'block';
     document.getElementById('input-section').style.display = 'none';
+
+    await refreshHistoryFromServer();
 }
 
 // 更新批次统计
@@ -407,13 +409,7 @@ async function submitOperation() {
                 state.searchResults.set(trackingNumber, data.data.package);
             }
 
-            // 添加到操作历史
-            addToHistory({
-                tracking_number: trackingNumber,
-                operation: state.currentOperation,
-                status: data.data.package.package_status,
-                time: new Date().toLocaleTimeString()
-            });
+            await refreshHistoryFromServer();
 
             // 清空输入，准备下一个
             clearInput();
@@ -464,22 +460,6 @@ function getStatusText(status) {
     return statusMap[status] || status;
 }
 
-// 添加到操作历史
-function addToHistory(record) {
-    state.operationHistory.unshift(record);
-
-    // [FIX] 增加存储上限到100条，以便在筛选后仍有足够数据展示
-    if (state.operationHistory.length > 100) {
-        state.operationHistory = state.operationHistory.slice(0, 100);
-    }
-
-    // 保存到localStorage
-    saveHistoryToStorage();
-
-    // 更新显示
-    displayHistory();
-}
-
 // [FIX] 显示历史记录（重构：增加筛选和去重逻辑）
 function displayHistory() {
     const historyDiv = document.getElementById('operation-history');
@@ -521,37 +501,6 @@ function displayHistory() {
     `).join('');
 }
 
-// 保存历史到localStorage
-function saveHistoryToStorage() {
-    try {
-        localStorage.setItem('express_operation_history', JSON.stringify(state.operationHistory));
-    } catch (e) {
-        console.error('Failed to save history:', e);
-    }
-}
-
-// 从localStorage加载历史
-function loadHistoryFromStorage() {
-    try {
-        const stored = localStorage.getItem('express_operation_history');
-        if (stored) {
-            const parsed = JSON.parse(stored);
-            if (Array.isArray(parsed)) {
-                state.operationHistory = parsed;
-            } else {
-                state.operationHistory = [];
-                localStorage.removeItem('express_operation_history');
-            }
-        }
-    } catch (e) {
-        console.error('Failed to load history:', e);
-        state.operationHistory = [];
-        localStorage.removeItem('express_operation_history');
-    }
-
-    displayHistory();
-}
-
 // 根据当前操作类型预填备注
 function updateNotesPrefill(trackingNumber) {
     if (!(state.searchResults instanceof Map)) {
@@ -591,6 +540,58 @@ function updateNotesPrefill(trackingNumber) {
             adjustField.value = pkg.adjustment_note || '';
         }
     }
+}
+
+// 从服务端刷新最新历史，保证不同设备展示一致
+async function refreshHistoryFromServer() {
+    if (!state.currentBatchId) {
+        state.operationHistory = [];
+        displayHistory();
+        return;
+    }
+
+    const params = new URLSearchParams({
+        batch_id: state.currentBatchId,
+        limit: 100
+    });
+
+    try {
+        const response = await fetch(`/express/index.php?action=get_recent_operations_api&${params.toString()}`);
+        const data = await response.json();
+
+        if (data.success && Array.isArray(data.data)) {
+            state.operationHistory = data.data.map(item => ({
+                tracking_number: item.tracking_number,
+                operation: item.operation_type,
+                status: item.new_status || item.package_status || item.old_status,
+                time: formatOperationTime(item.operation_time)
+            }));
+            displayHistory();
+        } else {
+            showMessage(data.message || '获取历史失败', 'error');
+        }
+    } catch (error) {
+        showMessage('获取历史失败: ' + error.message, 'error');
+    }
+}
+
+function formatOperationTime(value) {
+    if (!value) return '';
+
+    const parsed = new Date(value.replace(/-/g, '/'));
+    if (!Number.isNaN(parsed.getTime())) {
+        return parsed.toLocaleString('zh-CN', {
+            hour12: false,
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+    }
+
+    return value;
 }
 
 // 显示/隐藏上次清点内容提示
