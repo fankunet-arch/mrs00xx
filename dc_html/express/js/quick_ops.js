@@ -70,12 +70,27 @@ function bindEvents() {
     
     const btnSubmit = document.getElementById('btn-submit');
     if (btnSubmit) btnSubmit.addEventListener('click', submitOperation);
-    
+
     const btnReset = document.getElementById('btn-reset');
     if (btnReset) btnReset.addEventListener('click', resetForm);
-    
+
     const btnChangeOp = document.getElementById('btn-change-operation');
     if (btnChangeOp) btnChangeOp.addEventListener('click', changeOperation);
+
+    const lastCountButton = document.getElementById('btn-apply-last-count');
+    if (lastCountButton) {
+        lastCountButton.addEventListener('click', function() {
+            const noteField = document.getElementById('content-note');
+            const content = this.dataset.content || '';
+
+            if (noteField && content) {
+                noteField.value = content;
+                noteField.focus();
+                const length = content.length;
+                noteField.setSelectionRange(length, length);
+            }
+        });
+    }
 }
 
 // 时间更新
@@ -176,6 +191,10 @@ async function refreshBatches() {
 // 选择操作类型
 function selectOperation(operation) {
     state.currentOperation = operation;
+
+    if (operation !== 'count') {
+        hideLastCountSuggestion();
+    }
 
     // 更新操作名称显示
     const operationNames = {
@@ -315,6 +334,7 @@ function clearInput() {
     document.getElementById('content-note').value = '';
     document.getElementById('adjustment-note').value = '';
     hideSearchResults();
+    hideLastCountSuggestion();
     document.getElementById('tracking-input').focus();
 }
 
@@ -521,10 +541,18 @@ function loadHistoryFromStorage() {
 // 根据当前操作类型预填备注
 function updateNotesPrefill(trackingNumber) {
     if (!(state.searchResults instanceof Map)) {
+        hideLastCountSuggestion();
         return;
     }
 
     const pkg = state.searchResults.get(trackingNumber);
+    if (state.currentOperation === 'count') {
+        const lastContent = pkg && pkg.content_note ? pkg.content_note : '';
+        showLastCountSuggestion(lastContent);
+    } else {
+        hideLastCountSuggestion();
+    }
+
     if (!pkg) {
         return;
     }
@@ -542,4 +570,37 @@ function updateNotesPrefill(trackingNumber) {
             adjustField.value = pkg.adjustment_note || '';
         }
     }
+}
+
+// 显示/隐藏上次清点内容提示
+function showLastCountSuggestion(contentNote) {
+    const container = document.getElementById('last-count-suggestion');
+    const button = document.getElementById('btn-apply-last-count');
+
+    if (!container || !button) {
+        return;
+    }
+
+    const text = (contentNote || '').trim();
+    if (state.currentOperation !== 'count' || !text) {
+        hideLastCountSuggestion();
+        return;
+    }
+
+    button.textContent = text;
+    button.dataset.content = text;
+    container.style.display = 'flex';
+}
+
+function hideLastCountSuggestion() {
+    const container = document.getElementById('last-count-suggestion');
+    const button = document.getElementById('btn-apply-last-count');
+
+    if (!container || !button) {
+        return;
+    }
+
+    container.style.display = 'none';
+    button.textContent = '';
+    button.dataset.content = '';
 }
