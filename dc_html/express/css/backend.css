@@ -229,6 +229,12 @@ body {
     display: block;
 }
 
+.action-stack {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+    gap: 6px;
+}
+
 /* 表单样式 */
 .form-horizontal {
     max-width: 600px;

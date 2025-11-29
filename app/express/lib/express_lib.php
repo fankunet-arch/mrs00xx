@@ -207,6 +207,76 @@ function express_create_batch($pdo, $batch_name, $created_by = null, $notes = nu
 }
 
 /**
+ * 更新批次信息
+ * @param PDO $pdo
+ * @param int $batch_id
+ * @param string $batch_name
+ * @param string $status
+ * @param string|null $notes
+ * @return array ['success' => bool, 'message' => string]
+ */
+function express_update_batch($pdo, $batch_id, $batch_name, $status, $notes = null) {
+    try {
+        $stmt = $pdo->prepare("
+            UPDATE express_batch SET
+                batch_name = :batch_name,
+                status = :status,
+                notes = :notes
+            WHERE batch_id = :batch_id
+        ");
+
+        $stmt->execute([
+            'batch_name' => trim($batch_name),
+            'status' => $status,
+            'notes' => $notes,
+            'batch_id' => $batch_id
+        ]);
+
+        if ($stmt->rowCount() === 0) {
+            return ['success' => false, 'message' => '批次未找到或数据未改变'];
+        }
+
+        express_log('Batch updated: ' . $batch_id, 'INFO');
+        return ['success' => true, 'message' => '批次更新成功'];
+    } catch (PDOException $e) {
+        if ($e->getCode() === '23000') {
+            return ['success' => false, 'message' => '批次名称已存在'];
+        }
+
+        express_log('Failed to update batch: ' . $e->getMessage(), 'ERROR');
+        return ['success' => false, 'message' => '更新失败: ' . $e->getMessage()];
+    }
+}
+
+/**
+ * 删除批次（级联删除包裹与日志）
+ * @param PDO $pdo
+ * @param int $batch_id
+ * @return array ['success' => bool, 'message' => string]
+ */
+function express_delete_batch($pdo, $batch_id) {
+    try {
+        $pdo->beginTransaction();
+
+        $stmt = $pdo->prepare("DELETE FROM express_batch WHERE batch_id = :batch_id");
+        $stmt->execute(['batch_id' => $batch_id]);
+
+        if ($stmt->rowCount() === 0) {
+            $pdo->rollBack();
+            return ['success' => false, 'message' => '批次不存在'];
+        }
+
+        $pdo->commit();
+        express_log('Batch deleted: ' . $batch_id, 'WARNING');
+        return ['success' => true, 'message' => '批次已删除'];
+    } catch (PDOException $e) {
+        $pdo->rollBack();
+        express_log('Failed to delete batch: ' . $e->getMessage(), 'ERROR');
+        return ['success' => false, 'message' => '删除失败: ' . $e->getMessage()];
+    }
+}
+
+/**
  * 更新批次统计数据
  * @param PDO $pdo
  * @param int $batch_id

@@ -37,7 +37,10 @@ $packages = express_get_packages_by_batch($pdo, $batch_id, 'all');
         <header class="page-header">
             <h1>批次详情: <?= htmlspecialchars($batch['batch_name']) ?></h1>
             <div class="header-actions">
+                <a href="/express/exp/index.php?action=batch_edit&batch_id=<?= $batch_id ?>" class="btn btn-primary">修改</a>
                 <a href="/express/exp/index.php?action=batch_list" class="btn btn-secondary">返回列表</a>
+                <button type="button" class="btn btn-secondary" id="btn-delete-detail" data-batch-id="<?= $batch_id ?>"
+                        data-batch-name="<?= htmlspecialchars($batch['batch_name']) ?>">删除批次</button>
             </div>
         </header>
 
@@ -169,6 +172,37 @@ $packages = express_get_packages_by_batch($pdo, $batch_id, 'all');
     </div>
 
     <script>
+        const deleteButton = document.getElementById('btn-delete-detail');
+        deleteButton.addEventListener('click', async () => {
+            const batchId = deleteButton.dataset.batchId;
+            const batchName = deleteButton.dataset.batchName;
+
+            if (!confirm(`确认删除批次【${batchName}】及所有关联包裹吗？`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/express/exp/index.php?action=batch_delete', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ batch_id: batchId })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('批次已删除');
+                    window.location.href = '/express/exp/index.php?action=batch_list';
+                } else {
+                    alert(data.message || '删除失败');
+                }
+            } catch (error) {
+                alert('网络错误：' + error.message);
+            }
+        });
+
         document.getElementById('bulk-import-form').addEventListener('submit', async function(e) {
             e.preventDefault();
 

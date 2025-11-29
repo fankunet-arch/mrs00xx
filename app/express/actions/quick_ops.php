@@ -21,9 +21,12 @@ $batches = express_get_batches($pdo, 'active', 50);
     <link rel="stylesheet" href="./css/quick_ops.css">
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>快递单统一操作页面</h1>
+    <div class="container compact">
+        <header class="page-header">
+            <div>
+                <p class="page-label">Express 快速作业</p>
+                <h1>快递单统一操作</h1>
+            </div>
             <div class="header-info">
                 <span id="current-time"></span>
             </div>
@@ -31,7 +34,10 @@ $batches = express_get_batches($pdo, 'active', 50);
 
         <!-- 批次选择区域 -->
         <section class="batch-section">
-            <h2>选择批次</h2>
+            <div class="section-title">
+                <h2>选择批次</h2>
+                <button id="refresh-batches" class="btn btn-secondary btn-ghost">刷新</button>
+            </div>
             <div class="batch-selector">
                 <select id="batch-select" class="form-control">
                     <option value="">-- 请选择批次 --</option>
@@ -46,25 +52,24 @@ $batches = express_get_batches($pdo, 'active', 50);
                         </option>
                     <?php endforeach; ?>
                 </select>
-                <button id="refresh-batches" class="btn btn-secondary">刷新批次</button>
             </div>
 
             <!-- 批次统计信息 -->
             <div id="batch-stats" class="batch-stats" style="display: none;">
                 <div class="stat-item">
-                    <span class="stat-label">总数:</span>
+                    <span class="stat-label">总数</span>
                     <span id="stat-total" class="stat-value">0</span>
                 </div>
                 <div class="stat-item">
-                    <span class="stat-label">已核实:</span>
+                    <span class="stat-label">已核实</span>
                     <span id="stat-verified" class="stat-value">0</span>
                 </div>
                 <div class="stat-item">
-                    <span class="stat-label">已清点:</span>
+                    <span class="stat-label">已清点</span>
                     <span id="stat-counted" class="stat-value">0</span>
                 </div>
                 <div class="stat-item">
-                    <span class="stat-label">已调整:</span>
+                    <span class="stat-label">已调整</span>
                     <span id="stat-adjusted" class="stat-value">0</span>
                 </div>
                 <div class="stat-item progress-bar">
@@ -86,13 +91,18 @@ $batches = express_get_batches($pdo, 'active', 50);
 
         <!-- 快递单号输入区域 -->
         <section class="input-section" id="input-section" style="display: none;">
-            <h2 id="operation-title">操作：<span id="operation-name">--</span></h2>
+            <div class="section-title compact-title">
+                <h2 id="operation-title">操作：<span id="operation-name">--</span></h2>
+                <button id="btn-change-operation" class="btn btn-secondary btn-ghost">切换</button>
+            </div>
 
-            <div class="input-group">
-                <label for="tracking-input">快递单号:</label>
-                <input type="text" id="tracking-input" class="form-control"
-                       placeholder="输入快递单号（模糊搜索）" autocomplete="off">
-                <button id="btn-clear-input" class="btn btn-clear">清空</button>
+            <div class="input-group inline-group">
+                <label for="tracking-input">快递单号</label>
+                <div class="input-flex">
+                    <input type="text" id="tracking-input" class="form-control"
+                           placeholder="输入快递单号（模糊搜索）" autocomplete="off">
+                    <button id="btn-clear-input" class="btn btn-clear">清空</button>
+                </div>
             </div>
 
             <!-- 搜索结果候选列表 -->
@@ -100,22 +110,21 @@ $batches = express_get_batches($pdo, 'active', 50);
 
             <!-- 内容备注（清点时显示） -->
             <div id="content-note-group" class="input-group" style="display: none;">
-                <label for="content-note">内容备注:</label>
+                <label for="content-note">内容备注</label>
                 <textarea id="content-note" class="form-control" rows="3"
                           placeholder="例如：番茄酱×2"></textarea>
             </div>
 
             <!-- 调整备注（调整时显示） -->
             <div id="adjustment-note-group" class="input-group" style="display: none;">
-                <label for="adjustment-note">调整备注:</label>
+                <label for="adjustment-note">调整备注</label>
                 <textarea id="adjustment-note" class="form-control" rows="3"
                           placeholder="例如：包裹破损，已重新包装"></textarea>
             </div>
 
-            <div class="action-buttons">
+            <div class="action-buttons sticky-actions">
                 <button id="btn-submit" class="btn btn-primary">确认</button>
                 <button id="btn-reset" class="btn btn-secondary">重置</button>
-                <button id="btn-change-operation" class="btn btn-secondary">切换操作</button>
             </div>
         </section>
 
@@ -126,7 +135,10 @@ $batches = express_get_batches($pdo, 'active', 50);
 
         <!-- 最近操作记录 -->
         <section class="history-section">
-            <h2>最近操作记录</h2>
+            <div class="section-title">
+                <h2>最近操作记录</h2>
+                <span class="muted">最近10条</span>
+            </div>
             <div id="operation-history" class="operation-history">
                 <p class="empty-text">暂无操作记录</p>
             </div>

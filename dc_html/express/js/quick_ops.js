@@ -95,7 +95,7 @@ async function onBatchChange(e) {
     });
 
     // 显示操作选择区域
-    document.getElementById('batch-stats').style.display = 'flex';
+    document.getElementById('batch-stats').style.display = 'grid';
     document.getElementById('operation-section').style.display = 'block';
     document.getElementById('input-section').style.display = 'none';
 }

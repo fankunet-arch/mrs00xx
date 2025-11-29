@@ -67,8 +67,15 @@ $batches = express_get_batches($pdo, 'all', 100);
                                 <td><?= date('Y-m-d H:i', strtotime($batch['created_at'])) ?></td>
                                 <td><?= htmlspecialchars($batch['created_by'] ?? '-') ?></td>
                                 <td>
-                                    <a href="/express/exp/index.php?action=batch_detail&batch_id=<?= $batch['batch_id'] ?>"
-                                       class="btn btn-sm btn-info">详情</a>
+                                    <div class="action-stack">
+                                        <a href="/express/exp/index.php?action=batch_detail&batch_id=<?= $batch['batch_id'] ?>"
+                                           class="btn btn-sm btn-info">详情</a>
+                                        <a href="/express/exp/index.php?action=batch_edit&batch_id=<?= $batch['batch_id'] ?>"
+                                           class="btn btn-sm btn-primary">修改</a>
+                                        <button type="button" class="btn btn-sm btn-secondary btn-delete-batch"
+                                                data-batch-id="<?= $batch['batch_id'] ?>"
+                                                data-batch-name="<?= htmlspecialchars($batch['batch_name']) ?>">删除</button>
+                                    </div>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -77,5 +84,45 @@ $batches = express_get_batches($pdo, 'all', 100);
             </table>
         </div>
     </div>
+
+    <script>
+        const deleteButtons = document.querySelectorAll('.btn-delete-batch');
+
+        deleteButtons.forEach(button => {
+            button.addEventListener('click', async () => {
+                const batchId = button.dataset.batchId;
+                const batchName = button.dataset.batchName;
+
+                if (!confirm(`确定要删除批次【${batchName}】吗？此操作会同时删除其下所有包裹和日志。`)) {
+                    return;
+                }
+
+                try {
+                    const response = await fetch('/express/exp/index.php?action=batch_delete', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ batch_id: batchId })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        // 移除行，视觉反馈更快
+                        const row = button.closest('tr');
+                        if (row) {
+                            row.remove();
+                        }
+                        alert('批次已删除');
+                    } else {
+                        alert(data.message || '删除失败');
+                    }
+                } catch (error) {
+                    alert('网络错误：' + error.message);
+                }
+            });
+        });
+    </script>
 </body>
 </html>
