@@ -7,6 +7,49 @@ import { modal, showAlert, showPage, escapeHtml, appState } from './core.js';
 import { batchAPI } from './api.js';
 import { getStatusText, getStatusBadgeClass } from './utils.js';
 
+function formatNumber(value) {
+  const num = parseFloat(value);
+  if (Number.isNaN(num)) return '0';
+  if (num % 1 === 0) return parseInt(num, 10).toString();
+  return num.toFixed(4).replace(/\.?0+$/, '');
+}
+
+function updateRawRecordHelper() {
+  const qtyInput = document.getElementById('edit-raw-record-qty');
+  const boxInput = document.getElementById('edit-raw-record-box');
+  const averageEl = document.getElementById('edit-raw-record-average');
+  const markerEl = document.getElementById('edit-raw-record-marker');
+
+  if (!qtyInput || !boxInput || !averageEl || !markerEl) return;
+
+  const qty = parseFloat(qtyInput.value);
+  const box = parseFloat(boxInput.value);
+
+  if (!Number.isFinite(qty) || qty <= 0 || !Number.isFinite(box) || box <= 0) {
+    averageEl.textContent = '--';
+    markerEl.textContent = '--';
+    return;
+  }
+
+  const avg = qty / box;
+  const formatted = formatNumber(avg);
+  averageEl.textContent = formatted;
+  markerEl.textContent = formatted;
+}
+
+function bindRawRecordEditInputs() {
+  const qtyInput = document.getElementById('edit-raw-record-qty');
+  const boxInput = document.getElementById('edit-raw-record-box');
+  if (qtyInput && !qtyInput.dataset.bound) {
+    qtyInput.addEventListener('input', updateRawRecordHelper);
+    qtyInput.dataset.bound = 'true';
+  }
+  if (boxInput && !boxInput.dataset.bound) {
+    boxInput.addEventListener('input', updateRawRecordHelper);
+    boxInput.dataset.bound = 'true';
+  }
+}
+
 /**
  * 加载批次列表
  */
@@ -337,25 +380,92 @@ export async function viewRawRecords(skuId) {
     return;
   }
 
+  appState.rawRecords = result.data.records || [];
+  appState.currentRawRecordSkuId = skuId;
+
   // 填充模态框内容
   document.getElementById('raw-records-sku-name').textContent = item.sku_name || '-';
   document.getElementById('raw-records-batch-code').textContent = appState.currentBatch.batch_code || '-';
 
   const tbody = document.getElementById('raw-records-tbody');
   if (!result.data.records || result.data.records.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="5" class="empty">暂无原始记录</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" class="empty">暂无原始记录</td></tr>';
   } else {
-    tbody.innerHTML = result.data.records.map(record => `
+    tbody.innerHTML = result.data.records.map(record => {
+      const physicalBox = record.physical_box_count ? formatNumber(record.physical_box_count) : '-';
+      const avgPerBox = record.physical_box_count ? formatNumber(Number(record.qty) / Number(record.physical_box_count)) : '--';
+      return `
       <tr>
         <td>${escapeHtml(record.recorded_at || '-')}</td>
         <td>${escapeHtml(record.operator_name || '-')}</td>
         <td><strong>${escapeHtml(record.qty || '0')}</strong></td>
         <td>${escapeHtml(record.unit_name || '-')}</td>
+        <td>${escapeHtml(physicalBox)}</td>
+        <td>${escapeHtml(avgPerBox)}</td>
         <td>${escapeHtml(record.note || '-')}</td>
+        <td>
+          <button class="text" data-action="openRawRecordEdit" data-record-id="${record.raw_record_id}">修改</button>
+        </td>
       </tr>
-    `).join('');
+    `; }).join('');
   }
 
   // 显示模态框
   modal.show('modal-raw-records');
+}
+
+export function openRawRecordEdit(recordId) {
+  const record = (appState.rawRecords || []).find(r => parseInt(r.raw_record_id, 10) === recordId);
+  if (!record) {
+    showAlert('danger', '未找到需要编辑的记录');
+    return;
+  }
+
+  document.getElementById('edit-raw-record-id').value = record.raw_record_id;
+  document.getElementById('edit-raw-record-qty').value = record.qty;
+  document.getElementById('edit-raw-record-box').value = record.physical_box_count || '';
+  document.getElementById('edit-raw-record-unit').value = record.unit_name || '';
+  document.getElementById('edit-raw-record-note').value = record.note || '';
+
+  bindRawRecordEditInputs();
+  updateRawRecordHelper();
+
+  modal.show('modal-raw-record-edit');
+}
+
+export async function saveRawRecordEdit(event) {
+  event.preventDefault();
+
+  const recordId = parseInt(document.getElementById('edit-raw-record-id').value, 10);
+  const qty = parseFloat(document.getElementById('edit-raw-record-qty').value);
+  const physicalBox = parseFloat(document.getElementById('edit-raw-record-box').value);
+  const note = document.getElementById('edit-raw-record-note').value.trim();
+
+  if (!recordId || Number.isNaN(qty) || qty <= 0 || Number.isNaN(physicalBox) || physicalBox <= 0) {
+    showAlert('danger', '请填写有效的数量与物理箱数');
+    return;
+  }
+
+  const result = await batchAPI.updateRawRecord({
+    raw_record_id: recordId,
+    qty,
+    physical_box_count: physicalBox,
+    note
+  });
+
+  if (!result.success) {
+    showAlert('danger', '更新失败: ' + result.message);
+    return;
+  }
+
+  showAlert('success', '原始记录已更新');
+  modal.hide('modal-raw-record-edit');
+
+  if (appState.currentRawRecordSkuId) {
+    await viewRawRecords(appState.currentRawRecordSkuId);
+  }
+
+  if (appState.currentBatch) {
+    await showMergePage(appState.currentBatch.batch_id);
+  }
 }

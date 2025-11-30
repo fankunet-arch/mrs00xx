@@ -139,6 +139,9 @@ function setupEventDelegation() {
       case 'showBatchesPage':
         showPage('batches');
         break;
+      case 'openRawRecordEdit':
+        if (target.dataset.recordId) await Batch.openRawRecordEdit(parseInt(target.dataset.recordId, 10));
+        break;
 
       // SKU 管理
       case 'loadSkus':
@@ -248,6 +251,9 @@ function setupEventDelegation() {
       case 'form-inventory-adjust':
         const adjustData = new FormData(form);
         await Inventory.saveInventoryAdjustment(adjustData);
+        break;
+      case 'form-raw-record-edit':
+        await Batch.saveRawRecordEdit(e);
         break;
       default:
         console.warn('未知表单:', formId);

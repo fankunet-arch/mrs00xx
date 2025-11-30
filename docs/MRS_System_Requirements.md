@@ -4,8 +4,8 @@
 所属平台：ABCABC · DC（Data Collection）  
 子系统目标范围：入库 + 出库管理 + 库存调整，当前优先「预计收货 + 极速入库」及「基础出库管理」。
 
-**最近更新日期**: 2025-11-25
-**状态**: Phase 1 (Inbound) Completed, Phase 2 (Outbound) Implemented, Phase 3 (Inventory) Implemented.
+**最近更新日期**: 2025-12-05
+**状态**: Phase 1 (Inbound) Completed, Phase 2 (Outbound) Implemented, Phase 3 (Inventory) Implemented；新增“总量锚定 + 动态修正”能力。
 
 ## 1. 项目概述
 MRS 物料收发管理系统用于记录和管理所有物料从进入库存（入库）到离开库存（出库）的关键动作，并支持库存盘点调整。
@@ -25,7 +25,10 @@ MRS 物料收发管理系统用于记录和管理所有物料从进入库存（�
 **实际入库极速录入 (Completed)**
 - 到货时，前台录入页面可以基于“预计收货单”快速确认或修改数量；
 - 支持“极速录入”模式：纯文本输入，后台归一化。
-- 实现“自动归一化”：小数箱数（如 1.5 箱）在保存时自动转换为标准单位整数（如 15 瓶）。
+- 引入“智能辅助计算区”：
+  - 录入“入库总数量（标准单位）”与“实际物理箱数”时实时计算平均每箱数量，用于指导现场箱贴标记。
+  - 计算结果以醒目样式展示，并提示“请在箱上标记：X”。
+- 物理箱数一并写入原始记录，便于后续修正与均值回显。
 
 **出库记录 (Completed)**
 - 支持记录门店领料、店间调拨、退货、报废等出库动作；
@@ -114,7 +117,7 @@ MRS 专注以下内容：
 *   **`mrs_batch`** (收货批次主表)
     *   `batch_id`, `batch_code`, `batch_date`, `location_name`, `batch_status` ('draft', 'receiving', 'confirmed', 'posted'), `remark`.
 *   **`mrs_batch_raw_record`** (原始收货记录 - 极速录入用)
-    *   `raw_record_id`, `batch_id`, `sku_id`, `input_sku_name` (快照), `qty` (文本/数字), `unit_name`, `operator_name`.
+    *   `raw_record_id`, `batch_id`, `sku_id`, `input_sku_name` (快照), `qty` (文本/数字), `physical_box_count` (物理箱数), `unit_name`, `operator_name`.
 *   **`mrs_batch_confirmed_item`** (确认后的入库明细 - 库存来源)
     *   `confirmed_item_id`, `batch_id`, `sku_id`, `total_standard_qty` (整数), `confirmed_case_qty`, `confirmed_single_qty`.
 
@@ -135,6 +138,11 @@ MRS 专注以下内容：
 2.  后端根据 SKU 的箱规（例如 1 箱 = 10 个）计算总标准单位数：`1.5 * 10 = 15 个`。
 3.  数据库 `total_standard_qty` 字段仅存储整数 `15`。
 4.  展示时，根据箱规逆向计算显示为 "1箱 5个" 或 "1.5箱"（视前端逻辑而定，目前后端API支持拆分显示）。
+
+### 6.3 关键逻辑：总量锚定 + 动态修正
+- **录入侧锚定**：原始记录同时保存“入库总数量（标准单位）”与“实际物理箱数”，用于计算平均每箱值，指导现场箱贴标记。
+- **前端回显**：批次合并页的“原始记录明细”支持回显物理箱数与均值，并提供“编辑”入口，便于在货齐后调整数量与箱数。
+- **后端落库**：新增字段 `physical_box_count` 存储在 `mrs_batch_raw_record` 中，更新 API `backend_update_raw_record` 支持在线修正，修正后合并视图自动刷新以反映最新数据。
 
 ## 7. 部署与架构
 ### 7.1 目录结构
