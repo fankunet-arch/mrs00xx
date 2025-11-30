@@ -82,49 +82,44 @@ function sortable_th($column_name, $display_name, $hint, $current_sort, $current
 function get_batch_display_properties($batch)
 {
     $status = $batch['batch_status'];
-    $raw_record_count = $batch['raw_record_count'] ?? 0;
-    $confirmed_item_count = $batch['confirmed_item_count'] ?? 0;
+
+    // 用于批次清点状态的指标，默认值为0以避免未设置时的警告
+    $total_packages = (int)($batch['total_package_count'] ?? 0);
+    $verified_packages = (int)($batch['verified_package_count'] ?? 0);
+    $counted_packages = (int)($batch['counted_package_count'] ?? 0);
+    $adjusted_packages = (int)($batch['adjusted_package_count'] ?? 0);
 
     $properties = [
         'row_class' => '',
         'badge_class' => 'badge-secondary',
         'status_text' => '未知',
         'button_text' => '查看',
-        'button_class' => '',
+        'button_class' => 'btn-secondary',
         'action' => 'batch_detail'
     ];
 
-    // 规则1: 批次建立后，没有任何收货记录时显示蓝色的"等待收货"（无按钮）
-    if ($raw_record_count == 0) {
-        $properties['badge_class'] = 'badge-primary';
-        $properties['status_text'] = '等待收货';
-        $properties['button_text'] = '';  // 不显示按钮
+    // 状态规则（防止所有批次都显示为绿色“进行中”）
+    if ($total_packages === 0) {
+        $properties['badge_class'] = 'badge-secondary';
+        $properties['status_text'] = '等待录入';
+        $properties['button_text'] = '';
         $properties['button_class'] = '';
         $properties['action'] = '';
-    }
-    // 规则2: 存在前台清点收货时（有收货但没有全部确认入库的），显示红色的"收货中"
-    elseif ($raw_record_count > 0 && in_array($status, ['draft', 'receiving', 'pending_merge'])) {
-        $properties['row_class'] = 'row-danger';
-        $properties['badge_class'] = 'badge-danger';
-        $properties['status_text'] = '收货中';
-        $properties['button_text'] = '确认入库';
-        $properties['button_class'] = 'btn-warning';
-        $properties['action'] = 'batch_detail';
-    }
-    // 规则3: 全部收货完成后显示绿色的"已收货"
-    elseif ($status === 'confirmed' || $status === 'posted') {
+    } elseif ($verified_packages === 0 && $counted_packages === 0 && $adjusted_packages === 0) {
+        $properties['badge_class'] = 'badge-warning text-dark';
+        $properties['status_text'] = '等待中';
+    } elseif ($total_packages === $verified_packages && $verified_packages !== $counted_packages) {
+        $properties['badge_class'] = 'badge-info';
+        $properties['status_text'] = '待清点';
+    } elseif ($total_packages > 0 && $total_packages === $counted_packages) {
+        $properties['badge_class'] = 'badge-info';
+        $properties['status_text'] = '清点完成';
+    } elseif ($total_packages > 0 && $total_packages > $verified_packages) {
         $properties['badge_class'] = 'badge-success';
-        $properties['status_text'] = '已收货';
-        $properties['button_text'] = '查看详情';
-        $properties['button_class'] = 'btn-info';
-        $properties['action'] = 'batch_detail';
-    }
-    else {
-        // Default catch-all
+        $properties['status_text'] = '进行中';
+    } else {
+        // 兜底展示数据库状态，避免出现空白
         $properties['status_text'] = ucfirst($status);
-        $properties['button_text'] = '查看';
-        $properties['button_class'] = 'btn-secondary';
-        $properties['action'] = 'batch_detail';
     }
 
     return $properties;
@@ -151,7 +146,13 @@ function get_batch_display_properties($batch)
                                     </th>
                                     <?php echo sortable_th('batch_code', '参考号', '批次号', $sort_column, $sort_order); ?>
                                     <?php echo sortable_th('batch_status', '状态', '当前阶段', $sort_column, $sort_order); ?>
-                                    <?php echo sortable_th('raw_record_count', '待确认数', '待入库记录', $sort_column, $sort_order); ?>
+                                    <?php echo sortable_th('total_package_count', '总包裹数', '记录总数', $sort_column, $sort_order); ?>
+                                    <?php echo sortable_th('verified_package_count', '已核实', '已核实包裹', $sort_column, $sort_order); ?>
+                                    <?php echo sortable_th('counted_package_count', '已清点', '清点完成包裹', $sort_column, $sort_order); ?>
+                                    <th class="header-cell">
+                                        <span class="th-main">已调整</span>
+                                        <span class="header-hint">库存调整数</span>
+                                    </th>
                                     <?php echo sortable_th('created_at', '创建时间', '批次建立时间', $sort_column, $sort_order); ?>
                                     <?php echo sortable_th('updated_at', '更新时间', '最近操作时间', $sort_column, $sort_order); ?>
                                     <th class="header-cell">
@@ -177,7 +178,10 @@ function get_batch_display_properties($batch)
                                                     <?php echo $props['status_text']; ?>
                                                 </span>
                                             </td>
-                                            <td><?php echo $batch['raw_record_count']; ?></td>
+                                            <td><?php echo $batch['total_package_count']; ?></td>
+                                            <td><?php echo $batch['verified_package_count']; ?></td>
+                                            <td><?php echo $batch['counted_package_count']; ?></td>
+                                            <td><?php echo $batch['adjusted_package_count']; ?></td>
                                             <td><?php echo $batch['created_at']; ?></td>
                                             <td><?php echo $batch['updated_at']; ?></td>
                                             <td>

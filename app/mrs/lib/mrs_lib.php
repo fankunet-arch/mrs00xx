@@ -25,15 +25,32 @@ function get_batch_list($limit = 20, $status = null) {
         $pdo = get_db_connection();
 
         $sql = "SELECT
-                    batch_id,
-                    batch_code,
-                    batch_date,
-                    location_name,
-                    remark,
-                    batch_status,
-                    created_at,
-                    updated_at
-                FROM mrs_batch
+                    b.batch_id,
+                    b.batch_code,
+                    b.batch_date,
+                    b.location_name,
+                    b.remark,
+                    b.batch_status,
+                    b.created_at,
+                    b.updated_at,
+                    COALESCE(rr.total_package_count, 0) AS total_package_count,
+                    COALESCE(rr.verified_package_count, 0) AS verified_package_count,
+                    COALESCE(ci.counted_package_count, 0) AS counted_package_count,
+                    0 AS adjusted_package_count
+                FROM mrs_batch b
+                LEFT JOIN (
+                    SELECT
+                        batch_id,
+                        COUNT(*) AS total_package_count,
+                        SUM(CASE WHEN processing_status = 'confirmed' THEN 1 ELSE 0 END) AS verified_package_count
+                    FROM mrs_batch_raw_record
+                    GROUP BY batch_id
+                ) rr ON b.batch_id = rr.batch_id
+                LEFT JOIN (
+                    SELECT batch_id, COUNT(*) AS counted_package_count
+                    FROM mrs_batch_confirmed_item
+                    GROUP BY batch_id
+                ) ci ON b.batch_id = ci.batch_id
                 WHERE 1=1";
 
         $params = [];
@@ -43,7 +60,7 @@ function get_batch_list($limit = 20, $status = null) {
             $params[':status'] = $status;
         }
 
-        $sql .= " ORDER BY batch_date DESC, created_at DESC LIMIT :limit";
+        $sql .= " GROUP BY b.batch_id ORDER BY batch_date DESC, created_at DESC LIMIT :limit";
 
         $stmt = $pdo->prepare($sql);
         $stmt->bindValue(':limit', (int)$limit, PDO::PARAM_INT);
