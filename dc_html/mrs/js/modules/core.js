@@ -12,7 +12,9 @@ export const appState = {
   inventory: [],
   currentBatch: null,
   currentSku: null,
-  currentCategory: null
+  currentCategory: null,
+  rawRecords: [],
+  currentRawRecordSkuId: null
 };
 
 // DOM 元素引用
@@ -47,7 +49,8 @@ export function initDom() {
     aiPrompt: document.getElementById('modal-ai-prompt'),
     skuHistory: document.getElementById('modal-sku-history'),
     quickOutbound: document.getElementById('modal-quick-outbound'),
-    inventoryAdjust: document.getElementById('modal-inventory-adjust')
+    inventoryAdjust: document.getElementById('modal-inventory-adjust'),
+    rawRecordEdit: document.getElementById('modal-raw-record-edit')
   };
 }
 

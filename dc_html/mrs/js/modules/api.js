@@ -69,6 +69,13 @@ export const batchAPI = {
 
   async getRawRecords(batchId, skuId) {
     return await call(`/mrs/be/index.php?action=backend_raw_records&batch_id=${batchId}&sku_id=${skuId}`);
+  },
+
+  async updateRawRecord(data) {
+    return await call('/mrs/be/index.php?action=backend_update_raw_record', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
   }
 };
 
