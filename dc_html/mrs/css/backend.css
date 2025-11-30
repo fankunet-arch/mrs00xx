@@ -712,6 +712,7 @@ button.text {
 }
 
 .form-grid .full { grid-column: 1 / -1; }
+.form-grid .form-group:last-child { align-self: end; }
 
 /* Form refinements */
 .card form {
@@ -720,27 +721,58 @@ button.text {
     gap: 14px;
 }
 
-.card form .form-group {
+.card form .flex-between {
+    align-items: flex-end;
+    gap: 12px;
+}
+
+.card form .flex-between > div {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 12px;
+}
+
+.card form .flex-between input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="submit"]):not([type="button"]):not([type="reset"]),
+.card form .flex-between select {
+    min-width: 180px;
+}
+
+.card form .flex-between button,
+.card form .flex-between .primary,
+.card form .flex-between .secondary,
+.card form .flex-between .text {
+    height: 40px;
+    padding-inline: 16px;
+}
+
+.card form .form-group,
+.card .form-grid .form-group {
     display: flex;
     flex-direction: column;
     gap: 6px;
     margin: 0;
 }
 
-.card form label {
+.card form label,
+.card .form-grid label {
     font-weight: 600;
     color: #1f2937;
     letter-spacing: 0.1px;
 }
 
 .card form small,
-.card form .form-text {
+.card form .form-text,
+.card .form-grid small,
+.card .form-grid .form-text {
     color: #6b7280;
 }
 
 .card form input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="submit"]):not([type="button"]):not([type="reset"]),
+.card .form-grid input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="submit"]):not([type="button"]):not([type="reset"]),
 .card form select,
-.card form textarea {
+.card .form-grid select,
+.card form textarea,
+.card .form-grid textarea {
     width: 100%;
     padding: 10px 12px;
     background: #f9fafb;
@@ -748,11 +780,13 @@ button.text {
     border-radius: 8px;
     font-size: 14px;
     color: #111827;
+    min-height: 40px;
     transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
     box-shadow: inset 0 1px 2px rgba(17, 24, 39, 0.04);
 }
 
-.card form select {
+.card form select,
+.card .form-grid select {
     background-image: linear-gradient(45deg, transparent 50%, #6b7280 50%), linear-gradient(135deg, #6b7280 50%, transparent 50%);
     background-position: calc(100% - 16px) calc(50% - 3px), calc(100% - 12px) calc(50% - 3px);
     background-size: 6px 6px, 6px 6px;
@@ -763,14 +797,18 @@ button.text {
     -moz-appearance: none;
 }
 
-.card form textarea {
+.card form textarea,
+.card .form-grid textarea {
     resize: vertical;
     min-height: 96px;
 }
 
 .card form input:focus,
+.card .form-grid input:focus,
 .card form select:focus,
-.card form textarea:focus {
+.card .form-grid select:focus,
+.card form textarea:focus,
+.card .form-grid textarea:focus {
     outline: none;
     border-color: #2563eb;
     background: #fff;
@@ -778,12 +816,16 @@ button.text {
 }
 
 .card form input::placeholder,
-.card form textarea::placeholder {
+.card .form-grid input::placeholder,
+.card form textarea::placeholder,
+.card .form-grid textarea::placeholder {
     color: #9ca3af;
 }
 
 .card form input[type="checkbox"],
-.card form input[type="radio"] {
+.card .form-grid input[type="checkbox"],
+.card form input[type="radio"],
+.card .form-grid input[type="radio"] {
     width: 16px;
     height: 16px;
     accent-color: #2563eb;
@@ -791,11 +833,15 @@ button.text {
 
 .card form .muted,
 .card form .text-muted,
-.card form .text-secondary {
+.card form .text-secondary,
+.card .form-grid .muted,
+.card .form-grid .text-muted,
+.card .form-grid .text-secondary {
     color: #6b7280;
 }
 
-.card form .field-static {
+.card form .field-static,
+.card .form-grid .field-static {
     padding: 10px 12px;
     background: #f3f4f6;
     border: 1px solid #e5e7eb;
