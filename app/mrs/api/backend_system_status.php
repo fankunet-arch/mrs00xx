@@ -37,6 +37,14 @@ try {
         $migration_needed = true;
     }
 
+    // Check 003_add_physical_box_count_to_raw_record
+    $checkSql003 = "SHOW COLUMNS FROM mrs_batch_raw_record LIKE 'physical_box_count'";
+    $stmt003 = $pdo->query($checkSql003);
+    if ($stmt003->rowCount() === 0) {
+        $issues[] = "Database schema outdated: Missing 'physical_box_count' column.";
+        $migration_needed = true;
+    }
+
     json_response(true, [
         'healthy' => empty($issues),
         'migration_needed' => $migration_needed,

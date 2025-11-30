@@ -73,10 +73,13 @@ const dom = {
   candidateList: null,
   materialInput: null,
   qtyInput: null,
+  physicalBoxInput: null,
   unitRow: null,
   recordsEl: null,
   summaryEl: null,
-  btnAdd: null
+  btnAdd: null,
+  assistantValue: null,
+  assistantHint: null
 };
 
 /**
@@ -88,10 +91,33 @@ function initDom() {
   dom.candidateList = document.getElementById('candidate-list');
   dom.materialInput = document.getElementById('material-input');
   dom.qtyInput = document.getElementById('qty-input');
+  dom.physicalBoxInput = document.getElementById('physical-box-input');
   dom.unitRow = document.getElementById('unit-row');
   dom.recordsEl = document.getElementById('records');
   dom.summaryEl = document.getElementById('summary');
   dom.btnAdd = document.getElementById('btn-add');
+  dom.assistantValue = document.getElementById('assistant-value');
+  dom.assistantHint = document.getElementById('assistant-hint');
+}
+
+/**
+ * 更新智能辅助计算区
+ */
+function updateAssistant() {
+  const qty = parseFloat(dom.qtyInput.value.trim());
+  const boxCount = parseFloat(dom.physicalBoxInput.value.trim());
+
+  if (!isNaN(qty) && !isNaN(boxCount) && boxCount > 0) {
+    const avg = qty / boxCount;
+    const display = formatNumber(avg);
+    dom.assistantValue.textContent = display;
+    dom.assistantHint.textContent = `请在箱上标记：${display}`;
+    dom.assistantValue.classList.add('highlight');
+  } else {
+    dom.assistantValue.textContent = '--';
+    dom.assistantHint.textContent = '请输入总数和箱数，我们将提示箱贴数字';
+    dom.assistantValue.classList.remove('highlight');
+  }
 }
 
 /**
@@ -424,11 +450,14 @@ function renderRecords() {
 
     // 使用统一的数字格式化函数
     const displayQty = formatNumber(record.qty);
+    const physicalBox = record.physical_box_count ? formatNumber(record.physical_box_count) : null;
+    const avgPerBox = record.physical_box_count ? formatNumber(Number(record.qty) / Number(record.physical_box_count)) : null;
 
     row.innerHTML = `
       <div>
         <div><strong>${record.sku_name || '未知物料'}</strong></div>
         <div class="time">${time} - ${record.operator_name}</div>
+        ${physicalBox ? `<div class="record-sub">箱数：${physicalBox}${avgPerBox ? ` ｜ 均值：${avgPerBox}` : ''}</div>` : ''}
       </div>
       <div class="value">${displayQty}</div>
       <div class="tag">${record.unit_name}</div>
@@ -473,6 +502,7 @@ function renderSummary() {
 async function handleAddRecord() {
   const materialName = dom.materialInput.value.trim();
   const qty = dom.qtyInput.value.trim();
+  const physicalBox = dom.physicalBoxInput.value.trim();
 
   if (!appState.currentBatch) {
     showAlert('warning', '请先选择批次');
@@ -491,12 +521,19 @@ async function handleAddRecord() {
     return;
   }
 
+  if (!physicalBox || parseFloat(physicalBox) <= 0) {
+    showAlert('warning', '请输入有效的物理箱数');
+    dom.physicalBoxInput.focus();
+    return;
+  }
+
   // 准备提交数据
   const recordData = {
     batch_id: appState.currentBatch.batch_id,
     sku_id: appState.selectedMaterial?.sku_id || null,
     sku_name: materialName,
     qty: parseFloat(qty),
+    physical_box_count: parseFloat(physicalBox),
     unit_name: appState.selectedUnit,
     operator_name: '操作员', // TODO: 从登录系统获取
     note: ''
@@ -511,10 +548,13 @@ async function handleAddRecord() {
     // 清空输入
     dom.materialInput.value = '';
     dom.qtyInput.value = '';
+    dom.physicalBoxInput.value = '';
     appState.selectedMaterial = null;
 
     // [FIX] 保存成功后，重置单位选择，等待下一次输入
     resetUnitsToDefault();
+
+    updateAssistant();
 
     // 重新加载记录
     await loadBatchRecords();
@@ -553,10 +593,19 @@ async function initApp() {
     renderCandidates(e.target.value);
   });
 
+  dom.qtyInput.addEventListener('input', updateAssistant);
+  dom.physicalBoxInput.addEventListener('input', updateAssistant);
+
   dom.btnAdd.addEventListener('click', handleAddRecord);
 
   // 回车快捷键
   dom.qtyInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      handleAddRecord();
+    }
+  });
+
+  dom.physicalBoxInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {
       handleAddRecord();
     }
@@ -585,6 +634,8 @@ async function initApp() {
       handleCandidateSelect(row.dataset.skuId);
     }
   });
+
+  updateAssistant();
 
   // 聚焦到物料输入框
   dom.materialInput.focus();

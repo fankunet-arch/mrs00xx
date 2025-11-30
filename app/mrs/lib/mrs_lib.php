@@ -237,6 +237,7 @@ function save_raw_record($data) {
                     sku_id,
                     input_sku_name,
                     qty,
+                    physical_box_count,
                     unit_name,
                     operator_name,
                     recorded_at,
@@ -248,6 +249,7 @@ function save_raw_record($data) {
                     :sku_id,
                     :input_sku_name,
                     :qty,
+                    :physical_box_count,
                     :unit_name,
                     :operator_name,
                     :recorded_at,
@@ -261,6 +263,7 @@ function save_raw_record($data) {
         $stmt->bindValue(':sku_id', $data['sku_id'] ?? null, PDO::PARAM_INT);
         $stmt->bindValue(':input_sku_name', $data['input_sku_name'] ?? null, PDO::PARAM_STR); // [FIX] 保存手动输入的物料名
         $stmt->bindValue(':qty', $data['qty'], PDO::PARAM_STR);
+        $stmt->bindValue(':physical_box_count', $data['physical_box_count'] ?? null, PDO::PARAM_STR);
         $stmt->bindValue(':unit_name', $data['unit_name'], PDO::PARAM_STR);
         $stmt->bindValue(':operator_name', $data['operator_name'], PDO::PARAM_STR);
         $stmt->bindValue(':recorded_at', $data['recorded_at'] ?? date('Y-m-d H:i:s.u'), PDO::PARAM_STR);
@@ -272,36 +275,55 @@ function save_raw_record($data) {
 
     } catch (PDOException $e) {
         // [GRACEFUL FIX] 如果是因为 input_sku_name 列不存在 (Error 1054 / 42S22)，则降级重试
-        if ($e->getCode() === '42S22' && strpos($e->getMessage(), 'input_sku_name') !== false) {
-            mrs_log('保存原始记录降级: input_sku_name 列不存在，正在重试...', 'WARNING');
+        if ($e->getCode() === '42S22' && (strpos($e->getMessage(), 'input_sku_name') !== false || strpos($e->getMessage(), 'physical_box_count') !== false)) {
+            mrs_log('保存原始记录降级: 新增列缺失，正在使用兼容SQL重试...', 'WARNING');
 
             try {
-                $sql = "INSERT INTO mrs_batch_raw_record (
-                            batch_id,
-                            sku_id,
-                            qty,
-                            unit_name,
-                            operator_name,
-                            recorded_at,
-                            note,
-                            created_at,
-                            updated_at
-                        ) VALUES (
-                            :batch_id,
-                            :sku_id,
-                            :qty,
-                            :unit_name,
-                            :operator_name,
-                            :recorded_at,
-                            :note,
-                            NOW(6),
-                            NOW(6)
-                        )";
+                $missing_input_col = strpos($e->getMessage(), 'input_sku_name') !== false;
+                $missing_box_col = strpos($e->getMessage(), 'physical_box_count') !== false;
+
+                $columns = [
+                    'batch_id',
+                    'sku_id',
+                ];
+
+                $values = [
+                    ':batch_id',
+                    ':sku_id',
+                ];
+
+                if (!$missing_input_col) {
+                    $columns[] = 'input_sku_name';
+                    $values[] = ':input_sku_name';
+                }
+
+                $columns[] = 'qty';
+                $values[] = ':qty';
+
+                if (!$missing_box_col) {
+                    $columns[] = 'physical_box_count';
+                    $values[] = ':physical_box_count';
+                }
+
+                $columns = array_merge($columns, ['unit_name', 'operator_name', 'recorded_at', 'note', 'created_at', 'updated_at']);
+                $values = array_merge($values, [':unit_name', ':operator_name', ':recorded_at', ':note', 'NOW(6)', 'NOW(6)']);
+
+                $sql = sprintf(
+                    'INSERT INTO mrs_batch_raw_record (%s) VALUES (%s)',
+                    implode(",\n                            ", $columns),
+                    implode(",\n                            ", $values)
+                );
 
                 $stmt = $pdo->prepare($sql);
                 $stmt->bindValue(':batch_id', $data['batch_id'], PDO::PARAM_INT);
                 $stmt->bindValue(':sku_id', $data['sku_id'] ?? null, PDO::PARAM_INT);
+                if (!$missing_input_col) {
+                    $stmt->bindValue(':input_sku_name', $data['input_sku_name'] ?? null, PDO::PARAM_STR);
+                }
                 $stmt->bindValue(':qty', $data['qty'], PDO::PARAM_STR);
+                if (!$missing_box_col) {
+                    $stmt->bindValue(':physical_box_count', $data['physical_box_count'] ?? null, PDO::PARAM_STR);
+                }
                 $stmt->bindValue(':unit_name', $data['unit_name'], PDO::PARAM_STR);
                 $stmt->bindValue(':operator_name', $data['operator_name'], PDO::PARAM_STR);
                 $stmt->bindValue(':recorded_at', $data['recorded_at'] ?? date('Y-m-d H:i:s.u'), PDO::PARAM_STR);
@@ -335,6 +357,7 @@ function get_batch_raw_records($batch_id) {
                     r.sku_id,
                     r.input_sku_name,
                     r.qty,
+                    r.physical_box_count,
                     r.unit_name,
                     r.operator_name,
                     r.recorded_at,
@@ -362,6 +385,7 @@ function get_batch_raw_records($batch_id) {
                             r.raw_record_id,
                             r.batch_id,
                             r.sku_id,
+                            r.physical_box_count,
                             r.qty,
                             r.unit_name,
                             r.operator_name,

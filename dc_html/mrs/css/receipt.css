@@ -88,6 +88,57 @@ h1 {
   margin-top: 4px;
 }
 
+.field-label {
+  display: block;
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 6px;
+  font-weight: 700;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.smart-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  margin: 12px 0;
+}
+
+.assistant-panel {
+  background: #eff6ff;
+  border: 1px dashed var(--primary);
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.assistant-label {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.assistant-value {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--primary);
+  margin: 4px 0;
+  line-height: 1.1;
+}
+
+.assistant-value.highlight {
+  color: #16a34a;
+}
+
+.assistant-hint {
+  color: var(--muted);
+  font-size: 13px;
+}
+
 input[type="text"],
 input[type="number"] {
   width: 100%;
@@ -180,6 +231,12 @@ input:focus {
 .time {
   color: var(--muted);
   font-size: 12px;
+}
+
+.record-sub {
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 4px;
 }
 
 .tag {

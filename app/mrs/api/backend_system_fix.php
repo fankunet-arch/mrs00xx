@@ -33,6 +33,10 @@ try {
         '002' => [
             'check' => "SHOW TABLES LIKE 'mrs_outbound_order'",
             'file' => '002_create_outbound_tables.sql'
+        ],
+        '003' => [
+            'check' => "SHOW COLUMNS FROM mrs_batch_raw_record LIKE 'physical_box_count'",
+            'file' => '003_add_physical_box_count_to_raw_record.sql'
         ]
     ];
 

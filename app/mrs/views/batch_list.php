@@ -31,9 +31,9 @@ function sortable_th($column_name, $display_name, $current_sort, $current_order)
     $order = ($current_sort === $column_name && $current_order === 'ASC') ? 'DESC' : 'ASC';
     $icon = '';
     if ($current_sort === $column_name) {
-        $icon = $current_order === 'ASC' ? ' <i class="fa fa-sort-asc"></i>' : ' <i class="fa fa-sort-desc"></i>';
+        $icon = $current_order === 'ASC' ? ' ▲' : ' ▼';
     }
-    return '<th><a href="?action=batch_list&sort=' . $column_name . '&order=' . $order . '">' . $display_name . $icon . '</a></th>';
+    return '<th><a class="sort-link" href="?action=batch_list&sort=' . $column_name . '&order=' . $order . '">' . $display_name . $icon . '</a></th>';
 }
 
 /**
@@ -99,21 +99,26 @@ function get_batch_display_properties($batch)
         <div class="col-lg-12">
             <div class="card">
                 <div class="card-header">
-                    <h4 class="card-title">收货批次列表</h4>
-                    <a href="?action=batch_create" class="btn btn-primary btn-sm float-right">创建新批次</a>
+                    <div class="flex-between">
+                        <div>
+                            <h4 class="card-title">收货批次列表</h4>
+                            <p class="muted">快速查看批次状态与待确认数量，参考库存列表的表格样式</p>
+                        </div>
+                        <a href="?action=batch_create" class="btn btn-primary btn-sm">创建新批次</a>
+                    </div>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
-                        <table class="table table-bordered table-hover">
+                        <table class="data-table">
                             <thead>
                                 <tr>
-                                    <th>ID</th>
+                                    <th class="text-center" style="width: 70px;">ID</th>
                                     <?php echo sortable_th('batch_code', '参考号', $sort_column, $sort_order); ?>
                                     <?php echo sortable_th('batch_status', '状态', $sort_column, $sort_order); ?>
                                     <?php echo sortable_th('raw_record_count', '待确认数', $sort_column, $sort_order); ?>
                                     <?php echo sortable_th('created_at', '创建时间', $sort_column, $sort_order); ?>
                                     <?php echo sortable_th('updated_at', '更新时间', $sort_column, $sort_order); ?>
-                                    <th>操作</th>
+                                    <th class="text-center">操作</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -126,21 +131,35 @@ function get_batch_display_properties($batch)
                                         $props = get_batch_display_properties($batch);
                                     ?>
                                         <tr class="<?php echo $props['row_class']; ?>">
-                                            <td><?php echo $batch['batch_id']; ?></td>
-                                            <td><?php echo htmlspecialchars($batch['batch_code']); ?></td>
+                                            <td class="text-center"><?php echo $batch['batch_id']; ?></td>
+                                            <td>
+                                                <div class="strong"><?php echo htmlspecialchars($batch['batch_code']); ?></div>
+                                                <span class="table-subtext">批次编号</span>
+                                            </td>
                                             <td>
                                                 <span class="badge <?php echo $props['badge_class']; ?>">
                                                     <?php echo $props['status_text']; ?>
                                                 </span>
                                             </td>
-                                            <td><?php echo $batch['raw_record_count']; ?></td>
-                                            <td><?php echo $batch['created_at']; ?></td>
-                                            <td><?php echo $batch['updated_at']; ?></td>
                                             <td>
+                                                <div class="strong"><?php echo $batch['raw_record_count']; ?></div>
+                                                <span class="table-subtext">待确认记录</span>
+                                            </td>
+                                            <td>
+                                                <div class="strong"><?php echo $batch['created_at']; ?></div>
+                                                <span class="table-subtext">创建时间</span>
+                                            </td>
+                                            <td>
+                                                <div class="strong"><?php echo $batch['updated_at']; ?></div>
+                                                <span class="table-subtext">最近更新</span>
+                                            </td>
+                                            <td class="text-center">
                                                 <?php if (!empty($props['button_text'])): ?>
                                                     <a href="?action=<?php echo $props['action']; ?>&id=<?php echo $batch['batch_id']; ?>" class="btn <?php echo $props['button_class']; ?> btn-sm">
                                                         <?php echo $props['button_text']; ?>
                                                     </a>
+                                                <?php else: ?>
+                                                    <span class="table-subtext">等待收货</span>
                                                 <?php endif; ?>
                                             </td>
                                         </tr>

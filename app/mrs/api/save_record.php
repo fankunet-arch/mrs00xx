@@ -31,7 +31,7 @@ try {
     }
 
     // 验证必填字段
-    $required_fields = ['batch_id', 'qty', 'unit_name', 'operator_name'];
+    $required_fields = ['batch_id', 'qty', 'unit_name', 'operator_name', 'physical_box_count'];
     foreach ($required_fields as $field) {
         if (!isset($input[$field]) || $input[$field] === '') {
             json_response(false, null, "缺少必填字段: {$field}");
@@ -41,6 +41,11 @@ try {
     // [FIX] 验证数量必须为数字
     if (!is_numeric($input['qty'])) {
         json_response(false, null, '数量必须为有效数字');
+    }
+
+    // 验证物理箱数
+    if (!is_numeric($input['physical_box_count']) || floatval($input['physical_box_count']) <= 0) {
+        json_response(false, null, '物理箱数必须为大于0的数字');
     }
 
     // [SECURITY FIX] 验证单位合法性 (白名单)
@@ -108,6 +113,7 @@ try {
         'sku_id' => $input['sku_id'] ?? null,
         'input_sku_name' => $input['sku_name'] ?? null, // [FIX] 保存手动输入的物料名称
         'qty' => $input['qty'],
+        'physical_box_count' => $input['physical_box_count'],
         'unit_name' => $input['unit_name'],
         'operator_name' => $input['operator_name'],
         'recorded_at' => date('Y-m-d H:i:s.u'),

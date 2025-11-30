@@ -10,6 +10,23 @@ if (json_last_error() !== JSON_ERROR_NONE || !is_array($data)) {
     json_response(false, null, '无效的 JSON 数据。');
     exit;
 }
+
+// 校验必填字段
+$required_fields = ['batch_id', 'qty', 'unit_name', 'operator_name', 'physical_box_count'];
+foreach ($required_fields as $field) {
+    if (!isset($data[$field]) || $data[$field] === '') {
+        json_response(false, null, "缺少必填字段: {$field}");
+    }
+}
+
+// 数值校验
+if (!is_numeric($data['qty'])) {
+    json_response(false, null, '数量必须为数字');
+}
+
+if (!is_numeric($data['physical_box_count']) || floatval($data['physical_box_count']) <= 0) {
+    json_response(false, null, '物理箱数必须为大于0的数字');
+}
 $record_id = save_raw_record($data);
 if ($record_id) {
     if (!empty($data['batch_id'])) {

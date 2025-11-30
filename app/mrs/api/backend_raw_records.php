@@ -49,6 +49,7 @@ try {
                 r.sku_id,
                 r.input_sku_name,
                 r.qty,
+                r.physical_box_count,
                 r.unit_name,
                 r.operator_name,
                 r.recorded_at,
