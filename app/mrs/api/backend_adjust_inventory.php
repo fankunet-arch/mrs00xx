@@ -50,37 +50,62 @@ try {
             json_response(false, null, 'SKU不存在');
         }
 
-        // 2. 计算系统当前库存 (Inbound - Outbound + Adjustment)
-        // 入库总量
-        $inboundSql = "SELECT COALESCE(SUM(total_standard_qty), 0) as total
-                       FROM mrs_batch_confirmed_item
-                       WHERE sku_id = :sku_id";
-        $inStmt = $pdo->prepare($inboundSql);
-        $inStmt->bindValue(':sku_id', $skuId, PDO::PARAM_INT);
-        $inStmt->execute();
-        $totalInbound = (int)$inStmt->fetchColumn();
+        // 2. 计算系统当前库存，优先使用交易流水/锁定库存表，避免因历史 bug 导致的偏差
+        // 2.1 优先读取 mrs_inventory（由库存流水维护）
+        $invSql = "SELECT current_qty FROM mrs_inventory WHERE sku_id = :sku_id FOR UPDATE";
+        $invStmt = $pdo->prepare($invSql);
+        $invStmt->bindValue(':sku_id', $skuId, PDO::PARAM_INT);
+        $invStmt->execute();
+        $inventoryRow = $invStmt->fetch(PDO::FETCH_ASSOC);
 
-        // 出库总量
-        $outboundSql = "SELECT COALESCE(SUM(i.total_standard_qty), 0) as total
-                        FROM mrs_outbound_order_item i
-                        JOIN mrs_outbound_order o ON i.outbound_order_id = o.outbound_order_id
-                        WHERE i.sku_id = :sku_id AND o.status = 'confirmed'";
-        $outStmt = $pdo->prepare($outboundSql);
-        $outStmt->bindValue(':sku_id', $skuId, PDO::PARAM_INT);
-        $outStmt->execute();
-        $totalOutbound = (int)$outStmt->fetchColumn();
+        $sysQty = $inventoryRow ? floatval($inventoryRow['current_qty']) : null;
 
-        // 调整总量
-        $adjustmentSql = "SELECT COALESCE(SUM(delta_qty), 0) as total
-                          FROM mrs_inventory_adjustment
-                          WHERE sku_id = :sku_id";
-        $adjStmt = $pdo->prepare($adjustmentSql);
-        $adjStmt->bindValue(':sku_id', $skuId, PDO::PARAM_INT);
-        $adjStmt->execute();
-        $totalAdjustment = floatval($adjStmt->fetchColumn());
+        // 2.2 其次读取库存流水的最新结余（兼容历史数据）
+        if ($sysQty === null) {
+            $latestSql = "SELECT quantity_after FROM mrs_inventory_transaction
+                          WHERE sku_id = :sku_id
+                          ORDER BY transaction_date DESC, transaction_id DESC
+                          LIMIT 1";
+            $latestStmt = $pdo->prepare($latestSql);
+            $latestStmt->bindValue(':sku_id', $skuId, PDO::PARAM_INT);
+            $latestStmt->execute();
+            $latestQty = $latestStmt->fetchColumn();
+            $sysQty = $latestQty !== false ? floatval($latestQty) : null;
+        }
 
-        // 系统库存 = 入库 - 出库 + 调整
-        $sysQty = $totalInbound - $totalOutbound + $totalAdjustment;
+        // 2.3 如果仍未获取到库存，则使用原始汇总方式作为兜底
+        if ($sysQty === null) {
+            // 入库总量
+            $inboundSql = "SELECT COALESCE(SUM(total_standard_qty), 0) as total
+                           FROM mrs_batch_confirmed_item
+                           WHERE sku_id = :sku_id";
+            $inStmt = $pdo->prepare($inboundSql);
+            $inStmt->bindValue(':sku_id', $skuId, PDO::PARAM_INT);
+            $inStmt->execute();
+            $totalInbound = (int)$inStmt->fetchColumn();
+
+            // 出库总量
+            $outboundSql = "SELECT COALESCE(SUM(i.total_standard_qty), 0) as total
+                            FROM mrs_outbound_order_item i
+                            JOIN mrs_outbound_order o ON i.outbound_order_id = o.outbound_order_id
+                            WHERE i.sku_id = :sku_id AND o.status = 'confirmed'";
+            $outStmt = $pdo->prepare($outboundSql);
+            $outStmt->bindValue(':sku_id', $skuId, PDO::PARAM_INT);
+            $outStmt->execute();
+            $totalOutbound = (int)$outStmt->fetchColumn();
+
+            // 调整总量
+            $adjustmentSql = "SELECT COALESCE(SUM(delta_qty), 0) as total
+                              FROM mrs_inventory_adjustment
+                              WHERE sku_id = :sku_id";
+            $adjStmt = $pdo->prepare($adjustmentSql);
+            $adjStmt->bindValue(':sku_id', $skuId, PDO::PARAM_INT);
+            $adjStmt->execute();
+            $totalAdjustment = floatval($adjStmt->fetchColumn());
+
+            // 系统库存 = 入库 - 出库 + 调整
+            $sysQty = $totalInbound - $totalOutbound + $totalAdjustment;
+        }
 
         // 3. 计算差值
         $delta = $currentQty - $sysQty;

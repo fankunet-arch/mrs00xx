@@ -81,17 +81,21 @@
                                         $inventory_display = format_number($current_qty) . $item['standard_unit'];
                                     }
 
-                                    // 库存颜色提示
-                                    if ($current_qty <= 0) {
-                                        $inventory_class = 'text-danger';
-                                    } elseif ($current_qty < 10) {
-                                        $inventory_class = 'text-warning';
+                                    $box_threshold = ($case_spec > 0) ? 5 * $case_spec : null;
+                                    $is_zero_inventory = $current_qty <= 0;
+                                    $is_low_box_stock = !$is_zero_inventory && $box_threshold !== null && $current_qty < $box_threshold;
+
+                                    $name_class = $is_low_box_stock ? 'low-inventory' : '';
+                                    if ($is_zero_inventory) {
+                                        $inventory_class = 'zero-inventory';
+                                    } elseif ($is_low_box_stock) {
+                                        $inventory_class = 'low-inventory';
                                     } else {
                                         $inventory_class = 'text-success';
                                     }
                                     ?>
                                     <tr>
-                                        <td><strong><?php echo htmlspecialchars($item['sku_name']); ?></strong></td>
+                                        <td class="<?php echo $name_class; ?>"><strong><?php echo htmlspecialchars($item['sku_name']); ?></strong></td>
                                         <td><?php echo htmlspecialchars($item['category_name'] ?? '-'); ?></td>
                                         <td><?php echo htmlspecialchars($item['brand_name'] ?? '-'); ?></td>
                                         <td><?php echo htmlspecialchars($item['standard_unit']); ?></td>
@@ -508,6 +512,14 @@
     }
     .form-group label { color: #111827; }
     .form-grid .form-group small { margin-top: 6px; display: block; }
+    .low-inventory {
+        color: #1d4ed8;
+        font-weight: 700;
+    }
+    .zero-inventory {
+        color: #dc2626;
+        font-weight: 700;
+    }
     </style>
 </body>
 </html>

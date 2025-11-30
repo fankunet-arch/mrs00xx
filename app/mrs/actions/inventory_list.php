@@ -32,6 +32,32 @@ try {
         $params[] = $category_id;
     }
 
+    // 检查流水表/库存表是否存在，避免历史环境报错
+    $hasLedgerTable = $pdo->query("SHOW TABLES LIKE 'mrs_inventory_transaction'")->rowCount() > 0;
+    $hasInventoryTable = $pdo->query("SHOW TABLES LIKE 'mrs_inventory'")->rowCount() > 0;
+
+    $currentQtyExpr = "(COALESCE(inbound.total_inbound, 0) - COALESCE(outbound.total_outbound, 0) + COALESCE(adjustment.total_adjustment, 0))";
+    $inventoryJoin = '';
+    $latestTxJoin = '';
+
+    if ($hasInventoryTable) {
+        $inventoryJoin = "LEFT JOIN mrs_inventory inv ON s.sku_id = inv.sku_id";
+        $currentQtyExpr = "COALESCE(inv.current_qty, {$currentQtyExpr})";
+    }
+
+    if ($hasLedgerTable) {
+        $latestTxJoin = "LEFT JOIN (
+            SELECT t1.sku_id, t1.quantity_after
+            FROM mrs_inventory_transaction t1
+            INNER JOIN (
+                SELECT sku_id, MAX(transaction_id) as max_id
+                FROM mrs_inventory_transaction
+                GROUP BY sku_id
+            ) t2 ON t1.sku_id = t2.sku_id AND t1.transaction_id = t2.max_id
+        ) latest_tx ON s.sku_id = latest_tx.sku_id";
+        $currentQtyExpr = "COALESCE(" . ($hasInventoryTable ? 'inv.current_qty, ' : '') . "latest_tx.quantity_after, (COALESCE(inbound.total_inbound, 0) - COALESCE(outbound.total_outbound, 0) + COALESCE(adjustment.total_adjustment, 0)))";
+    }
+
     $sql = "
         SELECT
             s.sku_id,
@@ -44,7 +70,7 @@ try {
             COALESCE(inbound.total_inbound, 0) as total_inbound,
             COALESCE(outbound.total_outbound, 0) as total_outbound,
             COALESCE(adjustment.total_adjustment, 0) as total_adjustment,
-            (COALESCE(inbound.total_inbound, 0) - COALESCE(outbound.total_outbound, 0) + COALESCE(adjustment.total_adjustment, 0)) as current_inventory
+            {$currentQtyExpr} as current_inventory
         FROM mrs_sku s
         LEFT JOIN mrs_category c ON s.category_id = c.category_id
         LEFT JOIN (
@@ -64,6 +90,8 @@ try {
             FROM mrs_inventory_adjustment
             GROUP BY sku_id
         ) adjustment ON s.sku_id = adjustment.sku_id
+        {$inventoryJoin}
+        {$latestTxJoin}
         WHERE " . implode(' AND ', $where) . "
         ORDER BY s.sku_name
         LIMIT 100
