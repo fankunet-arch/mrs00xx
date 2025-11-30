@@ -17,39 +17,58 @@
         <?php include MRS_VIEW_PATH . '/shared/sidebar.php'; ?>
         <main class="content">
             <div class="card">
-                <h2>出库管理</h2>
+                <div class="card-header card-header-clean">
+                    <div>
+                        <h2>出库管理</h2>
+                        <p class="card-subtitle">通过组合筛选快速定位需要的出库单。</p>
+                    </div>
+                    <a href="/mrs/be/index.php?action=outbound_create" class="primary">新建出库单</a>
+                </div>
 
                 <!-- 筛选区 -->
                 <form action="/mrs/be/index.php" method="get" class="mb-3">
                     <input type="hidden" name="action" value="outbound_list">
-                    <div class="flex-between">
-                        <div class="filters">
-                            <input type="text" name="search" placeholder="搜索单号/去向..." value="<?php echo htmlspecialchars($search); ?>">
-
-                            <input type="date" name="date_start" value="<?php echo htmlspecialchars($date_start); ?>" placeholder="开始日期">
-                            <input type="date" name="date_end" value="<?php echo htmlspecialchars($date_end); ?>" placeholder="结束日期">
-
-                            <select name="outbound_type">
-                                <option value="">全部类型</option>
-                                <option value="1" <?php echo $outbound_type === '1' ? 'selected' : ''; ?>>领料</option>
-                                <option value="2" <?php echo $outbound_type === '2' ? 'selected' : ''; ?>>调拨</option>
-                                <option value="3" <?php echo $outbound_type === '3' ? 'selected' : ''; ?>>退货</option>
-                                <option value="4" <?php echo $outbound_type === '4' ? 'selected' : ''; ?>>报废</option>
-                            </select>
-
-                            <select name="status">
-                                <option value="">全部状态</option>
-                                <option value="draft" <?php echo $status === 'draft' ? 'selected' : ''; ?>>草稿</option>
-                                <option value="confirmed" <?php echo $status === 'confirmed' ? 'selected' : ''; ?>>已确认</option>
-                                <option value="cancelled" <?php echo $status === 'cancelled' ? 'selected' : ''; ?>>已取消</option>
-                            </select>
-
-                            <div class="filter-actions">
+                    <div class="filter-panel">
+                        <div class="filter-row">
+                            <div class="search-box">
+                                <span class="search-icon" aria-hidden="true">🔍</span>
+                                <input type="text" name="search" placeholder="搜索出库单号、去向或备注..." value="<?php echo htmlspecialchars($search); ?>" aria-label="搜索出库单号、去向或备注">
+                            </div>
+                            <div class="filter-row-actions">
                                 <button type="submit" class="primary">搜索</button>
                                 <a href="/mrs/be/index.php?action=outbound_list" class="text">重置</a>
                             </div>
                         </div>
-                        <a href="/mrs/be/index.php?action=outbound_create" class="primary">新建出库单</a>
+
+                        <div class="filter-grid">
+                            <div class="filter-field">
+                                <label for="date_start">开始日期</label>
+                                <input id="date_start" type="date" name="date_start" value="<?php echo htmlspecialchars($date_start); ?>" placeholder="开始日期">
+                            </div>
+                            <div class="filter-field">
+                                <label for="date_end">结束日期</label>
+                                <input id="date_end" type="date" name="date_end" value="<?php echo htmlspecialchars($date_end); ?>" placeholder="结束日期">
+                            </div>
+                            <div class="filter-field">
+                                <label for="outbound_type">出库类型</label>
+                                <select id="outbound_type" name="outbound_type">
+                                    <option value="">全部类型</option>
+                                    <option value="1" <?php echo $outbound_type === '1' ? 'selected' : ''; ?>>领料</option>
+                                    <option value="2" <?php echo $outbound_type === '2' ? 'selected' : ''; ?>>调拨</option>
+                                    <option value="3" <?php echo $outbound_type === '3' ? 'selected' : ''; ?>>退货</option>
+                                    <option value="4" <?php echo $outbound_type === '4' ? 'selected' : ''; ?>>报废</option>
+                                </select>
+                            </div>
+                            <div class="filter-field">
+                                <label for="status">状态</label>
+                                <select id="status" name="status">
+                                    <option value="">全部状态</option>
+                                    <option value="draft" <?php echo $status === 'draft' ? 'selected' : ''; ?>>草稿</option>
+                                    <option value="confirmed" <?php echo $status === 'confirmed' ? 'selected' : ''; ?>>已确认</option>
+                                    <option value="cancelled" <?php echo $status === 'cancelled' ? 'selected' : ''; ?>>已取消</option>
+                                </select>
+                            </div>
+                        </div>
                     </div>
                 </form>
             </div>
