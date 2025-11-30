@@ -591,16 +591,15 @@ header .user {
     border-radius: 8px;
     margin-bottom: 20px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    padding: 20px;
 }
 
-.card > :not(.card-header):not(.card-footer):not(.card-body) {
-    padding: 16px 20px;
-}
+.card > * + * { margin-top: 16px; }
 
 .card-header,
 .card-body,
 .card-footer {
-    padding: 16px 20px;
+    padding: 0;
 }
 
 .card-header {
@@ -654,9 +653,29 @@ button,
 .btn-secondary,
 .btn-danger,
 .btn-info,
+
 .btn-success {
     font-weight: 600;
     border: none;
+}
+
+.primary,
+.secondary,
+.text,
+.danger,
+.info,
+.success,
+.btn,
+button {
+    padding: 8px 14px;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    text-decoration: none;
+    line-height: 1.2;
+    font-weight: 600;
 }
 
 .primary,
@@ -679,6 +698,20 @@ button.text {
     color: #3498db;
     box-shadow: none;
 }
+
+.danger { background-color: #e74c3c; color: #fff; }
+.info { background-color: #17a2b8; color: #fff; }
+.success { background-color: #28a745; color: #fff; }
+
+.small { padding: 5px 10px; font-size: 13px; }
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px 20px;
+}
+
+.form-grid .full { grid-column: 1 / -1; }
 
 .alert {
     padding: 12px 15px;
