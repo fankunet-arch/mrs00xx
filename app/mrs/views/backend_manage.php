@@ -706,12 +706,15 @@ if (!defined('MRS_ENTRY')) {
                 <th>操作员</th>
                 <th>录入数量</th>
                 <th>单位</th>
+                <th>物理箱数</th>
+                <th>平均每箱</th>
                 <th>备注</th>
+                <th>操作</th>
               </tr>
             </thead>
             <tbody id="raw-records-tbody">
               <tr>
-                <td colspan="5" class="loading">加载中...</td>
+                <td colspan="8" class="loading">加载中...</td>
               </tr>
             </tbody>
           </table>
@@ -720,6 +723,42 @@ if (!defined('MRS_ENTRY')) {
       <div class="modal-actions">
         <button type="button" class="text" data-action="closeModal" data-modal-id="modal-raw-records">关闭</button>
       </div>
+    </div>
+  </div>
+
+  <!-- 模态框: 编辑原始记录 -->
+  <div class="modal-backdrop" id="modal-raw-record-edit">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>编辑原始记录</h3>
+        <button class="text" data-action="closeModal" data-modal-id="modal-raw-record-edit">×</button>
+      </div>
+      <form id="form-raw-record-edit">
+        <input type="hidden" id="edit-raw-record-id" name="raw_record_id">
+        <div class="modal-body">
+          <div class="form-group">
+            <label>录入数量（标准单位）*</label>
+            <input type="number" step="0.0001" min="0" id="edit-raw-record-qty" name="qty" required>
+          </div>
+          <div class="form-group">
+            <label>实际物理箱数 *</label>
+            <input type="number" step="0.01" min="0" id="edit-raw-record-box" name="physical_box_count" required>
+            <small class="muted">用于计算平均每箱提示，必须为正数。</small>
+          </div>
+          <div class="form-group">
+            <label>单位</label>
+            <input type="text" id="edit-raw-record-unit" name="unit_name" readonly>
+          </div>
+          <div class="form-group">
+            <label>备注</label>
+            <textarea id="edit-raw-record-note" name="note" rows="2" placeholder="选填"></textarea>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="text" data-action="closeModal" data-modal-id="modal-raw-record-edit">取消</button>
+          <button type="submit" class="primary">保存修改</button>
+        </div>
+      </form>
     </div>
   </div>
 

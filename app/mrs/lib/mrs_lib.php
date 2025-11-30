@@ -343,6 +343,61 @@ function save_raw_record($data) {
 }
 
 /**
+ * 更新原始收货记录
+ * @param array $data 更新数据
+ * @return bool 成功返回true，失败返回false
+ */
+function update_raw_record($data) {
+    try {
+        $pdo = get_db_connection();
+
+        // 验证必填字段
+        $required_fields = ['raw_record_id', 'qty', 'physical_box_count'];
+        foreach ($required_fields as $field) {
+            if (!isset($data[$field]) || $data[$field] === '') {
+                mrs_log('更新原始记录失败: 缺少必填字段 ' . $field, 'ERROR', $data);
+                return false;
+            }
+        }
+
+        if (!is_numeric($data['qty']) || floatval($data['qty']) <= 0) {
+            mrs_log('更新原始记录失败: 数量必须为大于0的数字', 'ERROR', $data);
+            return false;
+        }
+
+        if (!is_numeric($data['physical_box_count']) || floatval($data['physical_box_count']) <= 0) {
+            mrs_log('更新原始记录失败: 物理箱数必须为大于0的数字', 'ERROR', $data);
+            return false;
+        }
+
+        $sql = "UPDATE mrs_batch_raw_record SET
+                    qty = :qty,
+                    physical_box_count = :physical_box_count,
+                    note = :note,
+                    updated_at = NOW(6)
+                WHERE raw_record_id = :raw_record_id";
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->bindValue(':qty', $data['qty'], PDO::PARAM_STR);
+        $stmt->bindValue(':physical_box_count', $data['physical_box_count'], PDO::PARAM_STR);
+        $stmt->bindValue(':note', $data['note'] ?? '', PDO::PARAM_STR);
+        $stmt->bindValue(':raw_record_id', $data['raw_record_id'], PDO::PARAM_INT);
+
+        $stmt->execute();
+
+        if ($stmt->rowCount() === 0) {
+            mrs_log('更新原始记录失败: 记录不存在或数据未变化', 'WARNING', $data);
+            return false;
+        }
+
+        return true;
+    } catch (PDOException $e) {
+        mrs_log('更新原始记录失败: ' . $e->getMessage(), 'ERROR', $data);
+        return false;
+    }
+}
+
+/**
  * 获取批次的原始记录列表
  * @param int $batch_id
  * @return array
