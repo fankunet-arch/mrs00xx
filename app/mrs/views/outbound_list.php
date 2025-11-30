@@ -23,8 +23,8 @@
                 <form action="/mrs/be/index.php" method="get" class="mb-3">
                     <input type="hidden" name="action" value="outbound_list">
                     <div class="flex-between">
-                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                            <input type="text" name="search" placeholder="搜索单号/去向..." value="<?php echo htmlspecialchars($search); ?>" style="width: 200px;">
+                        <div class="filters">
+                            <input type="text" name="search" placeholder="搜索单号/去向..." value="<?php echo htmlspecialchars($search); ?>">
 
                             <input type="date" name="date_start" value="<?php echo htmlspecialchars($date_start); ?>" placeholder="开始日期">
                             <input type="date" name="date_end" value="<?php echo htmlspecialchars($date_end); ?>" placeholder="结束日期">
@@ -44,10 +44,12 @@
                                 <option value="cancelled" <?php echo $status === 'cancelled' ? 'selected' : ''; ?>>已取消</option>
                             </select>
 
-                            <button type="submit" class="secondary">搜索</button>
-                            <a href="/mrs/be/index.php?action=outbound_list"><button type="button" class="text">重置</button></a>
+                            <div class="filter-actions">
+                                <button type="submit" class="primary">搜索</button>
+                                <a href="/mrs/be/index.php?action=outbound_list" class="text">重置</a>
+                            </div>
                         </div>
-                        <a href="/mrs/be/index.php?action=outbound_create"><button type="button" class="primary">新建出库单</button></a>
+                        <a href="/mrs/be/index.php?action=outbound_create" class="primary">新建出库单</a>
                     </div>
                 </form>
             </div>
