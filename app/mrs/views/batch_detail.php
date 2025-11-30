@@ -119,7 +119,7 @@
                                             <?php if ($is_processed): ?>
                                                 <span class="status-text <?php echo $status_class; ?>"><?php echo $status_text; ?></span>
                                             <?php else: ?>
-                                                <button class="btn btn-success btn-sm btn-confirm">确认</button>
+                                                <button class="btn btn-primary btn-sm btn-confirm">确认</button>
                                                 <button class="btn btn-danger btn-sm btn-delete">删除</button>
                                                 <span class="text-muted status-text" style="display: none;"></span>
                                             <?php endif; ?>

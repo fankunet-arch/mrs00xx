@@ -10,6 +10,25 @@ if (!is_user_logged_in()) {
 $search = $_GET['search'] ?? '';
 $category_id = $_GET['category_id'] ?? '';
 
+// 获取排序参数
+$sort_key = $_GET['sort'] ?? 'sku_name';
+$sort_dir = strtolower($_GET['dir'] ?? 'asc');
+
+$valid_sorts = [
+    'sku_name' => 's.sku_name',
+    'category' => 'c.category_name',
+    'brand' => 's.brand_name',
+    'current_inventory' => 'current_inventory'
+];
+
+if (!array_key_exists($sort_key, $valid_sorts)) {
+    $sort_key = 'sku_name';
+}
+
+if (!in_array($sort_dir, ['asc', 'desc'])) {
+    $sort_dir = 'asc';
+}
+
 try {
     $pdo = get_db_connection();
 
@@ -58,6 +77,8 @@ try {
         $currentQtyExpr = "COALESCE(" . ($hasInventoryTable ? 'inv.current_qty, ' : '') . "latest_tx.quantity_after, (COALESCE(inbound.total_inbound, 0) - COALESCE(outbound.total_outbound, 0) + COALESCE(adjustment.total_adjustment, 0)))";
     }
 
+    $order_by = $valid_sorts[$sort_key] . ' ' . strtoupper($sort_dir);
+
     $sql = "
         SELECT
             s.sku_id,
@@ -93,7 +114,7 @@ try {
         {$inventoryJoin}
         {$latestTxJoin}
         WHERE " . implode(' AND ', $where) . "
-        ORDER BY s.sku_name
+        ORDER BY {$order_by}, s.sku_id
         LIMIT 100
     ";
 
@@ -109,5 +130,7 @@ try {
 
 $page_title = "库存管理";
 $action = 'inventory_list';
+$current_sort_key = $sort_key;
+$current_sort_dir = $sort_dir;
 
 require_once MRS_VIEW_PATH . '/inventory_list.php';

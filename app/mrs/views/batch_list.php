@@ -78,7 +78,7 @@ function get_batch_display_properties($batch)
         $properties['badge_class'] = 'badge-success';
         $properties['status_text'] = '已收货';
         $properties['button_text'] = '查看详情';
-        $properties['button_class'] = 'btn-success';
+        $properties['button_class'] = 'btn-info';
         $properties['action'] = 'batch_detail';
     }
     else {

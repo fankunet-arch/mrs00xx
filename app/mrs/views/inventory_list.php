@@ -47,15 +47,36 @@
                     <div class="alert success"><?php echo htmlspecialchars($_SESSION['success_message']); unset($_SESSION['success_message']); ?></div>
                 <?php endif; ?>
 
+                <?php
+                $query_params = [
+                    'action' => 'inventory_list',
+                    'search' => $search,
+                    'category_id' => $category_id
+                ];
+
+                function mrs_inventory_sort_link($field, $label, $currentSort, $currentDir, $params) {
+                    $nextDir = ($currentSort === $field && $currentDir === 'asc') ? 'desc' : 'asc';
+                    $params['sort'] = $field;
+                    $params['dir'] = $nextDir;
+                    $url = '/mrs/be/index.php?' . http_build_query($params);
+                    $arrow = '';
+                    if ($currentSort === $field) {
+                        $arrow = $currentDir === 'asc' ? ' ▲' : ' ▼';
+                    }
+
+                    return '<a class="sort-link" href="' . htmlspecialchars($url) . '">' . htmlspecialchars($label) . $arrow . '</a>';
+                }
+                ?>
+
                 <div class="table-responsive">
                     <table>
                         <thead>
                             <tr>
-                                <th>物料名称</th>
-                                <th>品类</th>
-                                <th>品牌</th>
+                                <th><?php echo mrs_inventory_sort_link('sku_name', '物料名称', $current_sort_key, $current_sort_dir, $query_params); ?></th>
+                                <th><?php echo mrs_inventory_sort_link('category', '品类', $current_sort_key, $current_sort_dir, $query_params); ?></th>
+                                <th><?php echo mrs_inventory_sort_link('brand', '品牌', $current_sort_key, $current_sort_dir, $query_params); ?></th>
                                 <th>单位</th>
-                                <th>当前库存</th>
+                                <th><?php echo mrs_inventory_sort_link('current_inventory', '当前库存', $current_sort_key, $current_sort_dir, $query_params); ?></th>
                                 <th>入库总量</th>
                                 <th>出库总量</th>
                                 <th>调整总量</th>
@@ -393,6 +414,17 @@
     </script>
 
     <style>
+    .sort-link {
+        color: inherit;
+        text-decoration: none;
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+    .sort-link:hover {
+        color: #2563eb;
+    }
     .modal {
         position: fixed;
         z-index: 1000;
