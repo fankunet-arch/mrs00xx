@@ -159,6 +159,16 @@ body {
     color: white;
 }
 
+.badge-waiting {
+    background-color: #f0ad4e;
+    color: #2c1600;
+}
+
+.badge-info {
+    background-color: #3498db;
+    color: white;
+}
+
 .badge-pending {
     background-color: #ffc107;
     color: #856404;
