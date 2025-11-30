@@ -760,6 +760,20 @@ button.text {
 
 .filters input::placeholder { color: #9ca3af; }
 
+.filters .filter-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.filters .filter-actions .primary,
+.filters .filter-actions .secondary,
+.filters .filter-actions .text {
+    height: 40px;
+    padding-inline: 16px;
+}
+
 .filters button,
 .filters .primary,
 .filters .secondary,
