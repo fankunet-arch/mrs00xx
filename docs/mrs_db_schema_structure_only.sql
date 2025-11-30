@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- 主机： mhdlmskp2kpxguj.mysql.db
--- 生成日期： 2025-11-29 00:23:56
+-- 生成日期： 2025-11-30 21:14:31
 -- 服务器版本： 8.4.6-6
 -- PHP 版本： 8.1.33
 
@@ -22,67 +22,6 @@ SET time_zone = "+00:00";
 --
 CREATE DATABASE IF NOT EXISTS `mhdlmskp2kpxguj` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
 USE `mhdlmskp2kpxguj`;
-
--- --------------------------------------------------------
-
---
--- 表的结构 `express_batch`
---
-
-DROP TABLE IF EXISTS `express_batch`;
-CREATE TABLE `express_batch` (
-  `batch_id` int UNSIGNED NOT NULL COMMENT '批次ID',
-  `batch_name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '批次名称（手工录入）',
-  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `created_by` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '创建人',
-  `status` enum('active','closed') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'active' COMMENT '批次状态',
-  `total_count` int UNSIGNED NOT NULL DEFAULT '0' COMMENT '总包裹数',
-  `verified_count` int UNSIGNED NOT NULL DEFAULT '0' COMMENT '已核实数',
-  `counted_count` int UNSIGNED NOT NULL DEFAULT '0' COMMENT '已清点数',
-  `adjusted_count` int UNSIGNED NOT NULL DEFAULT '0' COMMENT '已调整数',
-  `notes` text COLLATE utf8mb4_unicode_ci COMMENT '备注'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='快递批次表';
-
--- --------------------------------------------------------
-
---
--- 表的结构 `express_operation_log`
---
-
-DROP TABLE IF EXISTS `express_operation_log`;
-CREATE TABLE `express_operation_log` (
-  `log_id` int UNSIGNED NOT NULL COMMENT '日志ID',
-  `package_id` int UNSIGNED NOT NULL COMMENT '包裹ID',
-  `operation_type` enum('verify','count','adjust') COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '操作类型',
-  `operation_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '操作时间',
-  `operator` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '操作人',
-  `old_status` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '旧状态',
-  `new_status` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '新状态',
-  `notes` text COLLATE utf8mb4_unicode_ci COMMENT '备注'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='操作日志表';
-
--- --------------------------------------------------------
-
---
--- 表的结构 `express_package`
---
-
-DROP TABLE IF EXISTS `express_package`;
-CREATE TABLE `express_package` (
-  `package_id` int UNSIGNED NOT NULL COMMENT '包裹ID',
-  `batch_id` int UNSIGNED NOT NULL COMMENT '批次ID',
-  `tracking_number` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '快递单号',
-  `package_status` enum('pending','verified','counted','adjusted') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'pending' COMMENT '包裹状态',
-  `content_note` text COLLATE utf8mb4_unicode_ci COMMENT '内容备注（清点时填写）',
-  `adjustment_note` text COLLATE utf8mb4_unicode_ci COMMENT '调整备注',
-  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `verified_at` datetime DEFAULT NULL COMMENT '核实时间',
-  `counted_at` datetime DEFAULT NULL COMMENT '清点时间',
-  `adjusted_at` datetime DEFAULT NULL COMMENT '调整时间',
-  `verified_by` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '核实人',
-  `counted_by` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '清点人',
-  `adjusted_by` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '调整人'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='快递包裹表';
 
 -- --------------------------------------------------------
 
@@ -154,6 +93,7 @@ CREATE TABLE `mrs_batch_raw_record` (
   `sku_id` bigint UNSIGNED DEFAULT NULL COMMENT '外键：SKU ID (可为“品牌未区分”SKU)',
   `input_sku_name` varchar(255) DEFAULT NULL COMMENT '手动输入的物料名称（当sku_id为NULL时使用）',
   `qty` decimal(10,4) NOT NULL COMMENT '现场录入数量',
+  `physical_box_count` decimal(10,2) DEFAULT NULL COMMENT '录入时的物理箱数',
   `unit_name` varchar(32) NOT NULL COMMENT '现场录入单位',
   `operator_name` varchar(128) NOT NULL COMMENT '操作人名称',
   `recorded_at` datetime(6) NOT NULL COMMENT '现场录入时间 (UTC)',
@@ -327,35 +267,6 @@ CREATE TABLE `sys_users` (
 --
 
 --
--- 表的索引 `express_batch`
---
-ALTER TABLE `express_batch`
-  ADD PRIMARY KEY (`batch_id`),
-  ADD UNIQUE KEY `uk_batch_name` (`batch_name`),
-  ADD KEY `idx_created_at` (`created_at`),
-  ADD KEY `idx_status` (`status`);
-
---
--- 表的索引 `express_operation_log`
---
-ALTER TABLE `express_operation_log`
-  ADD PRIMARY KEY (`log_id`),
-  ADD KEY `idx_package_id` (`package_id`),
-  ADD KEY `idx_operation_type` (`operation_type`),
-  ADD KEY `idx_operation_time` (`operation_time`);
-
---
--- 表的索引 `express_package`
---
-ALTER TABLE `express_package`
-  ADD PRIMARY KEY (`package_id`),
-  ADD UNIQUE KEY `uk_tracking_batch` (`tracking_number`,`batch_id`),
-  ADD KEY `idx_batch_id` (`batch_id`),
-  ADD KEY `idx_tracking_number` (`tracking_number`),
-  ADD KEY `idx_package_status` (`package_status`),
-  ADD KEY `idx_created_at` (`created_at`);
-
---
 -- 表的索引 `mrs_batch`
 --
 ALTER TABLE `mrs_batch`
@@ -465,24 +376,6 @@ ALTER TABLE `sys_users`
 --
 
 --
--- 使用表AUTO_INCREMENT `express_batch`
---
-ALTER TABLE `express_batch`
-  MODIFY `batch_id` int UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '批次ID';
-
---
--- 使用表AUTO_INCREMENT `express_operation_log`
---
-ALTER TABLE `express_operation_log`
-  MODIFY `log_id` int UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '日志ID';
-
---
--- 使用表AUTO_INCREMENT `express_package`
---
-ALTER TABLE `express_package`
-  MODIFY `package_id` int UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '包裹ID';
-
---
 -- 使用表AUTO_INCREMENT `mrs_batch`
 --
 ALTER TABLE `mrs_batch`
@@ -557,18 +450,6 @@ ALTER TABLE `sys_users`
 --
 -- 限制导出的表
 --
-
---
--- 限制表 `express_operation_log`
---
-ALTER TABLE `express_operation_log`
-  ADD CONSTRAINT `fk_log_package` FOREIGN KEY (`package_id`) REFERENCES `express_package` (`package_id`) ON DELETE CASCADE;
-
---
--- 限制表 `express_package`
---
-ALTER TABLE `express_package`
-  ADD CONSTRAINT `fk_package_batch` FOREIGN KEY (`batch_id`) REFERENCES `express_batch` (`batch_id`) ON DELETE CASCADE;
 
 --
 -- 限制表 `mrs_outbound_order_item`

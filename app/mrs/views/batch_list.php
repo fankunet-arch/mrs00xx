@@ -5,6 +5,37 @@
     <title>MRS 管理系统 - <?php echo htmlspecialchars($page_title); ?></title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="/mrs/css/backend.css">
+    <style>
+        .batch-table thead th.header-cell {
+            background: #f8fafc;
+            vertical-align: middle;
+            border-bottom: 2px solid #e5e7eb;
+            font-weight: 700;
+            color: #1f2937;
+        }
+
+        .batch-table .th-main {
+            display: block;
+            line-height: 1.4;
+        }
+
+        .batch-table .header-hint {
+            display: block;
+            margin-top: 4px;
+            font-size: 12px;
+            color: #6b7280;
+            font-weight: 400;
+        }
+
+        .batch-table .sort-link {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        .batch-table .sort-link:hover {
+            color: #2563eb;
+        }
+    </style>
 </head>
 <body>
     <header>
@@ -26,14 +57,21 @@
  * @param string $current_order The current sorting order.
  * @return string HTML for the table header.
  */
-function sortable_th($column_name, $display_name, $current_sort, $current_order)
+function sortable_th($column_name, $display_name, $hint, $current_sort, $current_order)
 {
     $order = ($current_sort === $column_name && $current_order === 'ASC') ? 'DESC' : 'ASC';
     $icon = '';
     if ($current_sort === $column_name) {
         $icon = $current_order === 'ASC' ? ' ▲' : ' ▼';
     }
-    return '<th><a class="sort-link" href="?action=batch_list&sort=' . $column_name . '&order=' . $order . '">' . $display_name . $icon . '</a></th>';
+
+    return '<th class="header-cell">'
+        . '<span class="th-main">'
+        . '<a class="sort-link" href="?action=batch_list&sort=' . $column_name . '&order=' . $order . '">'
+        . $display_name . $icon . '</a>'
+        . '</span>'
+        . '<span class="header-hint">' . htmlspecialchars($hint) . '</span>'
+        . '</th>';
 }
 
 /**
@@ -99,26 +137,27 @@ function get_batch_display_properties($batch)
         <div class="col-lg-12">
             <div class="card">
                 <div class="card-header">
-                    <div class="flex-between">
-                        <div>
-                            <h4 class="card-title">收货批次列表</h4>
-                            <p class="muted">快速查看批次状态与待确认数量，参考库存列表的表格样式</p>
-                        </div>
-                        <a href="?action=batch_create" class="btn btn-primary btn-sm">创建新批次</a>
-                    </div>
+                    <h4 class="card-title">收货批次列表</h4>
+                    <a href="?action=batch_create" class="btn btn-primary btn-sm float-right">创建新批次</a>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
-                        <table class="data-table">
+                        <table class="table table-bordered table-hover batch-table">
                             <thead>
                                 <tr>
-                                    <th class="text-center" style="width: 70px;">ID</th>
-                                    <?php echo sortable_th('batch_code', '参考号', $sort_column, $sort_order); ?>
-                                    <?php echo sortable_th('batch_status', '状态', $sort_column, $sort_order); ?>
-                                    <?php echo sortable_th('raw_record_count', '待确认数', $sort_column, $sort_order); ?>
-                                    <?php echo sortable_th('created_at', '创建时间', $sort_column, $sort_order); ?>
-                                    <?php echo sortable_th('updated_at', '更新时间', $sort_column, $sort_order); ?>
-                                    <th class="text-center">操作</th>
+                                    <th class="header-cell">
+                                        <span class="th-main">ID</span>
+                                        <span class="header-hint">批次编号</span>
+                                    </th>
+                                    <?php echo sortable_th('batch_code', '参考号', '批次号', $sort_column, $sort_order); ?>
+                                    <?php echo sortable_th('batch_status', '状态', '当前阶段', $sort_column, $sort_order); ?>
+                                    <?php echo sortable_th('raw_record_count', '待确认数', '待入库记录', $sort_column, $sort_order); ?>
+                                    <?php echo sortable_th('created_at', '创建时间', '批次建立时间', $sort_column, $sort_order); ?>
+                                    <?php echo sortable_th('updated_at', '更新时间', '最近操作时间', $sort_column, $sort_order); ?>
+                                    <th class="header-cell">
+                                        <span class="th-main">操作</span>
+                                        <span class="header-hint">进入或确认</span>
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -131,35 +170,21 @@ function get_batch_display_properties($batch)
                                         $props = get_batch_display_properties($batch);
                                     ?>
                                         <tr class="<?php echo $props['row_class']; ?>">
-                                            <td class="text-center"><?php echo $batch['batch_id']; ?></td>
-                                            <td>
-                                                <div class="strong"><?php echo htmlspecialchars($batch['batch_code']); ?></div>
-                                                <span class="table-subtext">批次编号</span>
-                                            </td>
+                                            <td><?php echo $batch['batch_id']; ?></td>
+                                            <td><?php echo htmlspecialchars($batch['batch_code']); ?></td>
                                             <td>
                                                 <span class="badge <?php echo $props['badge_class']; ?>">
                                                     <?php echo $props['status_text']; ?>
                                                 </span>
                                             </td>
+                                            <td><?php echo $batch['raw_record_count']; ?></td>
+                                            <td><?php echo $batch['created_at']; ?></td>
+                                            <td><?php echo $batch['updated_at']; ?></td>
                                             <td>
-                                                <div class="strong"><?php echo $batch['raw_record_count']; ?></div>
-                                                <span class="table-subtext">待确认记录</span>
-                                            </td>
-                                            <td>
-                                                <div class="strong"><?php echo $batch['created_at']; ?></div>
-                                                <span class="table-subtext">创建时间</span>
-                                            </td>
-                                            <td>
-                                                <div class="strong"><?php echo $batch['updated_at']; ?></div>
-                                                <span class="table-subtext">最近更新</span>
-                                            </td>
-                                            <td class="text-center">
                                                 <?php if (!empty($props['button_text'])): ?>
                                                     <a href="?action=<?php echo $props['action']; ?>&id=<?php echo $batch['batch_id']; ?>" class="btn <?php echo $props['button_class']; ?> btn-sm">
                                                         <?php echo $props['button_text']; ?>
                                                     </a>
-                                                <?php else: ?>
-                                                    <span class="table-subtext">等待收货</span>
                                                 <?php endif; ?>
                                             </td>
                                         </tr>
