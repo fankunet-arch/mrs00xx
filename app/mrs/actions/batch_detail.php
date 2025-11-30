@@ -43,7 +43,15 @@ try {
     // 获取合并数据（按SKU汇总）- 包括所有状态和未知物料
     $merge_data = [];
     $aggregated_data = [];
+    $confirmed_items = [];
     if (in_array($batch['batch_status'], ['receiving', 'pending_merge', 'draft', 'confirmed'])) {
+        // 获取已确认的数量（用于显示保存后的数据）
+        $confirm_stmt = $pdo->prepare("SELECT sku_id, confirmed_case_qty, confirmed_single_qty, total_standard_qty FROM mrs_batch_confirmed_item WHERE batch_id = ?");
+        $confirm_stmt->execute([$batch_id]);
+        foreach ($confirm_stmt->fetchAll(PDO::FETCH_ASSOC) as $item) {
+            $confirmed_items[$item['sku_id']] = $item;
+        }
+
         // Query ALL raw records grouped by SKU and processing_status
         // IMPORTANT: Use LEFT JOIN to include records with NULL sku_id (unknown items)
         $stmt = $pdo->prepare("
@@ -113,6 +121,8 @@ try {
                 $sku_spec = $item['standard_unit'];
             }
 
+            $confirm_item = ($sku_id !== null && isset($confirmed_items[$sku_id])) ? $confirmed_items[$sku_id] : null;
+
             $aggregated_data[$unique_key] = [
                 'sku_id' => $sku_id,
                 'processing_status' => $processing_status,
@@ -126,7 +136,10 @@ try {
                 'calculated_single_qty' => $calculated_single_qty,
                 'calculated_total' => (int)$total_qty,
                 'raw_total' => (int)$total_qty,
-                'record_count' => $item['record_count']
+                'record_count' => $item['record_count'],
+                'confirmed_case_qty' => $confirm_item['confirmed_case_qty'] ?? null,
+                'confirmed_single_qty' => $confirm_item['confirmed_single_qty'] ?? null,
+                'confirmed_total' => $confirm_item['total_standard_qty'] ?? null,
             ];
         }
     }

@@ -100,6 +100,14 @@
                                         <td><?php echo format_number($item['total_outbound']); ?></td>
                                         <td><?php echo format_number($item['total_adjustment']); ?></td>
                                         <td>
+                                            <button class="info small" onclick="openStocktakeModal(
+                                                <?php echo $item['sku_id']; ?>,
+                                                '<?php echo htmlspecialchars(addslashes($item['sku_name'])); ?>',
+                                                <?php echo $case_spec > 0 ? $case_spec : 0; ?>,
+                                                '<?php echo htmlspecialchars(addslashes($item['case_unit_name'] ?? '')); ?>',
+                                                '<?php echo htmlspecialchars(addslashes($item['standard_unit'])); ?>',
+                                                <?php echo $current_qty; ?>
+                                            )">盘点</button>
                                             <a href="/mrs/be/index.php?action=outbound_create&sku_id=<?php echo $item['sku_id']; ?>"><button class="primary small">出库</button></a>
                                             <button class="secondary small" onclick="viewHistory(<?php echo $item['sku_id']; ?>, '<?php echo htmlspecialchars(addslashes($item['sku_name'])); ?>')">历史</button>
                                         </td>
@@ -130,7 +138,66 @@
         </div>
     </div>
 
+    <!-- 盘点调整模态框 -->
+    <div id="stocktake-modal" class="modal" style="display: none;">
+        <div class="modal-content stocktake-card" style="max-width: 620px;">
+            <div class="modal-header stocktake-header">
+                <div>
+                    <p class="eyebrow">库存盘点</p>
+                    <h3 id="stocktake-title">盘点调整</h3>
+                </div>
+                <span class="close" onclick="closeStocktakeModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="stocktake-summary">
+                    <div class="pill muted">现有库存</div>
+                    <div id="stocktake-current" class="stocktake-current">-</div>
+                    <div class="divider"></div>
+                    <div class="pill info-light">调整后</div>
+                    <div id="stocktake-target" class="stocktake-target">-</div>
+                </div>
+
+                <div class="form-grid">
+                    <div class="form-group" id="stocktake-case-group" style="display: none;">
+                        <label>调整为（箱）</label>
+                        <div class="input-row">
+                            <input type="number" id="stocktake-case" min="0" value="0" oninput="updateStocktakePreview()">
+                            <span class="unit" id="stocktake-case-unit">箱</span>
+                        </div>
+                        <small class="muted" id="stocktake-case-hint"></small>
+                    </div>
+                    <div class="form-group">
+                        <label id="stocktake-single-label">调整为</label>
+                        <div class="input-row">
+                            <input type="number" id="stocktake-single" min="0" value="0" oninput="updateStocktakePreview()">
+                            <span class="unit" id="stocktake-single-unit"></span>
+                        </div>
+                    </div>
+                    <div class="form-group full">
+                        <label>备注</label>
+                        <input type="text" id="stocktake-reason" placeholder="可填写盘点备注，默认：手动盘点调整">
+                    </div>
+                </div>
+
+                <div id="stocktake-error" class="alert error" style="display:none;"></div>
+
+                <div class="form-actions" style="justify-content: flex-end;">
+                    <button class="secondary" onclick="closeStocktakeModal()">取消</button>
+                    <button class="primary" onclick="submitStocktake()">确认调整</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
+    const stocktakeState = {
+        skuId: null,
+        caseSpec: 0,
+        caseUnit: '',
+        standardUnit: '',
+        currentQty: 0
+    };
+
     async function viewHistory(skuId, skuName) {
         document.getElementById('history-title').textContent = skuName + ' - 历史记录';
         document.getElementById('history-modal').style.display = 'block';
@@ -157,6 +224,105 @@
         if (isNaN(parsed)) return '-';
         // Convert to string and remove trailing zeros
         return parsed.toString().replace(/\.0+$/, '').replace(/(\.\d*[1-9])0+$/, '$1');
+    }
+
+    function openStocktakeModal(skuId, skuName, caseSpec, caseUnit, standardUnit, currentQty) {
+        stocktakeState.skuId = skuId;
+        stocktakeState.caseSpec = caseSpec;
+        stocktakeState.caseUnit = caseUnit || '';
+        stocktakeState.standardUnit = standardUnit;
+        stocktakeState.currentQty = currentQty;
+
+        document.getElementById('stocktake-title').textContent = skuName + ' - 库存盘点';
+        document.getElementById('stocktake-current').textContent = formatNumber(currentQty) + standardUnit;
+        document.getElementById('stocktake-reason').value = '';
+        document.getElementById('stocktake-error').style.display = 'none';
+
+        if (caseSpec > 1) {
+            document.getElementById('stocktake-case-group').style.display = 'block';
+            document.getElementById('stocktake-case-hint').textContent = '1 箱 = ' + formatNumber(caseSpec) + ' ' + standardUnit + (caseUnit ? ' / ' + caseUnit : '');
+            document.getElementById('stocktake-case-unit').textContent = caseUnit || '箱';
+            const cases = Math.floor(currentQty / caseSpec);
+            const singles = currentQty % caseSpec;
+            document.getElementById('stocktake-case').value = cases;
+            document.getElementById('stocktake-single').value = singles;
+            document.getElementById('stocktake-single-label').textContent = '调整为（散件）';
+            document.getElementById('stocktake-single-unit').textContent = standardUnit;
+        } else {
+            document.getElementById('stocktake-case-group').style.display = 'none';
+            document.getElementById('stocktake-single-label').textContent = '调整为（' + standardUnit + '）';
+            document.getElementById('stocktake-single').value = currentQty;
+            document.getElementById('stocktake-single-unit').textContent = standardUnit;
+        }
+
+        updateStocktakePreview();
+        document.getElementById('stocktake-modal').style.display = 'block';
+    }
+
+    function closeStocktakeModal() {
+        document.getElementById('stocktake-modal').style.display = 'none';
+    }
+
+    async function submitStocktake() {
+        const errorBox = document.getElementById('stocktake-error');
+        errorBox.style.display = 'none';
+
+        const caseQty = parseFloat(document.getElementById('stocktake-case').value) || 0;
+        const singleQty = parseFloat(document.getElementById('stocktake-single').value) || 0;
+        const reason = document.getElementById('stocktake-reason').value || '手动盘点调整';
+
+        if (caseQty < 0 || singleQty < 0) {
+            errorBox.textContent = '数量不能为负数';
+            errorBox.style.display = 'block';
+            return;
+        }
+
+        let targetQty = singleQty;
+        if (stocktakeState.caseSpec > 1) {
+            targetQty = (caseQty * stocktakeState.caseSpec) + singleQty;
+        }
+
+        updateStocktakePreview(targetQty);
+
+        try {
+            const response = await fetch('/mrs/be/index.php?action=backend_adjust_inventory', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    sku_id: stocktakeState.skuId,
+                    current_qty: targetQty,
+                    reason: reason
+                })
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                closeStocktakeModal();
+                alert('盘点成功，库存已更新');
+                window.location.reload();
+            } else {
+                throw new Error(result.message || '调整失败');
+            }
+        } catch (error) {
+            errorBox.textContent = error.message;
+            errorBox.style.display = 'block';
+        }
+    }
+
+    function updateStocktakePreview(providedQty) {
+        const caseQty = parseFloat(document.getElementById('stocktake-case').value) || 0;
+        const singleQty = parseFloat(document.getElementById('stocktake-single').value) || 0;
+
+        let totalQty = providedQty !== undefined ? providedQty : singleQty;
+        if (stocktakeState.caseSpec > 1) {
+            totalQty = (caseQty * stocktakeState.caseSpec) + singleQty;
+        }
+
+        const breakdown = stocktakeState.caseSpec > 1
+            ? `${formatNumber(caseQty)}${stocktakeState.caseUnit || '箱'} + ${formatNumber(singleQty)}${stocktakeState.standardUnit}`
+            : `${formatNumber(totalQty)}${stocktakeState.standardUnit}`;
+
+        document.getElementById('stocktake-target').textContent = breakdown + ' （合计 ' + formatNumber(totalQty) + stocktakeState.standardUnit + '）';
     }
 
     function renderHistory(history) {
@@ -211,9 +377,13 @@
 
     // 点击模态框外部关闭
     window.onclick = function(event) {
-        const modal = document.getElementById('history-modal');
-        if (event.target == modal) {
+        const historyModal = document.getElementById('history-modal');
+        const stocktakeModal = document.getElementById('stocktake-modal');
+        if (event.target === historyModal) {
             closeHistoryModal();
+        }
+        if (event.target === stocktakeModal) {
+            closeStocktakeModal();
         }
     }
     </script>
@@ -236,6 +406,13 @@
         max-width: 900px;
         border-radius: 5px;
     }
+    .modal-content.stocktake-card {
+        border: none;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 20px 50px rgba(0,0,0,0.18);
+        background: linear-gradient(135deg, #f9fafb 0%, #ffffff 100%);
+    }
     .modal-header {
         padding: 15px 20px;
         background-color: #f1f1f1;
@@ -243,6 +420,18 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
+    }
+    .stocktake-header {
+        background: linear-gradient(120deg, #0ea5e9 0%, #2563eb 100%);
+        color: #fff;
+        border-bottom: none;
+    }
+    .stocktake-header h3 { margin: 2px 0 0; }
+    .stocktake-header .eyebrow {
+        text-transform: uppercase;
+        letter-spacing: .08em;
+        font-size: 12px;
+        opacity: .85;
     }
     .modal-body {
         padding: 20px;
@@ -258,6 +447,67 @@
     .close:hover {
         color: #000;
     }
+    .stocktake-summary {
+        display: grid;
+        grid-template-columns: auto 1fr auto 1fr;
+        align-items: center;
+        gap: 10px;
+        padding: 14px 16px;
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.8);
+        margin-bottom: 16px;
+    }
+    .pill {
+        padding: 6px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+    }
+    .pill.muted { background: #f3f4f6; color: #4b5563; }
+    .pill.info-light { background: #e0f2fe; color: #0ea5e9; }
+    .stocktake-current { font-size: 18px; font-weight: 700; color: #0f172a; }
+    .stocktake-target { font-size: 16px; font-weight: 600; color: #0f172a; }
+    .divider { height: 24px; width: 1px; background: #e5e7eb; }
+    .input-row {
+        display: flex;
+        align-items: center;
+        border: 1px solid #d1d5db;
+        border-radius: 10px;
+        overflow: hidden;
+        background: #fff;
+        box-shadow: inset 0 1px 2px rgba(17,24,39,0.05);
+    }
+    .input-row input[type="number"] {
+        border: none;
+        padding: 12px 14px;
+        flex: 1;
+        font-size: 15px;
+        outline: none;
+    }
+    .input-row input[type="number"]:focus { box-shadow: none; }
+    .input-row .unit {
+        padding: 0 14px;
+        background: #f9fafb;
+        color: #6b7280;
+        font-weight: 700;
+        border-left: 1px solid #e5e7eb;
+    }
+    .form-grid .form-group.full input[type="text"] {
+        padding: 12px 14px;
+        border-radius: 10px;
+        border: 1px solid #d1d5db;
+    }
+    .form-grid .form-group.full input[type="text"]:focus {
+        outline: none;
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    }
+    .form-group label { color: #111827; }
+    .form-grid .form-group small { margin-top: 6px; display: block; }
     </style>
 </body>
 </html>

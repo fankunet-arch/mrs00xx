@@ -72,16 +72,16 @@ try {
 
         $total_standard_qty = ($case_qty * $case_conversion_rate) + $single_qty;
 
-        // Insert or update confirmed item
+        // Insert or accumulate confirmed quantities so multiple receipts in the same batch remain independent
         $confirm_sql = "
             INSERT INTO mrs_batch_confirmed_item
                 (batch_id, sku_id, confirmed_case_qty, confirmed_single_qty, total_standard_qty, created_at, updated_at)
             VALUES
                 (:batch_id, :sku_id, :case_qty, :single_qty, :total_qty, NOW(6), NOW(6))
             ON DUPLICATE KEY UPDATE
-                confirmed_case_qty = VALUES(confirmed_case_qty),
-                confirmed_single_qty = VALUES(confirmed_single_qty),
-                total_standard_qty = VALUES(total_standard_qty),
+                confirmed_case_qty = COALESCE(confirmed_case_qty, 0) + VALUES(confirmed_case_qty),
+                confirmed_single_qty = COALESCE(confirmed_single_qty, 0) + VALUES(confirmed_single_qty),
+                total_standard_qty = COALESCE(total_standard_qty, 0) + VALUES(total_standard_qty),
                 updated_at = NOW(6)
         ";
         $confirm_stmt = $pdo->prepare($confirm_sql);

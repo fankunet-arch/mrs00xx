@@ -13,6 +13,7 @@ if (!defined('MRS_ENTRY')) {
 // 加载配置
 require_once __DIR__ . '/../config_mrs/env_mrs.php';
 require_once MRS_LIB_PATH . '/mrs_lib.php';
+require_once MRS_LIB_PATH . '/inventory_lib.php';
 
 // 需要登录
 require_login();
@@ -118,6 +119,26 @@ try {
         $insertStmt->execute();
 
         $adjustmentId = $pdo->lastInsertId();
+
+        // 6. 同步记录到统一的库存流水表
+        $unit = $sku['standard_unit'] ?? '件';
+        $transactionSubtype = $delta >= 0 ? 'surplus' : 'deficit';
+        $transactionRecorded = record_inventory_transaction(
+            $pdo,
+            $skuId,
+            'adjustment',
+            $transactionSubtype,
+            $delta,
+            $unit,
+            $operatorName,
+            ['adjustment_id' => $adjustmentId],
+            $reason
+        );
+
+        // 如果流水记录失败则回滚，确保数据一致
+        if (!$transactionRecorded) {
+            throw new Exception('记录库存流水失败');
+        }
 
         // 提交事务
         $pdo->commit();

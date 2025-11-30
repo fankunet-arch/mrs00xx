@@ -52,6 +52,24 @@
                                     $row_class = '';
                                     $status_text = '';
                                     $status_class = '';
+                                    $case_spec = $item['case_to_standard_qty'];
+                                    $display_case_qty = $item['calculated_case_qty'];
+                                    $display_single_qty = $item['calculated_single_qty'];
+                                    $display_total = $item['calculated_total'];
+
+                                    if ($status === 'confirmed' && $item['confirmed_total'] !== null) {
+                                        $display_total = (int)$item['confirmed_total'];
+                                        if ($item['confirmed_case_qty'] !== null || $item['confirmed_single_qty'] !== null) {
+                                            $display_case_qty = (int)$item['confirmed_case_qty'];
+                                            $display_single_qty = (int)$item['confirmed_single_qty'];
+                                        } elseif ($case_spec > 0 && fmod($case_spec, 1.0) === 0.0) {
+                                            $case_size = (int)$case_spec;
+                                            $display_case_qty = intdiv($display_total, $case_size);
+                                            $display_single_qty = $display_total % $case_size;
+                                        } else {
+                                            $display_single_qty = $display_total;
+                                        }
+                                    }
 
                                     if ($status === 'confirmed') {
                                         $row_class = 'table-success';
@@ -63,6 +81,16 @@
                                         $status_class = 'text-danger';
                                     }
                                     $is_processed = ($status !== 'pending');
+
+                                    $difference_value = $display_total - $item['raw_total'];
+                                    $difference_class = 'difference text-muted';
+                                    $difference_text = $difference_value;
+                                    if ($difference_value > 0) {
+                                        $difference_class = 'difference text-success font-weight-bold';
+                                        $difference_text = '+' . $difference_value;
+                                    } elseif ($difference_value < 0) {
+                                        $difference_class = 'difference text-danger font-weight-bold';
+                                    }
                                 ?>
                                     <tr id="row-<?php echo $unique_key; ?>"
                                         data-sku-id="<?php echo $item['sku_id']; ?>"
@@ -72,21 +100,21 @@
                                         <td><?php echo htmlspecialchars($item['sku_spec']); ?></td>
                                         <td>
                                             <?php if ($is_processed): ?>
-                                                <?php echo $item['calculated_case_qty']; ?>
+                                                <?php echo $display_case_qty; ?>
                                             <?php else: ?>
                                                 <input type="number" class="form-control form-control-sm case-input" value="<?php echo $item['calculated_case_qty']; ?>" min="0">
                                             <?php endif; ?>
                                         </td>
                                         <td>
                                             <?php if ($is_processed): ?>
-                                                <?php echo $item['calculated_single_qty']; ?>
+                                                <?php echo $display_single_qty; ?>
                                             <?php else: ?>
                                                 <input type="number" class="form-control form-control-sm single-input" value="<?php echo $item['calculated_single_qty']; ?>" min="0">
                                             <?php endif; ?>
                                         </td>
-                                        <td class="system-total"><?php echo $item['calculated_total']; ?></td>
+                                        <td class="system-total"><?php echo $display_total; ?></td>
                                         <td class="raw-total"><?php echo $item['raw_total']; ?></td>
-                                        <td class="difference">0</td>
+                                        <td class="<?php echo $is_processed ? $difference_class : 'difference'; ?>"><?php echo $is_processed ? $difference_text : '0'; ?></td>
                                         <td>
                                             <?php if ($is_processed): ?>
                                                 <span class="status-text <?php echo $status_class; ?>"><?php echo $status_text; ?></span>
