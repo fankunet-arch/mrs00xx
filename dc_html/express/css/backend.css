@@ -472,6 +472,18 @@ body {
     border-top: 2px solid #e9ecef;
 }
 
+.section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.section-header h2 {
+    margin: 0;
+}
+
 .packages-section h2 {
     font-size: 18px;
     color: #2c3e50;
