@@ -129,14 +129,16 @@ function express_tracking_tail($tracking_number)
         .label-meta {
             margin-top: 8mm;
             display: flex;
-            justify-content: space-between;
+            justify-content: flex-start;
             align-items: center;
-            font-size: 16pt;
+            gap: 8mm;
+            font-size: 18pt;
             font-weight: 600;
             line-height: 1.2;
         }
 
         .tracking-tail {
+            font-size: 20pt;
             letter-spacing: 1px;
         }
 
