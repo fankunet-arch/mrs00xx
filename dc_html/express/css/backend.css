@@ -220,6 +220,15 @@ body {
     background-color: #7f8c8d;
 }
 
+.btn-highlight {
+    background-color: #f39c12;
+    color: white;
+}
+
+.btn-highlight:hover {
+    background-color: #d78a0d;
+}
+
 .btn-info {
     background-color: #17a2b8;
     color: white;
@@ -470,6 +479,18 @@ body {
     margin-top: 30px;
     padding-top: 30px;
     border-top: 2px solid #e9ecef;
+}
+
+.section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.section-header h2 {
+    margin: 0;
 }
 
 .packages-section h2 {
