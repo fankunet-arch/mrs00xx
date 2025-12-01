@@ -41,7 +41,7 @@ $user_name = $_SESSION['user_display_name'] ?? $_SESSION['user_login'] ?? '用�
             <span class="nav-icon" aria-hidden="true">🔄</span>
             <span>转Express系统</span>
         </a>
-        <a href="/mrs/" class="nav-link">
+        <a href="/mrs/" class="nav-link" target="_blank">
             <span class="nav-icon" aria-hidden="true">📝</span>
             <span>前台操作记录</span>
         </a>
