@@ -7,6 +7,28 @@
     <link rel="stylesheet" href="/mrs/css/backend.css">
 </head>
 <body>
+    <?php
+    $batch_status_labels = [
+        'draft' => '草稿',
+        'receiving' => '收货中',
+        'pending_merge' => '待合并',
+        'confirmed' => '已确认',
+        'posted' => '已入库',
+    ];
+
+    $outbound_type_labels = [
+        1 => '领料',
+        2 => '调拨',
+        3 => '退货',
+        4 => '报废',
+    ];
+
+    $outbound_status_labels = [
+        'draft' => '草稿',
+        'confirmed' => '已确认',
+        'cancelled' => '已取消',
+    ];
+    ?>
     <header>
         <div class="title"><?php echo htmlspecialchars($page_title); ?></div>
         <div class="user">
@@ -24,8 +46,8 @@
                         <p class="muted">所有功能均已迁移至新的 MPA 模式，如有需要可从左侧导航进入对应模块。</p>
                     </div>
                     <div class="muted" style="text-align: right;">
-                        <div>今天：<?php echo date('Y-m-d'); ?></div>
-                        <div>上次刷新：<?php echo date('H:i'); ?></div>
+                        <div>今天（西班牙时间）：<?php echo htmlspecialchars($current_local_date ?? date('Y-m-d')); ?></div>
+                        <div>上次刷新（西班牙时间）：<?php echo htmlspecialchars($last_refresh_time ?? date('H:i')); ?></div>
                     </div>
                 </div>
 
@@ -61,7 +83,7 @@
                     </div>
                 </div>
                 <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px;">
-                    <a class="primary" href="/mrs/be/index.php?action=quick_receipt">快速收货</a>
+                    <a class="primary" href="/mrs/be/index.php?action=quick_receipt" target="_blank" rel="noopener noreferrer">快速收货</a>
                     <a class="primary" href="/mrs/be/index.php?action=batch_create">创建批次</a>
                     <a class="secondary" href="/mrs/be/index.php?action=batch_list">查看批次</a>
                     <a class="primary" href="/mrs/be/index.php?action=outbound_create">创建出库单</a>
@@ -96,7 +118,7 @@
                                         <tr>
                                             <td><strong><?php echo htmlspecialchars($batch['batch_code']); ?></strong></td>
                                             <td><?php echo htmlspecialchars(date('Y-m-d', strtotime($batch['batch_date']))); ?></td>
-                                            <td><?php echo htmlspecialchars($batch['batch_status'] ?? '-'); ?></td>
+                                            <td><?php echo htmlspecialchars($batch_status_labels[$batch['batch_status']] ?? ($batch['batch_status'] ?? '-')); ?></td>
                                             <td><?php echo htmlspecialchars($batch['location_name'] ?? '-'); ?></td>
                                         </tr>
                                     <?php endforeach; ?>
@@ -125,8 +147,8 @@
                                         <tr>
                                             <td><strong><?php echo htmlspecialchars($outbound['outbound_code']); ?></strong></td>
                                             <td><?php echo htmlspecialchars(date('Y-m-d', strtotime($outbound['outbound_date']))); ?></td>
-                                            <td><?php echo htmlspecialchars($outbound['outbound_type'] ?? '-'); ?></td>
-                                            <td><?php echo htmlspecialchars($outbound['status'] ?? '-'); ?></td>
+                                            <td><?php echo htmlspecialchars($outbound_type_labels[(int) $outbound['outbound_type']] ?? ($outbound['outbound_type'] ?? '-')); ?></td>
+                                            <td><?php echo htmlspecialchars($outbound_status_labels[$outbound['status']] ?? ($outbound['status'] ?? '-')); ?></td>
                                         </tr>
                                     <?php endforeach; ?>
                                 <?php else: ?>

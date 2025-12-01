@@ -20,6 +20,9 @@ $stats = [
 $recent_batches = [];
 $recent_outbounds = [];
 $low_inventory = [];
+$local_now = new DateTime('now', new DateTimeZone('Europe/Madrid'));
+$current_local_date = $local_now->format('Y-m-d');
+$last_refresh_time = $local_now->format('H:i');
 
 try {
     $pdo = get_db_connection();
