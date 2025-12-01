@@ -21,6 +21,10 @@ if (!$batch) {
 }
 
 $packages = express_get_packages_by_batch($pdo, $batch_id, 'all');
+$printable_packages = array_values(array_filter($packages, function ($package) {
+    $note = trim($package['content_note'] ?? '');
+    return $note !== '空';
+}));
 
 function express_tracking_tail($tracking_number)
 {
@@ -160,7 +164,7 @@ function express_tracking_tail($tracking_number)
 <body>
 <div class="page-wrapper">
     <div class="print-header">
-        <div class="print-title">批次：<?= htmlspecialchars($batch['batch_name']) ?>（共 <?= count($packages) ?> 件）</div>
+        <div class="print-title">批次：<?= htmlspecialchars($batch['batch_name']) ?>（共 <?= count($printable_packages) ?> 件）</div>
         <div class="print-actions">
             <button class="btn" onclick="window.print()">打印</button>
             <button class="btn" onclick="window.close()">关闭</button>
@@ -168,7 +172,7 @@ function express_tracking_tail($tracking_number)
     </div>
 
     <div class="label-grid">
-        <?php foreach ($packages as $package): ?>
+        <?php foreach ($printable_packages as $package): ?>
             <?php
             $content = trim($package['content_note'] ?? '');
             $content = $content !== '' ? $content : '未填写内容备注';
