@@ -9,13 +9,45 @@ $user_name = $_SESSION['user_display_name'] ?? $_SESSION['user_login'] ?? '用�
     </div>
 
     <nav class="sidebar-nav">
-        <a href="/mrs/be/index.php?action=dashboard" class="nav-link <?php echo ($current_action === 'dashboard') ? 'active' : ''; ?>">仪表盘</a>
-        <a href="/mrs/be/index.php?action=batch_list" class="nav-link <?php echo (strpos($current_action, 'batch_') === 0) ? 'active' : ''; ?>">入库管理</a>
-        <a href="/mrs/be/index.php?action=outbound_list" class="nav-link <?php echo (strpos($current_action, 'outbound_') === 0) ? 'active' : ''; ?>">出库管理</a>
-        <a href="/mrs/be/index.php?action=inventory_list" class="nav-link <?php echo (strpos($current_action, 'inventory_') === 0) ? 'active' : ''; ?>">库存管理</a>
-        <a href="/mrs/be/index.php?action=sku_list" class="nav-link <?php echo (strpos($current_action, 'sku_') === 0) ? 'active' : ''; ?>">物料管理</a>
-        <a href="/mrs/be/index.php?action=category_list" class="nav-link <?php echo (strpos($current_action, 'category_') === 0) ? 'active' : ''; ?>">品类管理</a>
-        <a href="/mrs/be/index.php?action=reports" class="nav-link <?php echo ($current_action === 'reports') ? 'active' : ''; ?>">数据报表</a>
-        <a href="/mrs/be/index.php?action=logout" class="nav-link">退出登录</a>
+        <a href="/mrs/be/index.php?action=dashboard" class="nav-link <?php echo ($current_action === 'dashboard') ? 'active' : ''; ?>">
+            <span class="nav-icon" aria-hidden="true">📊</span>
+            <span>仪表盘</span>
+        </a>
+        <a href="/mrs/be/index.php?action=batch_list" class="nav-link <?php echo (strpos($current_action, 'batch_') === 0) ? 'active' : ''; ?>">
+            <span class="nav-icon" aria-hidden="true">📥</span>
+            <span>入库管理</span>
+        </a>
+        <a href="/mrs/be/index.php?action=outbound_list" class="nav-link <?php echo (strpos($current_action, 'outbound_') === 0) ? 'active' : ''; ?>">
+            <span class="nav-icon" aria-hidden="true">📤</span>
+            <span>出库管理</span>
+        </a>
+        <a href="/mrs/be/index.php?action=inventory_list" class="nav-link <?php echo (strpos($current_action, 'inventory_') === 0) ? 'active' : ''; ?>">
+            <span class="nav-icon" aria-hidden="true">📦</span>
+            <span>库存管理</span>
+        </a>
+        <a href="/mrs/be/index.php?action=sku_list" class="nav-link <?php echo (strpos($current_action, 'sku_') === 0) ? 'active' : ''; ?>">
+            <span class="nav-icon" aria-hidden="true">🧾</span>
+            <span>物料管理</span>
+        </a>
+        <a href="/mrs/be/index.php?action=category_list" class="nav-link <?php echo (strpos($current_action, 'category_') === 0) ? 'active' : ''; ?>">
+            <span class="nav-icon" aria-hidden="true">🗂️</span>
+            <span>品类管理</span>
+        </a>
+        <a href="/mrs/be/index.php?action=reports" class="nav-link <?php echo ($current_action === 'reports') ? 'active' : ''; ?>">
+            <span class="nav-icon" aria-hidden="true">📈</span>
+            <span>数据报表</span>
+        </a>
+        <a href="/express/exp/index.php?action=batch_list" class="nav-link">
+            <span class="nav-icon" aria-hidden="true">🔄</span>
+            <span>转Express系统</span>
+        </a>
+        <a href="/mrs/" class="nav-link">
+            <span class="nav-icon" aria-hidden="true">📝</span>
+            <span>前台操作记录</span>
+        </a>
+        <a href="/mrs/be/index.php?action=logout" class="nav-link">
+            <span class="nav-icon" aria-hidden="true">🚪</span>
+            <span>退出登录</span>
+        </a>
     </nav>
 </aside>

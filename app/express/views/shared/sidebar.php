@@ -19,17 +19,25 @@ $current_action = $_GET['action'] ?? 'batch_list';
     <nav class="sidebar-nav">
         <a href="/express/exp/index.php?action=batch_list"
            class="nav-link <?= $current_action === 'batch_list' ? 'active' : '' ?>">
-            批次列表
+            <span class="nav-icon" aria-hidden="true">📦</span>
+            <span>批次列表</span>
         </a>
         <a href="/express/exp/index.php?action=content_search"
            class="nav-link <?= $current_action === 'content_search' ? 'active' : '' ?>">
-            物品内容搜索
+            <span class="nav-icon" aria-hidden="true">🔍</span>
+            <span>物品内容搜索</span>
         </a>
         <a href="/express/index.php?action=quick_ops" class="nav-link" target="_blank">
-            前台操作页面
+            <span class="nav-icon" aria-hidden="true">🧾</span>
+            <span>前台操作页面</span>
+        </a>
+        <a href="/mrs/be/index.php?action=dashboard" class="nav-link">
+            <span class="nav-icon" aria-hidden="true">🔄</span>
+            <span>转MRS系统</span>
         </a>
         <a href="/express/exp/index.php?action=logout" class="nav-link">
-            退出登录
+            <span class="nav-icon" aria-hidden="true">🚪</span>
+            <span>退出登录</span>
         </a>
     </nav>
 </div>
