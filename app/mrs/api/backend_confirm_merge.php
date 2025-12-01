@@ -98,8 +98,52 @@ try {
                 json_response(false, null, "SKU ID {$skuId} 不存在");
             }
 
-            // 使用数据库中的真实换算率
-            $caseToStandard = floatval($skuInfo['case_to_standard_qty'] ?? 0);
+            // [FIX START] 动态系数优先逻辑（必须基于“标准单位总数 / 实际箱数”）
+            // 重新拉取原始记录，按标准单位重新累加，避免继续沿用出厂换算率导致误判
+            $dynamicSpecSql = "SELECT qty, unit_name, physical_box_count
+                               FROM mrs_batch_raw_record
+                               WHERE batch_id = :bid AND sku_id = :sid";
+            $specStmt = $pdo->prepare($dynamicSpecSql);
+            $specStmt->execute([':bid' => $batchId, ':sid' => $skuId]);
+            $rawRows = $specStmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $batchTotalQty = 0.0;   // 以标准单位计
+            $batchTotalBoxes = 0.0; // 实际物理箱数
+
+            foreach ($rawRows as $row) {
+                $rowQty = floatval($row['qty']);
+                $rowBoxes = floatval($row['physical_box_count']);
+                $unitName = $row['unit_name'];
+
+                // 如果未录入物理箱数但单位为“箱”，则默认按录入箱数计为物理箱数
+                if ($rowBoxes <= 0 && $unitName === ($skuInfo['case_unit_name'] ?? '')) {
+                    $rowBoxes = $rowQty;
+                }
+
+                // 如果录入单位是“箱”，先按出厂换算率折算成标准单位
+                if ($unitName === ($skuInfo['case_unit_name'] ?? '') && floatval($skuInfo['case_to_standard_qty']) > 0) {
+                    $rowQty *= floatval($skuInfo['case_to_standard_qty']);
+                }
+
+                $batchTotalQty += $rowQty;
+                $batchTotalBoxes += $rowBoxes > 0 ? $rowBoxes : 0; // 空值按0处理
+            }
+
+            $effectiveSpec = 0;
+
+            // 如果存在有效的物理箱数，且总数也存在，则计算动态系数
+            if ($batchTotalBoxes > 0 && $batchTotalQty > 0) {
+                $effectiveSpec = $batchTotalQty / $batchTotalBoxes;
+            }
+
+            // 2. 决策：如果动态系数有效，使用它；否则回退到出厂规格
+            if ($effectiveSpec > 0) {
+                $caseToStandard = $effectiveSpec;
+            } else {
+                // 使用数据库中的真实换算率
+                $caseToStandard = floatval($skuInfo['case_to_standard_qty'] ?? 0);
+            }
+            // [FIX END]
 
             // 计算总标准数量
             $caseQty = floatval($item['case_qty'] ?? 0);

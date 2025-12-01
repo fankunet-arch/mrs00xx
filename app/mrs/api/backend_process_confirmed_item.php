@@ -59,12 +59,44 @@ try {
     $case_conversion_rate = floatval($sku_info['case_to_standard_qty'] ?? 0);
     $standard_unit = $sku_info['standard_unit'];
 
+    // [FIX] Dynamic Spec Logic
+    // Query pending raw records to check for physical box count override
+    // This allows confirmation to use the actual repacked specification instead of factory spec
+    // MUST calculate standardized total quantity to handle mixed units (e.g. input in Boxes vs Pieces)
+    $dynamic_check_sql = "SELECT
+                            SUM(
+                                CASE
+                                    WHEN r.unit_name = s.case_unit_name AND s.case_to_standard_qty > 0
+                                    THEN r.qty * s.case_to_standard_qty
+                                    ELSE r.qty
+                                END
+                            ) as total_qty,
+                            SUM(r.physical_box_count) as total_boxes
+                          FROM mrs_batch_raw_record r
+                          LEFT JOIN mrs_sku s ON r.sku_id = s.sku_id
+                          WHERE r.batch_id = :batch_id AND r.sku_id = :sku_id AND r.processing_status = 'pending'";
+    $dynamic_stmt = $pdo->prepare($dynamic_check_sql);
+    $dynamic_stmt->execute([':batch_id' => $batch_id, ':sku_id' => $sku_id]);
+    $dynamic_row = $dynamic_stmt->fetch(PDO::FETCH_ASSOC);
+
+    if ($dynamic_row) {
+        $pending_total_qty = floatval($dynamic_row['total_qty']);
+        $pending_total_boxes = floatval($dynamic_row['total_boxes']);
+
+        if ($pending_total_boxes > 0 && $pending_total_qty > 0) {
+             // Calculate dynamic coefficient (e.g., 1000 pcs / 5 boxes = 200/box)
+             $case_conversion_rate = $pending_total_qty / $pending_total_boxes;
+             mrs_log("Using dynamic spec for confirmation: Batch={$batch_id}, SKU={$sku_id}, Spec={$case_conversion_rate} (Total={$pending_total_qty}/Boxes={$pending_total_boxes})", 'INFO');
+        }
+    }
+
     // ============================================================
     // Action: CONFIRM
     // ============================================================
     if ($action === 'confirm') {
-        $case_qty = filter_input(INPUT_POST, 'case_qty', FILTER_VALIDATE_INT);
-        $single_qty = filter_input(INPUT_POST, 'single_qty', FILTER_VALIDATE_INT);
+        // [FIX] Support float/decimal values for box counts (e.g. 1.5 boxes)
+        $case_qty = filter_input(INPUT_POST, 'case_qty', FILTER_VALIDATE_FLOAT);
+        $single_qty = filter_input(INPUT_POST, 'single_qty', FILTER_VALIDATE_FLOAT);
 
         if ($case_qty === false || $case_qty < 0 || $single_qty === false || $single_qty < 0) {
             throw new Exception('Invalid quantity values.');

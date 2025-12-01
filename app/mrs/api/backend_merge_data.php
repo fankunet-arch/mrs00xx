@@ -56,6 +56,7 @@ try {
     $expectedItems = $expectedStmt->fetchAll(PDO::FETCH_ASSOC);
 
     // 获取原始记录并按SKU分组汇总
+    // [FIX] Calculate standardized total quantity
     $rawSql = "SELECT
                     r.sku_id,
                     s.sku_name,
@@ -66,7 +67,14 @@ try {
                     s.is_precise_item,
                     c.category_name,
                     r.unit_name,
-                    SUM(r.qty) as total_qty,
+                    SUM(
+                        CASE
+                            WHEN r.unit_name = s.case_unit_name AND s.case_to_standard_qty > 0
+                            THEN r.qty * s.case_to_standard_qty
+                            ELSE r.qty
+                        END
+                    ) as total_qty,
+                    SUM(COALESCE(r.physical_box_count, 0)) as total_physical_boxes,
                     COUNT(*) as record_count
                 FROM mrs_batch_raw_record r
                 LEFT JOIN mrs_sku s ON r.sku_id = s.sku_id
@@ -110,7 +118,8 @@ try {
                 'expected_qty' => floatval($item['expected_qty'] ?? 0),
                 'expected_unit' => $item['expected_unit'] ?? '',
                 'raw_records' => [],
-                'raw_total_standard' => 0
+                'raw_total_standard' => 0,
+                'raw_total_physical_boxes' => 0
             ];
         }
     }
@@ -132,12 +141,14 @@ try {
                 'expected_qty' => 0,
                 'expected_unit' => '',
                 'raw_records' => [],
-                'raw_total_standard' => 0
+                'raw_total_standard' => 0,
+                'raw_total_physical_boxes' => 0
             ];
         }
 
         $qty = floatval($record['total_qty']);
         $unit = $record['unit_name'];
+        $physicalBoxes = floatval($record['total_physical_boxes'] ?? 0);
 
         // 转换为标准单位
         $standardQty = $qty;
@@ -148,9 +159,11 @@ try {
         $skuMap[$skuId]['raw_records'][] = [
             'qty' => $qty,
             'unit' => $unit,
-            'count' => $record['record_count']
+            'count' => $record['record_count'],
+            'physical_box_count' => $physicalBoxes
         ];
         $skuMap[$skuId]['raw_total_standard'] += $standardQty;
+        $skuMap[$skuId]['raw_total_physical_boxes'] += $physicalBoxes;
     }
 
     // 生成合并建议
@@ -160,15 +173,17 @@ try {
         $currentRawTotal = $data['raw_total_standard'];
         $expectedQty = $data['expected_qty'];
 
-        // 根据当前原始记录计算箱数和散件数
-        $caseQty = 0;
+        // 根据实际物理箱数优先生成建议：如果有真实箱数则直接展示，不再强行按照出厂规格拆分
+        $caseQty = $data['raw_total_physical_boxes'] > 0 ? $data['raw_total_physical_boxes'] : 0;
         $singleQty = 0;
 
-        if ($data['case_to_standard_qty'] > 0) {
-            $caseQty = floor($currentRawTotal / $data['case_to_standard_qty']);
-            $singleQty = $currentRawTotal % $data['case_to_standard_qty'];
-        } else {
-            $singleQty = $currentRawTotal;
+        if ($caseQty <= 0) {
+            if ($data['case_to_standard_qty'] > 0) {
+                $caseQty = floor($currentRawTotal / $data['case_to_standard_qty']);
+                $singleQty = $currentRawTotal % $data['case_to_standard_qty'];
+            } else {
+                $singleQty = $currentRawTotal;
+            }
         }
 
         // [FIX] 检查是否存在已确认记录，并对比数据是否变更
@@ -185,18 +200,32 @@ try {
             $confirmedTotal = floatval($c['total_standard_qty']);
             $isConfirmed = true;
 
-            // [FIX CRITICAL] 对比已确认数量和当前原始记录总数
-            // 如果不一致，说明有新的原始记录被添加，需要重新确认
-            if (abs($confirmedTotal - $currentRawTotal) > 0.001) { // 使用浮点数比较容差
+            // [FIX] 获取当前物理总箱数
+            $currentPhysicalBoxes = floatval($data['raw_total_physical_boxes']);
+
+            // [DIAGNOSTIC] 如果总数存在但物理箱数为0，可能是因为数据库列缺失导致 save_record 降级
+            if ($currentRawTotal > 0 && $currentPhysicalBoxes <= 0) {
+                 mrs_log('合并数据诊断: 物理箱数为0，请检查 mrs_batch_raw_record 表是否包含 physical_box_count 列', 'WARNING', [
+                     'sku_id' => $skuId,
+                     'total_qty' => $currentRawTotal
+                 ]);
+            }
+
+            // [FIX CRITICAL] 判定逻辑升级：不仅对比总数，还要对比箱数
+            // 如果总数有差异 OR (有录入物理箱数 且 物理箱数与已确认箱数不一致) -> 视为变更
+            $qtyChanged = abs($confirmedTotal - $currentRawTotal) > 0.001; // 使用浮点数比较容差
+            $boxChanged = ($currentPhysicalBoxes > 0 && abs($confirmedCase - $currentPhysicalBoxes) > 0.001);
+
+            if ($qtyChanged || $boxChanged) {
                 $hasDataChanged = true;
-                // 当数据变更时，使用当前原始记录的数量作为建议值
-                // 保留已确认的值用于前端对比显示
+                // 数据变更，保留当前计算出的 caseQty (即 physicalBoxes)
             } else {
-                // 数据未变更，使用已确认的值
+                // 数据完全一致，才使用已确认的值覆盖
                 $caseQty = $confirmedCase;
                 $singleQty = $confirmedSingle;
             }
         }
+
 
         // 判断状态（始终基于当前原始记录总数）
         $status = 'normal';
@@ -223,6 +252,13 @@ try {
             $rawSummary[] = $r['qty'] . ' ' . $r['unit'];
         }
 
+        $totalPhysicalBoxes = floatval($data['raw_total_physical_boxes']);
+        $dynamicCoefficient = ($totalPhysicalBoxes > 0) ? ($currentRawTotal / $totalPhysicalBoxes) : 0;
+
+        // [FIX] 前端输入框的优先展示值：如果有物理箱数，则始终优先物理箱数，避免沿用旧确认值
+        // 即便历史已确认箱数存在，也要以最新的实际箱数为准，避免出现“录入10箱却回填5箱”的情况。
+        $displayCaseQty = $totalPhysicalBoxes > 0 ? $totalPhysicalBoxes : $caseQty;
+
         $items[] = [
             'sku_id' => $skuId,
             'sku_name' => $data['sku_name'],
@@ -236,8 +272,12 @@ try {
             'expected_unit' => $data['expected_unit'],
             'raw_summary' => implode(' + ', $rawSummary),
             'raw_total_standard' => $currentRawTotal, // [FIX] 始终返回当前原始记录总数
-            'suggested_qty' => $caseQty . ' ' . ($data['case_unit_name'] ?: '箱') . ' + ' . $singleQty . ' ' . $data['standard_unit'],
-            'confirmed_case' => $caseQty,
+            'total_physical_boxes' => $totalPhysicalBoxes,
+            'dynamic_coefficient' => $dynamicCoefficient,
+            'suggested_qty' => $singleQty > 0
+                ? ($displayCaseQty . ' ' . ($data['case_unit_name'] ?: '箱') . ' + ' . $singleQty . ' ' . $data['standard_unit'])
+                : ($displayCaseQty . ' ' . ($data['case_unit_name'] ?: '箱')), // 优先展示真实箱数
+            'confirmed_case' => $displayCaseQty,
             'confirmed_single' => $singleQty,
             'is_confirmed' => $isConfirmed,
             'has_data_changed' => $hasDataChanged, // [FIX] 新增字段

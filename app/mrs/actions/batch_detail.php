@@ -66,6 +66,7 @@ try {
                 COALESCE(s.standard_unit, r.unit_name) as standard_unit,
                 s.case_unit_name,
                 s.case_to_standard_qty,
+                r.unit_name as input_unit_name,
                 SUM(
                     CASE
                         WHEN r.unit_name = s.case_unit_name AND s.case_to_standard_qty > 0
@@ -73,6 +74,8 @@ try {
                         ELSE r.qty
                     END
                 ) as total_quantity,
+                SUM(r.qty) as total_raw_input_qty,
+                SUM(COALESCE(r.physical_box_count, 0)) as total_physical_boxes,
                 COUNT(*) as record_count
             FROM mrs_batch_raw_record r
             LEFT JOIN mrs_sku s ON r.sku_id = s.sku_id
@@ -90,20 +93,64 @@ try {
             $processing_status = $item['processing_status'];
             $case_to_standard = floatval($item['case_to_standard_qty'] ?? 0);
             $total_qty = floatval($item['total_quantity']);
+            $total_raw_input_qty = floatval($item['total_raw_input_qty']);
+            $total_physical_boxes = floatval($item['total_physical_boxes'] ?? 0);
+
+            // [FIX] Dynamic Spec Calculation
+            // If physical box count is present, use it to derive the dynamic spec (coefficient).
+            // This ensures the backend calculates totals based on the ACTUAL box configuration.
+            $use_input_units = false;
+            $display_coefficient = $case_to_standard;
+            $display_raw_total = (int)$total_qty;
+            $display_unit_name = $item['standard_unit'];
+
+            if ($total_physical_boxes > 0 && $total_qty > 0) {
+                // Check if we should display in Input Units (e.g. Box/Box) instead of Standard Units (Pieces/Box)
+                // If the input unit is different from Standard Unit, use the Input Unit for display to match frontend experience
+                if ($item['input_unit_name'] !== $item['standard_unit']) {
+                    $use_input_units = true;
+                    // Coefficient = Total Input Qty / Physical Boxes (e.g. 50 Boxes / 5 PhysBoxes = 10)
+                    $display_coefficient = $total_raw_input_qty / $total_physical_boxes;
+                    $display_raw_total = (int)$total_raw_input_qty;
+                    $display_unit_name = $item['input_unit_name'];
+                    
+                    // For internal calculation (standardization), we still need the standard spec
+                    $dynamic_spec = $total_qty / $total_physical_boxes;
+                    $case_to_standard = $dynamic_spec;
+                } else {
+                    // Standard Unit Input: simple division
+                    $dynamic_spec = $total_qty / $total_physical_boxes;
+                    $case_to_standard = $dynamic_spec;
+                    $display_coefficient = $dynamic_spec;
+                    $display_raw_total = (int)$total_qty;
+                }
+            } else {
+                $display_coefficient = $case_to_standard;
+            }
 
             // Create unique key for SKU + status combination
             // For unknown items (sku_id IS NULL), use input_sku_name
             if ($sku_id) {
-                $unique_key = $sku_id . '_' . $processing_status;
+                // [FIX] Include input unit in unique key to prevent overwriting when multiple units are used for same SKU
+                $unique_key = $sku_id . '_' . md5($item['input_unit_name'] ?? '') . '_' . $processing_status;
             } else {
-                $unique_key = 'unknown_' . md5($item['input_sku_name'] ?? '') . '_' . $processing_status;
+                $unique_key = 'unknown_' . md5($item['input_sku_name'] ?? '') . '_' . md5($item['input_unit_name'] ?? '') . '_' . $processing_status;
             }
 
             // Calculate case and single quantities
             $calculated_case_qty = 0;
             $calculated_single_qty = 0;
 
-            if ($case_to_standard > 0 && fmod($case_to_standard, 1.0) == 0.0) {
+            // [FIX] Priority Logic: Use physical box count if available
+            if ($total_physical_boxes > 0) {
+                $calculated_case_qty = $total_physical_boxes;
+                // For dynamic spec, usually single qty is 0 because the spec absorbs the remainder,
+                // or we consider the box count as the primary unit.
+                // However, let's keep the math strict: Total = Box * Spec + Single.
+                // Since Spec = Total / Box, then Total = Box * (Total/Box) + 0.
+                // So Single is 0.
+                $calculated_single_qty = 0;
+            } elseif ($case_to_standard > 0 && fmod($case_to_standard, 1.0) == 0.0) {
                 // If case conversion is a whole number, calculate breakdown
                 $case_size = (int)$case_to_standard;
                 $calculated_case_qty = intdiv((int)$total_qty, $case_size);
@@ -115,14 +162,37 @@ try {
 
             // Build sku_spec string
             $sku_spec = '';
-            if ($case_to_standard > 0 && !empty($item['case_unit_name'])) {
-                $sku_spec = format_number($case_to_standard, 4) . ' ' . $item['standard_unit'] . '/' . $item['case_unit_name'];
+            if ($display_coefficient > 0 && !empty($item['case_unit_name'])) {
+                $is_dynamic = ($total_physical_boxes > 0);
+                // [UI FIX] Use 2 decimals precision
+                // If using input units, display e.g. "10.00 Box/Box"
+                // If standard units, display e.g. "200.00 Piece/Box"
+                $case_unit_label = $item['case_unit_name']; // Usually 'Box' or 'Carton'
+                
+                // If dynamic and input unit is used, we might want to say "Box/PhysicalBox"
+                // But let's stick to "Unit/CaseUnit" format
+                $sku_spec = format_number($display_coefficient, 2) . ' ' . $display_unit_name . '/' . $case_unit_label;
+                
+                if ($is_dynamic) {
+                    $sku_spec .= ' (动态)';
+                }
             } else {
                 $sku_spec = $item['standard_unit'];
             }
 
             $confirm_item = ($sku_id !== null && isset($confirmed_items[$sku_id])) ? $confirmed_items[$sku_id] : null;
 
+            // If confirmed item exists, we need to decide what to show as "calculated_total"
+            // If using input units, we should probably attempt to back-calculate confirmed qty to input units?
+            // This is tricky. Confirmed items only store Standard Qty.
+            // If the row is already confirmed, we might want to switch back to Standard Units display to avoid confusion?
+            // Or just show Standard Units for confirmed items.
+            // But let's try to be consistent with "pending" view.
+            
+            // For now, if confirmed, we just use the confirmed totals (which are in Standard Units).
+            // So if confirmed, the display might revert to Standard Units unless we convert it back.
+            // Since the user is likely complaining about the PENDING state (verification), we focus on that.
+            
             $aggregated_data[$unique_key] = [
                 'sku_id' => $sku_id,
                 'processing_status' => $processing_status,
@@ -130,12 +200,14 @@ try {
                 'brand_name' => $item['brand_name'],
                 'category_name' => $item['category_name'],
                 'sku_spec' => $sku_spec,
-                'case_to_standard_qty' => $case_to_standard,
-                'standard_unit' => $item['standard_unit'],
+                'current_coefficient' => $display_coefficient, // [UI FIX] Pass display coefficient (Input Units)
+                'case_to_standard_qty' => $display_coefficient, // Used by JS for calculation
+                'standard_unit' => $display_unit_name, // Display Unit Name
                 'calculated_case_qty' => $calculated_case_qty,
                 'calculated_single_qty' => $calculated_single_qty,
-                'calculated_total' => (int)$total_qty,
-                'raw_total' => (int)$total_qty,
+                'calculated_total' => $display_raw_total, // Display Total (Input Units)
+                'raw_total' => $display_raw_total, // Display Raw Total (Input Units)
+                'raw_physical_boxes' => $total_physical_boxes, // [UI FIX] Pass raw box count
                 'record_count' => $item['record_count'],
                 'confirmed_case_qty' => $confirm_item['confirmed_case_qty'] ?? null,
                 'confirmed_single_qty' => $confirm_item['confirmed_single_qty'] ?? null,
