@@ -220,6 +220,15 @@ body {
     background-color: #7f8c8d;
 }
 
+.btn-highlight {
+    background-color: #f39c12;
+    color: white;
+}
+
+.btn-highlight:hover {
+    background-color: #d78a0d;
+}
+
 .btn-info {
     background-color: #17a2b8;
     color: white;
