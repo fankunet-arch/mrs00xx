@@ -478,6 +478,18 @@ body {
     margin-bottom: 15px;
 }
 
+.section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 15px;
+}
+
+.section-header h2 {
+    margin-bottom: 0;
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
     .sidebar {

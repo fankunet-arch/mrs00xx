@@ -35,6 +35,7 @@ $allowed_actions = [
     'logout',                   // 登出
     'batch_list',               // 批次列表
     'batch_detail',             // 批次详情
+    'batch_print_labels',       // 批次打印标签页面
     'batch_create',             // 创建批次页面
     'batch_edit',               // 编辑批次页面
     'batch_create_save',        // 保存新批次
