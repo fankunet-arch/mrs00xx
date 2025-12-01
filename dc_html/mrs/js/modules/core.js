@@ -50,7 +50,8 @@ export function initDom() {
     skuHistory: document.getElementById('modal-sku-history'),
     quickOutbound: document.getElementById('modal-quick-outbound'),
     inventoryAdjust: document.getElementById('modal-inventory-adjust'),
-    rawRecordEdit: document.getElementById('modal-raw-record-edit')
+    rawRecordEdit: document.getElementById('modal-raw-record-edit'),
+    aggregateCorrection: document.getElementById('modal-aggregate-correction')
   };
 }
 

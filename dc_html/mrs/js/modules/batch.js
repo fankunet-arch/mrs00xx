@@ -50,6 +50,38 @@ function bindRawRecordEditInputs() {
   }
 }
 
+function updateAggregateHelper() {
+  const qtyInput = document.getElementById('correction-total-qty');
+  const boxInput = document.getElementById('correction-total-box');
+  const avgEl = document.getElementById('correction-average');
+
+  if (!qtyInput || !boxInput || !avgEl) return;
+
+  const qty = parseFloat(qtyInput.value);
+  const box = parseFloat(boxInput.value);
+
+  if (!Number.isFinite(qty) || qty <= 0 || !Number.isFinite(box) || box <= 0) {
+    avgEl.textContent = '--';
+    return;
+  }
+
+  const avg = qty / box;
+  avgEl.textContent = formatNumber(avg);
+}
+
+function bindAggregateInputs() {
+  const qtyInput = document.getElementById('correction-total-qty');
+  const boxInput = document.getElementById('correction-total-box');
+  if (qtyInput && !qtyInput.dataset.bound) {
+    qtyInput.addEventListener('input', updateAggregateHelper);
+    qtyInput.dataset.bound = 'true';
+  }
+  if (boxInput && !boxInput.dataset.bound) {
+    boxInput.addEventListener('input', updateAggregateHelper);
+    boxInput.dataset.bound = 'true';
+  }
+}
+
 /**
  * 加载批次列表
  */
@@ -228,19 +260,34 @@ function renderMergePage(data) {
   if (!tbody) return;
 
   if (!data.items || data.items.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="9" class="empty">暂无记录</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="11" class="empty">暂无记录</td></tr>';
     return;
   }
 
   tbody.innerHTML = data.items.map(item => {
-    const isConfirmed = item.merge_status === 'confirmed';
+    const isConfirmed = item.is_confirmed || item.merge_status === 'confirmed';
+    const physicalBoxes = item.total_physical_boxes ? formatNumber(item.total_physical_boxes) : '0';
+  const dynamicCoefficient = item.total_physical_boxes > 0 ? formatNumber(item.dynamic_coefficient) : '--';
+  const factorySpec = item.case_to_standard_qty > 0 ? `${formatNumber(item.case_to_standard_qty)}/${item.case_unit_name || '箱'}` : '—';
+  const hasDynamic = dynamicCoefficient !== '--';
+  const hasSpec = item.case_to_standard_qty > 0;
+  const coefficientDiffers = hasDynamic && hasSpec && Math.abs(item.dynamic_coefficient - item.case_to_standard_qty) > 0.0001;
+  const dynamicClass = coefficientDiffers ? 'style="color:#c0392b;font-weight:700;"' : '';
+  const dynamicDisplay = hasDynamic
+      ? `<div ${dynamicClass}>${dynamicCoefficient}/${item.case_unit_name || '箱'}${coefficientDiffers ? ' · 规格变更' : ''}</div><div class="muted" style="font-size:12px;">出厂规格：${factorySpec}</div>`
+      : `<div style="color:#c0392b;font-weight:700;">缺少箱数</div><div class="muted" style="font-size:12px;">出厂规格：${factorySpec}</div>`;
 
     // 渲染操作列：包含查看明细、输入框和确认按钮
+    const baseActions = `
+      <button class="text" data-action="viewRawRecords" data-sku-id="${item.sku_id}">查看明细</button>
+      <button class="text" data-action="openAggregateCorrection" data-sku-id="${item.sku_id}">修正总账</button>
+    `;
+
     const actions = isConfirmed
-      ? '<span class="badge success">✓ 已确认</span>'
+      ? `<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">${baseActions}<span class="badge success">✓ 已确认</span></div>`
       : `
         <div style="display: flex; gap: 4px; align-items: center; flex-wrap: wrap;">
-          <button class="text" data-action="viewRawRecords" data-sku-id="${item.sku_id}">查看明细</button>
+          ${baseActions}
           <input type="number" id="case-${item.sku_id}" value="${item.confirmed_case || 0}" style="width: 70px;" placeholder="箱数" min="0" step="1" />
           <input type="number" id="single-${item.sku_id}" value="${item.confirmed_single || 0}" style="width: 70px;" placeholder="散件" min="0" step="1" />
           <button class="secondary" data-action="confirmItem" data-sku-id="${item.sku_id}">确认</button>
@@ -255,6 +302,8 @@ function renderMergePage(data) {
         <td>${item.case_unit_name ? `1 ${item.case_unit_name} = ${parseFloat(item.case_to_standard_qty)} ${item.standard_unit}` : '—'}</td>
         <td><strong>${item.expected_qty || 0}</strong></td>
         <td>${escapeHtml(item.raw_summary || '-')}</td>
+        <td>${item.total_physical_boxes ? `<strong>${physicalBoxes}</strong> 箱` : '<span class="badge danger">缺失</span>'}</td>
+        <td>${dynamicDisplay}</td>
         <td><span class="pill">${escapeHtml(item.suggested_qty || '-')}</span></td>
         <td><span class="badge ${item.status === 'normal' ? 'success' : item.status === 'over' ? 'warning' : 'danger'}">${item.status_text || '正常'}</span></td>
         <td class="table-actions">${actions}</td>
@@ -463,6 +512,78 @@ export async function saveRawRecordEdit(event) {
 
   if (appState.currentRawRecordSkuId) {
     await viewRawRecords(appState.currentRawRecordSkuId);
+  }
+
+  if (appState.currentBatch) {
+    await showMergePage(appState.currentBatch.batch_id);
+  }
+}
+
+export function openAggregateCorrection(skuId) {
+  if (!appState.currentBatch) {
+    showAlert('danger', '批次信息未加载');
+    return;
+  }
+
+  const item = (appState.mergeItems || []).find((i) => i.sku_id === skuId);
+  if (!item) {
+    showAlert('danger', '数据同步错误，请刷新页面');
+    return;
+  }
+
+  const qtyInput = document.getElementById('correction-total-qty');
+  const boxInput = document.getElementById('correction-total-box');
+  const noteInput = document.getElementById('correction-note');
+
+  document.getElementById('correction-sku-id').value = skuId;
+  document.getElementById('correction-batch-id').value = appState.currentBatch.batch_id;
+
+  if (qtyInput) qtyInput.value = item.raw_total_standard || '';
+  if (boxInput) boxInput.value = item.total_physical_boxes ? formatNumber(item.total_physical_boxes) : '';
+  if (noteInput) noteInput.value = '';
+
+  bindAggregateInputs();
+  updateAggregateHelper();
+  modal.show('modal-aggregate-correction');
+}
+
+export async function saveAggregateCorrection(event) {
+  event.preventDefault();
+
+  const skuId = parseInt(document.getElementById('correction-sku-id').value, 10);
+  const batchId = parseInt(document.getElementById('correction-batch-id').value, 10);
+  const totalQty = parseFloat(document.getElementById('correction-total-qty').value);
+  const totalBoxes = parseFloat(document.getElementById('correction-total-box').value);
+  const note = document.getElementById('correction-note').value.trim();
+
+  if (!skuId || !batchId) {
+    showAlert('danger', '缺少必要的批次或SKU信息');
+    return;
+  }
+
+  if (!Number.isFinite(totalQty) || totalQty <= 0 || !Number.isFinite(totalBoxes) || totalBoxes <= 0) {
+    showAlert('danger', '请填写有效的总数量和总箱数');
+    return;
+  }
+
+  const result = await batchAPI.rewriteRawRecords({
+    batch_id: batchId,
+    sku_id: skuId,
+    total_qty: totalQty,
+    physical_box_count: totalBoxes,
+    note
+  });
+
+  if (!result.success) {
+    showAlert('danger', '重写原始记录失败: ' + result.message);
+    return;
+  }
+
+  showAlert('success', '原始记录已重写');
+  modal.hide('modal-aggregate-correction');
+
+  if (appState.currentRawRecordSkuId === skuId) {
+    await viewRawRecords(skuId);
   }
 
   if (appState.currentBatch) {

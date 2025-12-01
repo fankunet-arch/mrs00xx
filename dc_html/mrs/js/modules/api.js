@@ -76,6 +76,13 @@ export const batchAPI = {
       method: 'POST',
       body: JSON.stringify(data)
     });
+  },
+
+  async rewriteRawRecords(data) {
+    return await call('/mrs/be/index.php?action=backend_rewrite_raw_records', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
   }
 };
 

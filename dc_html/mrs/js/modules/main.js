@@ -142,6 +142,9 @@ function setupEventDelegation() {
       case 'openRawRecordEdit':
         if (target.dataset.recordId) await Batch.openRawRecordEdit(parseInt(target.dataset.recordId, 10));
         break;
+      case 'openAggregateCorrection':
+        if (skuId) await Batch.openAggregateCorrection(skuId);
+        break;
 
       // SKU 管理
       case 'loadSkus':
@@ -254,6 +257,9 @@ function setupEventDelegation() {
         break;
       case 'form-raw-record-edit':
         await Batch.saveRawRecordEdit(e);
+        break;
+      case 'form-aggregate-correction':
+        await Batch.saveAggregateCorrection(e);
         break;
       default:
         console.warn('未知表单:', formId);
