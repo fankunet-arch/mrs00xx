@@ -107,6 +107,17 @@ body {
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.section-header h2 {
+    margin: 0;
+}
+
 /* 表格样式 */
 .data-table {
     width: 100%;

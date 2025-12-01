@@ -43,7 +43,8 @@ $allowed_actions = [
     'bulk_import_save',         // 保存批量导入
     'content_search',           // 内容备注搜索页面
     'content_search_api',       // 内容备注搜索API
-    'update_content_note'       // 更新内容备注API
+    'update_content_note',      // 更新内容备注API
+    'batch_print'               // 批次标签打印页面
 ];
 
 // 验证action是否允许
