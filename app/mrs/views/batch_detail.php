@@ -38,6 +38,7 @@
                                 <tr>
                                     <th>SKU</th>
                                     <th>规格</th>
+                                    <th>入库系数</th>
                                     <th style="width: 120px;">确认箱数</th>
                                     <th style="width: 120px;">确认散件</th>
                                     <th>系统小计</th>
@@ -98,6 +99,7 @@
                                         class="<?php echo $row_class; ?>">
                                         <td><?php echo htmlspecialchars($item['sku_name']); ?></td>
                                         <td><?php echo htmlspecialchars($item['sku_spec']); ?></td>
+                                        <td class="font-weight-bold text-primary"><?php echo format_number($item['current_coefficient'], 2); ?></td>
                                         <td>
                                             <?php if ($is_processed): ?>
                                                 <?php echo $display_case_qty; ?>
@@ -113,7 +115,12 @@
                                             <?php endif; ?>
                                         </td>
                                         <td class="system-total"><?php echo $display_total; ?></td>
-                                        <td class="raw-total"><?php echo $item['raw_total']; ?></td>
+                                        <td class="raw-total">
+                                            <?php echo $item['raw_total']; ?>
+                                            <?php if ($item['raw_physical_boxes'] > 0): ?>
+                                                <div class="small text-muted">(<?php echo format_number($item['raw_physical_boxes'], 2); ?> 箱)</div>
+                                            <?php endif; ?>
+                                        </td>
                                         <td class="<?php echo $is_processed ? $difference_class : 'difference'; ?>"><?php echo $is_processed ? $difference_text : '0'; ?></td>
                                         <td>
                                             <?php if ($is_processed): ?>

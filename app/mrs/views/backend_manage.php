@@ -107,6 +107,8 @@ if (!defined('MRS_ENTRY')) {
                   <th>单位规则</th>
                   <th>预计数量</th>
                   <th>原始记录汇总</th>
+                  <th>实际入库箱数</th>
+                  <th>动态系数</th>
                   <th>系统建议</th>
                   <th>状态</th>
                   <th>操作</th>
@@ -114,7 +116,7 @@ if (!defined('MRS_ENTRY')) {
               </thead>
               <tbody>
                 <tr>
-                  <td colspan="9" class="loading">加载中...</td>
+                  <td colspan="11" class="loading">加载中...</td>
                 </tr>
               </tbody>
             </table>
@@ -764,6 +766,44 @@ if (!defined('MRS_ENTRY')) {
         <div class="modal-actions">
           <button type="button" class="text" data-action="closeModal" data-modal-id="modal-raw-record-edit">取消</button>
           <button type="submit" class="primary">保存修改</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 模态框: 修正原始记录（总量+总箱） -->
+  <div class="modal-backdrop" id="modal-aggregate-correction">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>修正原始记录</h3>
+        <button class="text" data-action="closeModal" data-modal-id="modal-aggregate-correction">×</button>
+      </div>
+      <form id="form-aggregate-correction">
+        <input type="hidden" id="correction-batch-id">
+        <input type="hidden" id="correction-sku-id">
+        <div class="modal-body">
+          <div class="form-group">
+            <label>总数量（标准单位）*</label>
+            <input type="number" step="0.0001" min="0" id="correction-total-qty" required>
+          </div>
+          <div class="form-group">
+            <label>实际总箱数 *</label>
+            <input type="number" step="0.01" min="0" id="correction-total-box" required>
+          </div>
+          <div class="form-group">
+            <label>动态系数预览</label>
+            <div id="correction-helper" style="padding: 12px; background: #f5f7fb; border-radius: 8px; line-height: 1.6;">
+              平均每箱：<strong id="correction-average">--</strong>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>备注</label>
+            <textarea id="correction-note" rows="2" placeholder="选填，记录此次修正的原因"></textarea>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="text" data-action="closeModal" data-modal-id="modal-aggregate-correction">取消</button>
+          <button type="submit" class="primary">保存修正</button>
         </div>
       </form>
     </div>
