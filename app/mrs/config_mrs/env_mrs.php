@@ -1,8 +1,8 @@
 <?php
 /**
- * MRS 物料收发管理系统 - 配置文件
+ * MRS System Configuration
  * 文件路径: app/mrs/config_mrs/env_mrs.php
- * 说明: 数据库连接、路径常量、系统配置
+ * 说明: MRS 系统配置文件
  */
 
 // 防止直接访问
@@ -10,159 +10,116 @@ if (!defined('MRS_ENTRY')) {
     die('Access denied');
 }
 
-// ============================================
 // 数据库配置
-// ============================================
+define('MRS_DB_HOST', 'mhdlmskp2kpxguj.mysql.db');
+define('MRS_DB_PORT', '3306');
+define('MRS_DB_NAME', 'mhdlmskp2kpxguj');
+define('MRS_DB_USER', 'mhdlmskp2kpxguj');
+define('MRS_DB_PASS', 'BWNrmksqMEqgbX37r3QNDJLGRrUka');
+define('MRS_DB_CHARSET', 'utf8mb4');
 
-// [FIX] 支持环境变量，优先使用环境变量，否则使用默认配置
-// 本地开发环境可以使用 localhost，生产环境使用实际主机名
-define('DB_HOST', getenv('MRS_DB_HOST') ?: 'mhdlmskp2kpxguj.mysql.db');
-define('DB_NAME', getenv('MRS_DB_NAME') ?: 'mhdlmskp2kpxguj');
-define('DB_USER', getenv('MRS_DB_USER') ?: 'mhdlmskp2kpxguj');
-define('DB_PASS', getenv('MRS_DB_PASS') ?: 'BWNrmksqMEqgbX37r3QNDJLGRrUka');
-define('DB_CHARSET', getenv('MRS_DB_CHARSET') ?: 'utf8mb4');
-
-// ============================================
 // 路径常量
-// ============================================
+define('MRS_APP_PATH', PROJECT_ROOT . '/app/mrs');
+define('MRS_CONFIG_PATH', MRS_APP_PATH . '/config_mrs');
+define('MRS_LIB_PATH', MRS_APP_PATH . '/lib');
+define('MRS_VIEW_PATH', MRS_APP_PATH . '/views');
+define('MRS_API_PATH', MRS_APP_PATH . '/api');
 
-// 应用根目录
-if (!defined('MRS_APP_PATH')) {
-    define('MRS_APP_PATH', dirname(dirname(__FILE__)));
-}
-
-// 配置目录
-if (!defined('MRS_CONFIG_PATH')) {
-    define('MRS_CONFIG_PATH', MRS_APP_PATH . '/config_mrs');
-}
-
-// 业务库目录
-if (!defined('MRS_LIB_PATH')) {
-    define('MRS_LIB_PATH', MRS_APP_PATH . '/lib');
-}
-
-// 控制器目录
-if (!defined('MRS_ACTION_PATH')) {
-    define('MRS_ACTION_PATH', MRS_APP_PATH . '/actions');
-}
-
-// API目录
-if (!defined('MRS_API_PATH')) {
-    define('MRS_API_PATH', MRS_APP_PATH . '/api');
-}
-
-// 日志目录
-if (!defined('MRS_LOG_PATH')) {
-    define('MRS_LOG_PATH', dirname(dirname(MRS_APP_PATH)) . '/logs/mrs');
-}
-
-// Web根目录 (dc_html/mrs)
-if (!defined('MRS_WEB_ROOT')) {
-    define('MRS_WEB_ROOT', dirname(dirname(dirname(MRS_APP_PATH))) . '/dc_html/mrs');
-}
-
-// ============================================
-// 系统配置
-// ============================================
-
-// 时区设置
-date_default_timezone_set('UTC');
-
-// 错误报告级别
-error_reporting(E_ALL);
-ini_set('display_errors', '0'); // 生产环境设为0
-ini_set('log_errors', '1');
-ini_set('error_log', MRS_LOG_PATH . '/error.log');
-
-// 数据库连接配置
-$db_config = [
-    'host' => DB_HOST,
-    'dbname' => DB_NAME,
-    'user' => DB_USER,
-    'pass' => DB_PASS,
-    'charset' => DB_CHARSET,
-    'options' => [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-        PDO::ATTR_EMULATE_PREPARES => false,
-    ]
-];
-
-// ============================================
-// 数据库连接函数
-// ============================================
+// 会话配置（与 Express 保持一致）
+// Express 默认使用 PHP 的默认会话名，直接复用即可
+define('MRS_SESSION_NAME', ini_get('session.name') ?: 'PHPSESSID');
+define('MRS_SESSION_TIMEOUT', 1800); // 30分钟
+define('MRS_SESSION_SAMESITE', 'Strict');
 
 /**
- * 获取数据库PDO连接
+ * 获取数据库连接
  * @return PDO
  * @throws PDOException
  */
-function get_db_connection() {
-    global $db_config;
-
+function get_mrs_db_connection() {
     static $pdo = null;
 
-    if ($pdo === null) {
-        try {
-            $dsn = sprintf(
-                'mysql:host=%s;dbname=%s;charset=%s',
-                $db_config['host'],
-                $db_config['dbname'],
-                $db_config['charset']
-            );
+    if ($pdo !== null) {
+        return $pdo;
+    }
 
-            $pdo = new PDO(
-                $dsn,
-                $db_config['user'],
-                $db_config['pass'],
-                $db_config['options']
-            );
-        } catch (PDOException $e) {
-            // 记录错误日志
-            error_log('Database connection failed: ' . $e->getMessage());
-            throw $e;
+    try {
+        $dsn = sprintf(
+            'mysql:host=%s;port=%s;dbname=%s;charset=%s',
+            MRS_DB_HOST,
+            MRS_DB_PORT,
+            MRS_DB_NAME,
+            MRS_DB_CHARSET
+        );
+
+        $options = [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_EMULATE_PREPARES => false,
+        ];
+
+        $pdo = new PDO($dsn, MRS_DB_USER, MRS_DB_PASS, $options);
+
+        return $pdo;
+    } catch (PDOException $e) {
+        error_log('MRS Database connection error: ' . $e->getMessage());
+        throw $e;
+    }
+}
+
+/**
+ * 启动安全会话
+ */
+function mrs_start_secure_session() {
+    if (session_status() === PHP_SESSION_NONE) {
+        // 参考 Express 的默认设置，仅调整必要参数
+        $is_https = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on';
+
+        ini_set('session.cookie_httponly', 1);
+        ini_set('session.cookie_secure', $is_https ? 1 : 0);
+        ini_set('session.use_strict_mode', 1);
+        ini_set('session.cookie_samesite', MRS_SESSION_SAMESITE);
+
+        $params = session_get_cookie_params();
+        session_name(MRS_SESSION_NAME);
+        session_set_cookie_params([
+            'lifetime' => $params['lifetime'],
+            'path' => $params['path'],
+            'domain' => $params['domain'],
+            'secure' => $is_https,
+            'httponly' => true,
+            'samesite' => MRS_SESSION_SAMESITE,
+        ]);
+
+        session_start();
+
+        if (!isset($_SESSION['initiated'])) {
+            session_regenerate_id(true);
+            $_SESSION['initiated'] = true;
         }
     }
-
-    return $pdo;
 }
 
-// ============================================
-// 日志函数
-// ============================================
-
 /**
- * 写入日志
- * @param string $message 日志消息
- * @param string $level 日志级别 (INFO, WARNING, ERROR)
- * @param array $context 上下文数据
+ * 日志记录函数
+ * @param string $message
+ * @param string $level
+ * @param array $context
  */
 function mrs_log($message, $level = 'INFO', $context = []) {
-    $log_file = MRS_LOG_PATH . '/debug.log';
-
-    // 确保日志目录存在
-    if (!is_dir(MRS_LOG_PATH)) {
-        mkdir(MRS_LOG_PATH, 0755, true);
-    }
-
     $timestamp = date('Y-m-d H:i:s');
-    $context_str = !empty($context) ? ' | Context: ' . json_encode($context, JSON_UNESCAPED_UNICODE) : '';
-    $log_line = sprintf("[%s] [%s] %s%s\n", $timestamp, $level, $message, $context_str);
-
-    file_put_contents($log_file, $log_line, FILE_APPEND);
+    $context_str = !empty($context) ? json_encode($context) : '';
+    $log_message = sprintf("[%s] [%s] %s %s\n", $timestamp, $level, $message, $context_str);
+    error_log($log_message);
 }
 
-// ============================================
-// 辅助函数
-// ============================================
-
 /**
- * 输出JSON响应
- * @param bool $success 成功标志
- * @param mixed $data 响应数据
- * @param string $message 消息
+ * JSON响应输出
+ * @param bool $success
+ * @param mixed $data
+ * @param string $message
  */
-function json_response($success, $data = null, $message = '') {
+function mrs_json_response($success, $data = null, $message = '') {
     header('Content-Type: application/json; charset=utf-8');
     echo json_encode([
         'success' => $success,
@@ -173,10 +130,13 @@ function json_response($success, $data = null, $message = '') {
 }
 
 /**
- * 获取POST JSON数据
+ * 获取JSON输入
  * @return array|null
  */
-function get_json_input() {
+function mrs_get_json_input() {
     $input = file_get_contents('php://input');
+    if (empty($input)) {
+        return null;
+    }
     return json_decode($input, true);
 }

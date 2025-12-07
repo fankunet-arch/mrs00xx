@@ -1,5 +1,13 @@
 <?php
-// MRS Backend Login Page (Express-style)
+/**
+ * Backend Login Page (SaaS style)
+ * 文件路径: app/mrs/views/login.php
+ */
+
+if (!defined('MRS_ENTRY')) {
+    die('Access denied');
+}
+
 $message = '';
 if (isset($_GET['error'])) {
     switch ($_GET['error']) {
@@ -7,13 +15,16 @@ if (isset($_GET['error'])) {
             $message = '用户名或密码错误';
             break;
         case 'too_many_attempts':
-            $message = '尝试次数过多，请稍后再试';
+            $message = '尝试次数过多,请稍后再试';
             break;
         case 'system':
-            $message = '系统错误，请稍后再试';
+            $message = '系统错误,请稍后再试';
+            break;
+        case 'logout':
+            $message = '已安全注销';
             break;
         default:
-            $message = '登录失败，请重试';
+            $message = '登录失败,请重试';
     }
 }
 ?>
@@ -23,19 +34,19 @@ if (isset($_GET['error'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SaaS 登录 - MRS 系统</title>
-    <link rel="stylesheet" href="/mrs/css/login-v2.css">
+    <link rel="stylesheet" href="/mrs/ap/css/login.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body>
     <div class="split-container">
         <div class="marketing-panel">
             <div class="marketing-content">
-                <h1>提升您的工作效率</h1>
-                <p>一个平台，管理您的所有数据和协作流程。安全、快速、可靠。</p>
+                <h1>物料收发管理系统</h1>
+                <p>精准的库存台账管理,让您的仓储数据清晰可见。安全、快速、可靠。</p>
                 <div class="feature-list">
-                    <div><i class="fas fa-chart-line"></i> 实时数据分析</div>
-                    <div><i class="fas fa-users"></i> 无缝团队协作</div>
-                    <div><i class="fas fa-lock"></i> 顶级安全保障</div>
+                    <div><i class="fas fa-inbox"></i> 入库登记</div>
+                    <div><i class="fas fa-box-open"></i> 出库核销</div>
+                    <div><i class="fas fa-chart-bar"></i> 统计报表</div>
                 </div>
             </div>
         </div>
@@ -50,7 +61,7 @@ if (isset($_GET['error'])) {
                     <div class="alert"><?= htmlspecialchars($message) ?></div>
                 <?php endif; ?>
 
-                <form action="/mrs/be/index.php?action=process_login" method="post">
+                <form action="/mrs/ap/index.php?action=do_login" method="post">
                     <div class="input-group">
                         <input type="text" id="username" name="username" placeholder=" " required autofocus>
                         <label for="username">登录账号</label>
@@ -62,7 +73,7 @@ if (isset($_GET['error'])) {
                     </div>
 
                     <div class="options">
-                        <!-- 预留“忘记密码”或其他链接的位置 -->
+                        <!-- 保留布局,未来可接入"忘记密码"链接 -->
                     </div>
 
                     <button type="submit" class="login-button">
@@ -70,12 +81,12 @@ if (isset($_GET['error'])) {
                     </button>
 
                     <div class="divider">
-                        <span>或使用</span>
+                        <span>MRS 物料收发管理系统</span>
                     </div>
 
-                    <button type="button" class="social-button google-btn" disabled>
-                        <i class="fa-solid fa-circle-info"></i> 没其他办法了
-                    </button>
+                    <div class="system-info">
+                        
+                    </div>
                 </form>
 
                 <div class="register-link"></div>
