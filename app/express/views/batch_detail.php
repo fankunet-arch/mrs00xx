@@ -20,6 +20,42 @@ if (!$batch) {
     die('批次不存在');
 }
 
+$render_batch_status = function (array $batch): array {
+    $status = $batch['status'] ?? 'inactive';
+
+    if ($status !== 'active') {
+        return ['label' => '已关闭', 'class' => 'secondary'];
+    }
+
+    $total_count = (int) ($batch['total_count'] ?? 0);
+    $verified_count = (int) ($batch['verified_count'] ?? 0);
+    $counted_count = (int) ($batch['counted_count'] ?? 0);
+    $adjusted_count = (int) ($batch['adjusted_count'] ?? 0);
+
+    if ($total_count === 0) {
+        return ['label' => '等待录入', 'class' => 'secondary'];
+    }
+
+    if ($verified_count === 0 && $counted_count === 0 && $adjusted_count === 0) {
+        return ['label' => '等待中', 'class' => 'waiting'];
+    }
+
+    if ($total_count === $counted_count) {
+        return ['label' => '清点完成', 'class' => 'info'];
+    }
+
+    if ($total_count === $verified_count && $verified_count !== $counted_count) {
+        return ['label' => '待清点', 'class' => 'info'];
+    }
+
+    if ($total_count > 0 && $total_count > $verified_count) {
+        return ['label' => '进行中', 'class' => 'success'];
+    }
+
+    return ['label' => '进行中', 'class' => 'success'];
+};
+
+$status_info = $render_batch_status($batch);
 $packages = express_get_packages_by_batch($pdo, $batch_id, 'all');
 $content_summary = express_get_content_summary($pdo, $batch_id);
 ?>
@@ -30,11 +66,13 @@ $content_summary = express_get_content_summary($pdo, $batch_id);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>批次详情 - <?= htmlspecialchars($batch['batch_name']) ?></title>
     <link rel="stylesheet" href="../css/backend.css">
+    <link rel="stylesheet" href="../css/modal.css">
 </head>
 <body>
     <?php include EXPRESS_VIEW_PATH . '/shared/sidebar.php'; ?>
 
     <div class="main-content">
+        <!-- 版本标记: 2024-12-02 自定义包裹功能已添加 -->
         <header class="page-header">
             <h1>批次详情: <?= htmlspecialchars($batch['batch_name']) ?></h1>
             <div class="header-actions">
@@ -55,8 +93,8 @@ $content_summary = express_get_content_summary($pdo, $batch_id);
                     <div class="info-item">
                         <span class="info-label">状态:</span>
                         <span class="info-value">
-                            <span class="badge badge-<?= $batch['status'] === 'active' ? 'success' : 'secondary' ?>">
-                                <?= $batch['status'] === 'active' ? '进行中' : '已关闭' ?>
+                            <span class="badge badge-<?= htmlspecialchars($status_info['class']) ?>">
+                                <?= htmlspecialchars($status_info['label']) ?>
                             </span>
                         </span>
                     </div>
@@ -113,6 +151,26 @@ $content_summary = express_get_content_summary($pdo, $batch_id);
                     <button type="submit" class="btn btn-primary">批量导入</button>
                 </form>
                 <div id="import-message" class="message" style="display: none; margin-top: 15px;"></div>
+            </div>
+
+            <!-- 添加自定义包裹区域 -->
+            <div class="bulk-import-section" style="margin-top: 30px; background-color: #f8f9fa; padding: 20px; border-radius: 5px; border: 2px dashed #28a745;">
+                <h2 style="color: #28a745;">📦 添加自定义包裹（拆分箱子功能）</h2>
+                <p class="form-text" style="margin-bottom: 15px; color: #666;">
+                    用于添加拆分后的箱子。系统会自动生成虚拟快递单号（格式：CUSTOM-批次ID-序号），您可以打印标签并贴在箱子上。
+                </p>
+                <form id="custom-package-form">
+                    <div class="form-group">
+                        <label for="custom_count">要添加的箱子数量:</label>
+                        <input type="number" id="custom_count" class="form-control"
+                               min="1" max="100" value="1" style="width: 200px;">
+                        <small class="form-text">
+                            一次最多添加100个自定义包裹
+                        </small>
+                    </div>
+                    <button type="submit" class="btn btn-success">添加自定义包裹</button>
+                </form>
+                <div id="custom-message" class="message" style="display: none; margin-top: 15px;"></div>
             </div>
 
             <!-- 包裹列表 -->
@@ -210,6 +268,7 @@ $content_summary = express_get_content_summary($pdo, $batch_id);
     </div>
 
     <script>
+        // 批量导入快递单号
         document.getElementById('bulk-import-form').addEventListener('submit', async function(e) {
             e.preventDefault();
 
@@ -264,68 +323,150 @@ $content_summary = express_get_content_summary($pdo, $batch_id);
             }
         });
 
+        // 添加自定义包裹
+        document.getElementById('custom-package-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const count = parseInt(document.getElementById('custom_count').value);
+            const messageDiv = document.getElementById('custom-message');
+
+            if (!count || count < 1 || count > 100) {
+                messageDiv.className = 'message error';
+                messageDiv.textContent = '数量必须在1-100之间';
+                messageDiv.style.display = 'block';
+                return;
+            }
+
+            // 确认操作
+            const confirmed = await showConfirm(
+                `确定要添加 ${count} 个自定义包裹吗？\n系统将自动生成虚拟快递单号。`,
+                '确认添加',
+                {
+                    confirmText: '确认',
+                    cancelText: '取消'
+                }
+            );
+            if (!confirmed) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/express/exp/index.php?action=create_custom_packages', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        batch_id: <?= $batch_id ?>,
+                        count: count
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    let msg = `成功添加 ${data.data.created.length} 个自定义包裹！`;
+                    if (data.data.errors.length > 0) {
+                        msg += ` 失败: ${data.data.errors.length} 个`;
+                    }
+
+                    messageDiv.className = 'message success';
+                    messageDiv.textContent = msg;
+                    messageDiv.style.display = 'block';
+
+                    // 显示生成的编号
+                    if (data.data.created.length > 0) {
+                        const numbers = data.data.created.map(p => p.tracking_number).join(', ');
+                        const detailDiv = document.createElement('div');
+                        detailDiv.style.marginTop = '10px';
+                        detailDiv.innerHTML = `<strong>生成的编号:</strong><br>${numbers}`;
+                        messageDiv.appendChild(detailDiv);
+                    }
+
+                    setTimeout(() => {
+                        location.reload();
+                    }, 3000);
+                } else {
+                    messageDiv.className = 'message error';
+                    messageDiv.textContent = data.message || '添加失败';
+                    messageDiv.style.display = 'block';
+                }
+            } catch (error) {
+                messageDiv.className = 'message error';
+                messageDiv.textContent = '网络错误：' + error.message;
+                messageDiv.style.display = 'block';
+            }
+        });
+
         // 修改内容备注
         document.querySelectorAll('.btn-edit-content').forEach(button => {
             button.addEventListener('click', async () => {
                 const packageId = button.getAttribute('data-package-id');
                 const currentNote = button.getAttribute('data-current-note') || '';
-                const newNote = prompt('请输入新的内容备注', currentNote);
 
-                const messageDiv = document.getElementById('update-message');
-                messageDiv.style.display = 'none';
+                // 使用模态框输入
+                const formHtml = `
+                    <form id="contentNoteForm" style="padding: 20px;">
+                        <div class="modal-form-group">
+                            <label class="modal-form-label">内容备注 *</label>
+                            <input type="text" name="content_note" class="modal-form-control"
+                                   value="${currentNote}" placeholder="如：香蕉、苹果等" required>
+                        </div>
+                    </form>
+                `;
 
-                if (newNote === null) {
-                    return;
-                }
-
-                if (newNote.trim() === '') {
-                    messageDiv.className = 'message error';
-                    messageDiv.textContent = '内容备注不能为空';
-                    messageDiv.style.display = 'block';
-                    return;
-                }
-
-                try {
-                    const resp = await fetch('/express/exp/index.php?action=update_content_note', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            package_id: packageId,
-                            content_note: newNote.trim()
-                        })
-                    });
-
-                    const data = await resp.json();
-
-                    if (!data.success) {
-                        messageDiv.className = 'message error';
-                        messageDiv.textContent = data.message || '更新失败';
-                        messageDiv.style.display = 'block';
-                        return;
-                    }
-
-                    // 更新行内容
-                    const row = button.closest('tr');
-                    if (row) {
-                        row.querySelectorAll('td')[3].textContent = newNote.trim();
-                        button.setAttribute('data-current-note', newNote.trim());
-                    }
-
-                    messageDiv.className = 'message success';
-                    messageDiv.textContent = data.message;
-                    messageDiv.style.display = 'block';
-
-                    // 刷新统计信息
-                    setTimeout(() => window.location.reload(), 800);
-                } catch (error) {
-                    messageDiv.className = 'message error';
-                    messageDiv.textContent = '网络错误：' + error.message;
-                    messageDiv.style.display = 'block';
-                }
+                await showModal({
+                    title: '修改内容备注',
+                    content: formHtml,
+                    footer: `
+                        <div class="modal-footer">
+                            <button class="modal-btn modal-btn-secondary" data-action="cancel">取消</button>
+                            <button class="modal-btn modal-btn-primary" onclick="submitContentNote(${packageId})">保存</button>
+                        </div>
+                    `
+                });
             });
         });
+    </script>
+
+    <script src="../js/modal.js"></script>
+    <script>
+    async function submitContentNote(packageId) {
+        const form = document.getElementById('contentNoteForm');
+        const newNote = form.querySelector('[name="content_note"]').value.trim();
+        const messageDiv = document.getElementById('update-message');
+
+        if (!newNote) {
+            await showAlert('内容备注不能为空', '提示', 'warning');
+            return;
+        }
+
+        try {
+            const resp = await fetch('/express/exp/index.php?action=update_content_note', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    package_id: packageId,
+                    content_note: newNote
+                })
+            });
+
+            const data = await resp.json();
+
+            if (!data.success) {
+                await showAlert(data.message || '更新失败', '错误', 'error');
+                return;
+            }
+
+            await showAlert(data.message, '成功', 'success');
+            window.modal.close(true);
+            setTimeout(() => window.location.reload(), 800);
+        } catch (error) {
+            await showAlert('网络错误：' + error.message, '错误', 'error');
+        }
+    }
     </script>
 </body>
 </html>

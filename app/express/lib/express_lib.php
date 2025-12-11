@@ -562,6 +562,123 @@ function express_create_package($pdo, $batch_id, $tracking_number) {
     }
 }
 
+/**
+ * 获取批次的下一个自定义包裹编号
+ * @param PDO $pdo
+ * @param int $batch_id
+ * @return string 格式: CUSTOM-{batch_id}-{序号}
+ */
+function express_get_next_custom_tracking_number($pdo, $batch_id) {
+    try {
+        // 查找该批次中最后一个自定义包裹编号
+        $stmt = $pdo->prepare("
+            SELECT tracking_number
+            FROM express_package
+            WHERE batch_id = :batch_id
+              AND tracking_number LIKE :pattern
+            ORDER BY tracking_number DESC
+            LIMIT 1
+        ");
+
+        $pattern = "CUSTOM-{$batch_id}-%";
+        $stmt->execute([
+            'batch_id' => $batch_id,
+            'pattern' => $pattern
+        ]);
+
+        $last = $stmt->fetch();
+
+        if (!$last) {
+            // 没有自定义包裹，从0001开始
+            return "CUSTOM-{$batch_id}-0001";
+        }
+
+        // 解析最后一个编号，递增
+        // 格式: CUSTOM-{batch_id}-{序号}
+        $parts = explode('-', $last['tracking_number']);
+        if (count($parts) >= 3) {
+            $last_num = intval(end($parts));
+            $next_num = $last_num + 1;
+            return "CUSTOM-{$batch_id}-" . str_pad($next_num, 4, '0', STR_PAD_LEFT);
+        }
+
+        // 如果解析失败，默认返回0001
+        return "CUSTOM-{$batch_id}-0001";
+
+    } catch (PDOException $e) {
+        express_log('Failed to get next custom tracking number: ' . $e->getMessage(), 'ERROR');
+        return "CUSTOM-{$batch_id}-0001";
+    }
+}
+
+/**
+ * 批量创建自定义包裹
+ * @param PDO $pdo
+ * @param int $batch_id
+ * @param int $count 要创建的数量
+ * @param string $operator 操作人
+ * @return array ['success' => bool, 'message' => string, 'data' => array]
+ */
+function express_create_custom_packages($pdo, $batch_id, $count, $operator = '') {
+    try {
+        $pdo->beginTransaction();
+
+        $created = [];
+        $errors = [];
+
+        for ($i = 0; $i < $count; $i++) {
+            // 获取下一个自定义编号
+            $tracking_number = express_get_next_custom_tracking_number($pdo, $batch_id);
+
+            // 创建包裹记录
+            $package_id = express_create_package($pdo, $batch_id, $tracking_number);
+
+            if ($package_id) {
+                $created[] = [
+                    'package_id' => $package_id,
+                    'tracking_number' => $tracking_number
+                ];
+
+                // 记录操作日志
+                $log_stmt = $pdo->prepare("
+                    INSERT INTO express_operation_log
+                    (package_id, operation_type, operation_time, operator, old_status, new_status, notes)
+                    VALUES (:package_id, 'create_custom', NOW(), :operator, NULL, 'pending', :notes)
+                ");
+                $log_stmt->execute([
+                    'package_id' => $package_id,
+                    'operator' => $operator,
+                    'notes' => "创建自定义包裹: {$tracking_number}"
+                ]);
+            } else {
+                $errors[] = "创建包裹失败: {$tracking_number}";
+            }
+        }
+
+        // 更新批次统计
+        express_update_batch_statistics($pdo, $batch_id);
+
+        $pdo->commit();
+
+        return [
+            'success' => true,
+            'message' => "成功创建 " . count($created) . " 个自定义包裹",
+            'data' => [
+                'created' => $created,
+                'errors' => $errors
+            ]
+        ];
+
+    } catch (PDOException $e) {
+        $pdo->rollBack();
+        express_log('Failed to create custom packages: ' . $e->getMessage(), 'ERROR');
+        return [
+            'success' => false,
+            'message' => '创建自定义包裹失败: ' . $e->getMessage()
+        ];
+    }
+}
+
 // ============================================
 // 业务操作函数
 // ============================================
@@ -674,7 +791,7 @@ function express_update_content_note($pdo, $package_id, $operator, $content_note
     try {
         $pdo->beginTransaction();
 
-        $stmt = $pdo->prepare("SELECT package_id, package_status FROM express_package WHERE package_id = :package_id");
+        $stmt = $pdo->prepare("SELECT package_id, package_status, batch_id FROM express_package WHERE package_id = :package_id");
         $stmt->execute(['package_id' => $package_id]);
         $package = $stmt->fetch();
 
@@ -683,16 +800,44 @@ function express_update_content_note($pdo, $package_id, $operator, $content_note
             return ['success' => false, 'message' => '包裹不存在'];
         }
 
-        $update = $pdo->prepare("
-            UPDATE express_package
-            SET content_note = :content_note
-            WHERE package_id = :package_id
-        ");
+        $old_status = $package['package_status'];
+        $new_status = $old_status;
 
-        $update->execute([
-            'package_id' => $package_id,
-            'content_note' => $content_note
-        ]);
+        // 如果包裹状态是pending或verified，并且填写了内容备注，则自动变为counted（已清点）
+        if (in_array($old_status, ['pending', 'verified']) && !empty($content_note)) {
+            $new_status = 'counted';
+
+            $update = $pdo->prepare("
+                UPDATE express_package
+                SET content_note = :content_note,
+                    package_status = :new_status,
+                    counted_at = NOW(),
+                    counted_by = :counted_by,
+                    verified_at = COALESCE(verified_at, NOW()),
+                    verified_by = COALESCE(verified_by, :verified_by)
+                WHERE package_id = :package_id
+            ");
+
+            $update->execute([
+                'package_id' => $package_id,
+                'content_note' => $content_note,
+                'new_status' => $new_status,
+                'counted_by' => $operator,
+                'verified_by' => $operator
+            ]);
+        } else {
+            // 已经是counted或adjusted状态，只更新内容备注
+            $update = $pdo->prepare("
+                UPDATE express_package
+                SET content_note = :content_note
+                WHERE package_id = :package_id
+            ");
+
+            $update->execute([
+                'package_id' => $package_id,
+                'content_note' => $content_note
+            ]);
+        }
 
         $log = $pdo->prepare("
             INSERT INTO express_operation_log (package_id, operation_type, operator, old_status, new_status, notes)
@@ -702,16 +847,21 @@ function express_update_content_note($pdo, $package_id, $operator, $content_note
         $log->execute([
             'package_id' => $package_id,
             'operator' => $operator,
-            'old_status' => $package['package_status'],
-            'new_status' => $package['package_status'],
+            'old_status' => $old_status,
+            'new_status' => $new_status,
             'notes' => $content_note
         ]);
+
+        // 如果状态发生了变化，需要更新批次统计
+        if ($old_status !== $new_status) {
+            express_update_batch_statistics($pdo, $package['batch_id']);
+        }
 
         $pdo->commit();
 
         return [
             'success' => true,
-            'message' => '内容备注已更新',
+            'message' => ($old_status !== $new_status) ? '内容备注已更新，状态已变为已清点' : '内容备注已更新',
             'package' => express_get_package_by_id($pdo, $package_id)
         ];
     } catch (PDOException $e) {
