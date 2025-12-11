@@ -136,13 +136,28 @@ function express_require_login() {
  */
 function express_get_batches($pdo, $status = 'all', $limit = 100) {
     try {
-        $sql = "SELECT * FROM express_batch";
+        // 添加清点状态判断字段
+        $sql = "SELECT *,
+                CASE
+                    WHEN counted_count > 0 AND counted_count < total_count THEN 'counting'
+                    WHEN counted_count = total_count AND total_count > 0 THEN 'completed'
+                    ELSE 'pending'
+                END AS count_status
+                FROM express_batch";
 
         if ($status !== 'all') {
             $sql .= " WHERE status = :status";
         }
 
-        $sql .= " ORDER BY created_at DESC LIMIT :limit";
+        // 优化排序：正在清点的靠前，已完成的靠后，其他按创建时间倒序
+        $sql .= " ORDER BY
+                  CASE
+                      WHEN counted_count > 0 AND counted_count < total_count THEN 1
+                      WHEN counted_count = 0 OR total_count = 0 THEN 2
+                      WHEN counted_count = total_count AND total_count > 0 THEN 3
+                  END,
+                  created_at DESC
+                  LIMIT :limit";
 
         $stmt = $pdo->prepare($sql);
 
@@ -692,9 +707,10 @@ function express_create_custom_packages($pdo, $batch_id, $count, $operator = '')
  * @param string $operator
  * @param string $content_note 内容备注（清点时使用）
  * @param string $adjustment_note 调整备注（调整时使用）
+ * @param string $expiry_date 保质期（清点时使用）
  * @return array ['success' => bool, 'message' => string, 'package' => array]
  */
-function express_process_package($pdo, $batch_id, $tracking_number, $operation_type, $operator, $content_note = null, $adjustment_note = null) {
+function express_process_package($pdo, $batch_id, $tracking_number, $operation_type, $operator, $content_note = null, $adjustment_note = null, $expiry_date = null) {
     try {
         $pdo->beginTransaction();
 
@@ -729,7 +745,7 @@ function express_process_package($pdo, $batch_id, $tracking_number, $operation_t
                 $result = express_process_verify($pdo, $package_id, $old_status, $operator);
                 break;
             case 'count':
-                $result = express_process_count($pdo, $package_id, $old_status, $operator, $content_note);
+                $result = express_process_count($pdo, $package_id, $old_status, $operator, $content_note, $expiry_date);
                 break;
             case 'adjust':
                 $result = express_process_adjust($pdo, $package_id, $old_status, $operator, $adjustment_note);
@@ -910,9 +926,10 @@ function express_process_verify($pdo, $package_id, $old_status, $operator) {
  * @param string $old_status
  * @param string $operator
  * @param string $content_note
+ * @param string $expiry_date 保质期
  * @return array
  */
-function express_process_count($pdo, $package_id, $old_status, $operator, $content_note) {
+function express_process_count($pdo, $package_id, $old_status, $operator, $content_note, $expiry_date = null) {
     // 清点操作自动包含核实，同时更新两个时间戳
     $stmt = $pdo->prepare("
         UPDATE express_package SET
@@ -921,7 +938,8 @@ function express_process_count($pdo, $package_id, $old_status, $operator, $conte
             verified_by = COALESCE(verified_by, :verified_by),
             counted_at = NOW(),
             counted_by = :counted_by,
-            content_note = :content_note
+            content_note = :content_note,
+            expiry_date = :expiry_date
         WHERE package_id = :package_id
     ");
 
@@ -929,7 +947,8 @@ function express_process_count($pdo, $package_id, $old_status, $operator, $conte
         'package_id' => $package_id,
         'verified_by' => $operator,
         'counted_by' => $operator,
-        'content_note' => $content_note
+        'content_note' => $content_note,
+        'expiry_date' => $expiry_date
     ]);
 
     return [

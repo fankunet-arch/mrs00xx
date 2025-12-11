@@ -95,6 +95,17 @@ function bindEvents() {
             }
         });
     }
+
+    // 清空保质期按钮
+    const btnClearExpiry = document.getElementById('btn-clear-expiry');
+    if (btnClearExpiry) {
+        btnClearExpiry.addEventListener('click', function() {
+            const expiryField = document.getElementById('expiry-date');
+            if (expiryField) {
+                expiryField.value = '';
+            }
+        });
+    }
 }
 
 // 时间更新
@@ -213,6 +224,8 @@ function selectOperation(operation) {
 
     // 显示/隐藏相应的备注输入框
     document.getElementById('content-note-group').style.display =
+        operation === 'count' ? 'block' : 'none';
+    document.getElementById('expiry-date-group').style.display =
         operation === 'count' ? 'block' : 'none';
     document.getElementById('adjustment-note-group').style.display =
         operation === 'adjust' ? 'block' : 'none';
@@ -348,6 +361,10 @@ function clearInput() {
     document.getElementById('tracking-input').value = '';
     document.getElementById('content-note').value = '';
     document.getElementById('adjustment-note').value = '';
+    const expiryField = document.getElementById('expiry-date');
+    if (expiryField) {
+        expiryField.value = '';
+    }
     hideSearchResults();
     hideLastCountSuggestion();
     document.getElementById('tracking-input').focus();
@@ -376,6 +393,10 @@ async function submitOperation() {
 
     if (state.currentOperation === 'count') {
         payload.content_note = document.getElementById('content-note').value.trim();
+        const expiryField = document.getElementById('expiry-date');
+        if (expiryField && expiryField.value) {
+            payload.expiry_date = expiryField.value;
+        }
     }
 
     if (state.currentOperation === 'adjust') {
@@ -538,18 +559,26 @@ function updateNotesPrefill(trackingNumber) {
     const pkg = state.searchResults.get(trackingNumber);
     if (state.currentOperation === 'count') {
         const noteField = document.getElementById('content-note');
+        const expiryField = document.getElementById('expiry-date');
         const savedContent = pkg && pkg.content_note ? pkg.content_note : '';
+        const savedExpiry = pkg && pkg.expiry_date ? pkg.expiry_date : '';
 
         if (pkg && savedContent) {
             hideLastCountSuggestion();
             if (noteField) {
                 noteField.value = savedContent;
             }
+            if (expiryField && savedExpiry) {
+                expiryField.value = savedExpiry;
+            }
             return;
         }
 
         if (noteField) {
             noteField.value = '';
+        }
+        if (expiryField) {
+            expiryField.value = savedExpiry || '';
         }
 
         showLastCountSuggestion(state.lastCountNote);
