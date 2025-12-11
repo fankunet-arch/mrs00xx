@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- 主机： mhdlmskp2kpxguj.mysql.db
--- 生成日期： 2025-12-11 21:55:03
+-- 生成日期： 2025-12-11 22:21:38
 -- 服务器版本： 8.4.6-6
 -- PHP 版本： 8.1.33
 
@@ -74,6 +74,7 @@ CREATE TABLE `express_package` (
   `tracking_number` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '快递单号',
   `package_status` enum('pending','verified','counted','adjusted') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'pending' COMMENT '包裹状态',
   `content_note` text COLLATE utf8mb4_unicode_ci COMMENT '内容备注（清点时填写）',
+  `expiry_date` date DEFAULT NULL COMMENT '保质期（非生产日期，选填）',
   `adjustment_note` text COLLATE utf8mb4_unicode_ci COMMENT '调整备注',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `verified_at` datetime DEFAULT NULL COMMENT '核实时间',
@@ -216,7 +217,8 @@ ALTER TABLE `express_package`
   ADD KEY `idx_batch_id` (`batch_id`),
   ADD KEY `idx_tracking_number` (`tracking_number`),
   ADD KEY `idx_package_status` (`package_status`),
-  ADD KEY `idx_created_at` (`created_at`);
+  ADD KEY `idx_created_at` (`created_at`),
+  ADD KEY `idx_expiry_date` (`expiry_date`);
 
 --
 -- 表的索引 `mrs_destinations`
