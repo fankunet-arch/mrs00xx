@@ -551,18 +551,22 @@ function express_get_recent_operations($pdo, $batch_id, $operation_type = null, 
  * @param PDO $pdo
  * @param int $batch_id
  * @param string $tracking_number
+ * @param string|null $expiry_date 有效期（选填）
+ * @param int|null $quantity 数量（选填，参考用途）
  * @return int|false
  */
-function express_create_package($pdo, $batch_id, $tracking_number) {
+function express_create_package($pdo, $batch_id, $tracking_number, $expiry_date = null, $quantity = null) {
     try {
         $stmt = $pdo->prepare("
-            INSERT INTO express_package (batch_id, tracking_number)
-            VALUES (:batch_id, :tracking_number)
+            INSERT INTO express_package (batch_id, tracking_number, expiry_date, quantity)
+            VALUES (:batch_id, :tracking_number, :expiry_date, :quantity)
         ");
 
         $stmt->execute([
             'batch_id' => $batch_id,
-            'tracking_number' => trim($tracking_number)
+            'tracking_number' => trim($tracking_number),
+            'expiry_date' => $expiry_date,
+            'quantity' => $quantity
         ]);
 
         return $pdo->lastInsertId();
@@ -1017,7 +1021,7 @@ function express_process_adjust($pdo, $package_id, $old_status, $operator, $adju
  * 批量导入快递单号
  * @param PDO $pdo
  * @param int $batch_id
- * @param array $tracking_numbers
+ * @param array $tracking_numbers 支持格式：单号 或 单号|有效期|数量
  * @return array ['success' => bool, 'imported' => int, 'duplicates' => int, 'errors' => array]
  */
 function express_bulk_import($pdo, $batch_id, $tracking_numbers) {
@@ -1028,15 +1032,32 @@ function express_bulk_import($pdo, $batch_id, $tracking_numbers) {
     try {
         $pdo->beginTransaction();
 
-        foreach ($tracking_numbers as $tracking_number) {
-            $tracking_number = trim($tracking_number);
+        foreach ($tracking_numbers as $line) {
+            $line = trim($line);
 
             // 跳过空行
+            if (empty($line)) {
+                continue;
+            }
+
+            // 解析导入格式：单号|有效期|数量（字段可选）
+            $parts = array_map('trim', explode('|', $line));
+            $tracking_number = $parts[0] ?? '';
+            $expiry_date = !empty($parts[1]) ? $parts[1] : null;
+            $quantity = !empty($parts[2]) && is_numeric($parts[2]) ? (int)$parts[2] : null;
+
+            // 跳过无效单号
             if (empty($tracking_number)) {
                 continue;
             }
 
-            $result = express_create_package($pdo, $batch_id, $tracking_number);
+            // 验证有效期格式（如果提供）
+            if ($expiry_date && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $expiry_date)) {
+                $errors[] = $tracking_number . ' (有效期格式错误)';
+                continue;
+            }
+
+            $result = express_create_package($pdo, $batch_id, $tracking_number, $expiry_date, $quantity);
 
             if ($result) {
                 $imported++;

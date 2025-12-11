@@ -143,9 +143,15 @@ $content_summary = express_get_content_summary($pdo, $batch_id);
                     <div class="form-group">
                         <label for="tracking_numbers">快递单号列表（每行一个）:</label>
                         <textarea id="tracking_numbers" class="form-control" rows="10"
-                                  placeholder="111111&#10;222222&#10;333333"></textarea>
-                        <small class="form-text">
-                            请每行输入一个快递单号，系统会自动过滤空行和重复单号
+                                  placeholder="111111&#10;222222|2025-12-31|50&#10;333333||30&#10;444444|2026-01-15"></textarea>
+                        <small class="form-text" style="line-height: 1.6;">
+                            <strong>支持两种导入格式：</strong><br>
+                            1️⃣ <strong>仅单号</strong>：111111<br>
+                            2️⃣ <strong>含附加信息</strong>：单号|有效期|数量（用 | 分隔）<br>
+                            &nbsp;&nbsp;&nbsp;• 完整示例：222222|2025-12-31|50<br>
+                            &nbsp;&nbsp;&nbsp;• 仅有效期：333333|2025-12-31|<br>
+                            &nbsp;&nbsp;&nbsp;• 仅数量：444444||30<br>
+                            📌 <strong>说明</strong>：有效期格式为 YYYY-MM-DD，数量为参考数据（不影响系统计数）
                         </small>
                     </div>
                     <button type="submit" class="btn btn-primary">批量导入</button>
