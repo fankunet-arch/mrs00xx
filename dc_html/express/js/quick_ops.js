@@ -99,11 +99,27 @@ function bindEvents() {
     // 清空保质期按钮
     const btnClearExpiry = document.getElementById('btn-clear-expiry');
     if (btnClearExpiry) {
-        btnClearExpiry.addEventListener('click', function() {
+        btnClearExpiry.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation(); // 防止触发日期选择器
             const expiryField = document.getElementById('expiry-date');
             if (expiryField) {
                 expiryField.value = '';
+                // 给用户反馈
+                const wrapper = expiryField.closest('.expiry-date-wrapper');
+                if (wrapper) {
+                    wrapper.classList.add('cleared');
+                    setTimeout(() => wrapper.classList.remove('cleared'), 300);
+                }
             }
+        });
+    }
+
+    // 保质期输入框 - 确保点击整个区域都能弹出选择器
+    const expiryDateInput = document.getElementById('expiry-date');
+    if (expiryDateInput) {
+        expiryDateInput.addEventListener('click', function() {
+            this.showPicker && this.showPicker();
         });
     }
 }

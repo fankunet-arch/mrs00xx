@@ -114,10 +114,12 @@ $batches = express_get_batches($pdo, 'active', 50);
             </div>
 
             <div id="expiry-date-group" class="input-group" style="display: none;">
-                <label for="expiry-date">保质期:</label>
-                <input type="date" id="expiry-date" class="form-control"
-                       placeholder="选择保质期（选填）">
-                <button id="btn-clear-expiry" class="btn btn-clear" style="margin-left: 10px;">清空</button>
+                <label for="expiry-date">保质期 (选填):</label>
+                <div class="expiry-date-wrapper">
+                    <input type="date" id="expiry-date" class="form-control expiry-date-input">
+                    <button type="button" id="btn-clear-expiry" class="btn-clear-expiry" title="清空保质期">×</button>
+                </div>
+                <div class="expiry-date-hint">点击输入框选择保质期日期</div>
             </div>
 
             <div id="adjustment-note-group" class="input-group" style="display: none;">
