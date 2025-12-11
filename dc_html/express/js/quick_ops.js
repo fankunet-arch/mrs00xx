@@ -95,6 +95,46 @@ function bindEvents() {
             }
         });
     }
+
+    // 清空保质期按钮
+    const btnClearExpiry = document.getElementById('btn-clear-expiry');
+    if (btnClearExpiry) {
+        btnClearExpiry.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation(); // 防止触发日期选择器
+            const expiryField = document.getElementById('expiry-date');
+            if (expiryField) {
+                expiryField.value = '';
+                // 给用户反馈
+                const wrapper = expiryField.closest('.expiry-date-wrapper');
+                if (wrapper) {
+                    wrapper.classList.add('cleared');
+                    setTimeout(() => wrapper.classList.remove('cleared'), 300);
+                }
+            }
+        });
+    }
+
+    // 保质期输入框 - 确保点击整个区域都能弹出选择器
+    const expiryDateInput = document.getElementById('expiry-date');
+    if (expiryDateInput) {
+        expiryDateInput.addEventListener('click', function() {
+            this.showPicker && this.showPicker();
+        });
+    }
+
+    // 清空数量按钮
+    const btnClearQuantity = document.getElementById('btn-clear-quantity');
+    if (btnClearQuantity) {
+        btnClearQuantity.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const quantityField = document.getElementById('quantity');
+            if (quantityField) {
+                quantityField.value = '';
+            }
+        });
+    }
 }
 
 // 时间更新
@@ -213,6 +253,10 @@ function selectOperation(operation) {
 
     // 显示/隐藏相应的备注输入框
     document.getElementById('content-note-group').style.display =
+        operation === 'count' ? 'block' : 'none';
+    document.getElementById('expiry-date-group').style.display =
+        operation === 'count' ? 'block' : 'none';
+    document.getElementById('quantity-group').style.display =
         operation === 'count' ? 'block' : 'none';
     document.getElementById('adjustment-note-group').style.display =
         operation === 'adjust' ? 'block' : 'none';
@@ -348,6 +392,14 @@ function clearInput() {
     document.getElementById('tracking-input').value = '';
     document.getElementById('content-note').value = '';
     document.getElementById('adjustment-note').value = '';
+    const expiryField = document.getElementById('expiry-date');
+    if (expiryField) {
+        expiryField.value = '';
+    }
+    const quantityField = document.getElementById('quantity');
+    if (quantityField) {
+        quantityField.value = '';
+    }
     hideSearchResults();
     hideLastCountSuggestion();
     document.getElementById('tracking-input').focus();
@@ -376,6 +428,14 @@ async function submitOperation() {
 
     if (state.currentOperation === 'count') {
         payload.content_note = document.getElementById('content-note').value.trim();
+        const expiryField = document.getElementById('expiry-date');
+        if (expiryField && expiryField.value) {
+            payload.expiry_date = expiryField.value;
+        }
+        const quantityField = document.getElementById('quantity');
+        if (quantityField && quantityField.value) {
+            payload.quantity = parseInt(quantityField.value);
+        }
     }
 
     if (state.currentOperation === 'adjust') {
@@ -538,18 +598,34 @@ function updateNotesPrefill(trackingNumber) {
     const pkg = state.searchResults.get(trackingNumber);
     if (state.currentOperation === 'count') {
         const noteField = document.getElementById('content-note');
+        const expiryField = document.getElementById('expiry-date');
+        const quantityField = document.getElementById('quantity');
         const savedContent = pkg && pkg.content_note ? pkg.content_note : '';
+        const savedExpiry = pkg && pkg.expiry_date ? pkg.expiry_date : '';
+        const savedQuantity = pkg && pkg.quantity ? pkg.quantity : '';
 
         if (pkg && savedContent) {
             hideLastCountSuggestion();
             if (noteField) {
                 noteField.value = savedContent;
             }
+            if (expiryField && savedExpiry) {
+                expiryField.value = savedExpiry;
+            }
+            if (quantityField && savedQuantity) {
+                quantityField.value = savedQuantity;
+            }
             return;
         }
 
         if (noteField) {
             noteField.value = '';
+        }
+        if (expiryField) {
+            expiryField.value = savedExpiry || '';
+        }
+        if (quantityField) {
+            quantityField.value = savedQuantity || '';
         }
 
         showLastCountSuggestion(state.lastCountNote);
