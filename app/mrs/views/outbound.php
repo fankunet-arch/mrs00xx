@@ -164,6 +164,8 @@ function format_tracking_number($tracking_number) {
                                 <th>箱号</th>
                                 <th>内容备注</th>
                                 <th>规格</th>
+                                <th>有效期</th>
+                                <th>数量</th>
                                 <th>入库时间</th>
                                 <th>库存天数</th>
                             </tr>
@@ -181,6 +183,8 @@ function format_tracking_number($tracking_number) {
                                     <td><?= htmlspecialchars($pkg['box_number']) ?></td>
                                     <td><strong><?= htmlspecialchars($pkg['content_note']) ?></strong></td>
                                     <td><?= htmlspecialchars($pkg['spec_info']) ?></td>
+                                    <td><?= $pkg['expiry_date'] ? htmlspecialchars($pkg['expiry_date']) : '-' ?></td>
+                                    <td><?= $pkg['quantity'] ? htmlspecialchars($pkg['quantity']) : '-' ?></td>
                                     <td><?= date('Y-m-d H:i', strtotime($pkg['inbound_time'])) ?></td>
                                     <td><?= $pkg['days_in_stock'] ?> 天</td>
                                 </tr>

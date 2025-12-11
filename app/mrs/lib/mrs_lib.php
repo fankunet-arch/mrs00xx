@@ -266,7 +266,7 @@ function mrs_get_next_box_number($pdo, $batch_name) {
 /**
  * 创建入库记录（批量，从 Express 包裹）
  * @param PDO $pdo
- * @param array $packages 包裹数组，每个元素包含: batch_name, tracking_number, content_note
+ * @param array $packages 包裹数组，每个元素包含: batch_name, tracking_number, content_note, expiry_date, quantity
  * @param string $spec_info 规格信息（可选）
  * @param string $operator 操作员
  * @return array ['success' => bool, 'created' => int, 'errors' => array]
@@ -287,15 +287,19 @@ function mrs_inbound_packages($pdo, $packages, $spec_info = '', $operator = '') 
                     $content_note = '未填写';
                 }
 
+                // 获取有效期和数量（可选字段）
+                $expiry_date = $pkg['expiry_date'] ?? null;
+                $quantity = $pkg['quantity'] ?? null;
+
                 // 自动生成箱号
                 $box_number = mrs_get_next_box_number($pdo, $batch_name);
 
                 $stmt = $pdo->prepare("
                     INSERT INTO mrs_package_ledger
                     (batch_name, tracking_number, content_note, box_number, spec_info,
-                     status, inbound_time, created_by)
+                     expiry_date, quantity, status, inbound_time, created_by)
                     VALUES (:batch_name, :tracking_number, :content_note, :box_number, :spec_info,
-                            'in_stock', NOW(), :operator)
+                            :expiry_date, :quantity, 'in_stock', NOW(), :operator)
                 ");
 
                 $stmt->execute([
@@ -304,6 +308,8 @@ function mrs_inbound_packages($pdo, $packages, $spec_info = '', $operator = '') 
                     'content_note' => trim($content_note),
                     'box_number' => $box_number,
                     'spec_info' => trim($spec_info),
+                    'expiry_date' => $expiry_date,
+                    'quantity' => $quantity,
                     'operator' => $operator
                 ]);
 
@@ -458,6 +464,8 @@ function mrs_get_inventory_detail($pdo, $content_note, $order_by = 'fifo') {
                 content_note,
                 box_number,
                 spec_info,
+                expiry_date,
+                quantity,
                 warehouse_location,
                 status,
                 inbound_time,
@@ -762,6 +770,8 @@ function mrs_search_instock_packages($pdo, $search_type, $search_value) {
                     content_note,
                     box_number,
                     spec_info,
+                    expiry_date,
+                    quantity,
                     warehouse_location,
                     status,
                     inbound_time,
