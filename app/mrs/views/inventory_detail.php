@@ -9,6 +9,7 @@ if (!defined('MRS_ENTRY')) {
 }
 
 $content_note = $_GET['sku'] ?? '';
+$order_by = $_GET['order_by'] ?? 'fifo';
 
 if (empty($content_note)) {
     header('Location: /mrs/ap/index.php?action=inventory_list');
@@ -16,7 +17,7 @@ if (empty($content_note)) {
 }
 
 // 获取库存明细
-$packages = mrs_get_inventory_detail($pdo, $content_note, 'fifo');
+$packages = mrs_get_inventory_detail($pdo, $content_note, $order_by);
 ?>
 <!DOCTYPE html>
 <html lang="zh">
@@ -39,8 +40,21 @@ $packages = mrs_get_inventory_detail($pdo, $content_note, 'fifo');
         </div>
 
         <div class="content-wrapper">
-            <div class="info-box">
-                <strong>当前在库数量:</strong> <?= count($packages) ?> 箱
+            <div class="info-box" style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <strong>当前在库数量:</strong> <?= count($packages) ?> 箱
+                </div>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <label for="sort-select" style="margin: 0; font-weight: 500;">排序方式:</label>
+                    <select id="sort-select" class="form-control" style="width: auto; min-width: 180px;" onchange="changeSortOrder(this.value)">
+                        <option value="fifo" <?= $order_by === 'fifo' ? 'selected' : '' ?>>入库时间↑ (先进先出)</option>
+                        <option value="inbound_time_desc" <?= $order_by === 'inbound_time_desc' ? 'selected' : '' ?>>入库时间↓ (后进先出)</option>
+                        <option value="expiry_date_asc" <?= $order_by === 'expiry_date_asc' ? 'selected' : '' ?>>有效期↑ (最早到期)</option>
+                        <option value="expiry_date_desc" <?= $order_by === 'expiry_date_desc' ? 'selected' : '' ?>>有效期↓ (最晚到期)</option>
+                        <option value="days_in_stock_asc" <?= $order_by === 'days_in_stock_asc' ? 'selected' : '' ?>>库存天数↑ (库龄最短)</option>
+                        <option value="days_in_stock_desc" <?= $order_by === 'days_in_stock_desc' ? 'selected' : '' ?>>库存天数↓ (库龄最长)</option>
+                    </select>
+                </div>
             </div>
 
             <?php if (empty($packages)): ?>
@@ -90,6 +104,13 @@ $packages = mrs_get_inventory_detail($pdo, $content_note, 'fifo');
 
     <script src="/mrs/ap/js/modal.js"></script>
     <script>
+    // 改变排序方式
+    function changeSortOrder(orderBy) {
+        const urlParams = new URLSearchParams(window.location.search);
+        urlParams.set('order_by', orderBy);
+        window.location.search = urlParams.toString();
+    }
+
     async function markVoid(ledgerId) {
         const confirmed = await showConfirm(
             '确定要将此包裹标记为损耗/作废吗?',
