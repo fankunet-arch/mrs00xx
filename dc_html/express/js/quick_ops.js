@@ -122,6 +122,19 @@ function bindEvents() {
             this.showPicker && this.showPicker();
         });
     }
+
+    // 清空数量按钮
+    const btnClearQuantity = document.getElementById('btn-clear-quantity');
+    if (btnClearQuantity) {
+        btnClearQuantity.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const quantityField = document.getElementById('quantity');
+            if (quantityField) {
+                quantityField.value = '';
+            }
+        });
+    }
 }
 
 // 时间更新
@@ -242,6 +255,8 @@ function selectOperation(operation) {
     document.getElementById('content-note-group').style.display =
         operation === 'count' ? 'block' : 'none';
     document.getElementById('expiry-date-group').style.display =
+        operation === 'count' ? 'block' : 'none';
+    document.getElementById('quantity-group').style.display =
         operation === 'count' ? 'block' : 'none';
     document.getElementById('adjustment-note-group').style.display =
         operation === 'adjust' ? 'block' : 'none';
@@ -381,6 +396,10 @@ function clearInput() {
     if (expiryField) {
         expiryField.value = '';
     }
+    const quantityField = document.getElementById('quantity');
+    if (quantityField) {
+        quantityField.value = '';
+    }
     hideSearchResults();
     hideLastCountSuggestion();
     document.getElementById('tracking-input').focus();
@@ -412,6 +431,10 @@ async function submitOperation() {
         const expiryField = document.getElementById('expiry-date');
         if (expiryField && expiryField.value) {
             payload.expiry_date = expiryField.value;
+        }
+        const quantityField = document.getElementById('quantity');
+        if (quantityField && quantityField.value) {
+            payload.quantity = parseInt(quantityField.value);
         }
     }
 
@@ -576,8 +599,10 @@ function updateNotesPrefill(trackingNumber) {
     if (state.currentOperation === 'count') {
         const noteField = document.getElementById('content-note');
         const expiryField = document.getElementById('expiry-date');
+        const quantityField = document.getElementById('quantity');
         const savedContent = pkg && pkg.content_note ? pkg.content_note : '';
         const savedExpiry = pkg && pkg.expiry_date ? pkg.expiry_date : '';
+        const savedQuantity = pkg && pkg.quantity ? pkg.quantity : '';
 
         if (pkg && savedContent) {
             hideLastCountSuggestion();
@@ -587,6 +612,9 @@ function updateNotesPrefill(trackingNumber) {
             if (expiryField && savedExpiry) {
                 expiryField.value = savedExpiry;
             }
+            if (quantityField && savedQuantity) {
+                quantityField.value = savedQuantity;
+            }
             return;
         }
 
@@ -595,6 +623,9 @@ function updateNotesPrefill(trackingNumber) {
         }
         if (expiryField) {
             expiryField.value = savedExpiry || '';
+        }
+        if (quantityField) {
+            quantityField.value = savedQuantity || '';
         }
 
         showLastCountSuggestion(state.lastCountNote);

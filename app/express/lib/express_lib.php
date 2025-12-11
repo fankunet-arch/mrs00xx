@@ -708,9 +708,10 @@ function express_create_custom_packages($pdo, $batch_id, $count, $operator = '')
  * @param string $content_note 内容备注（清点时使用）
  * @param string $adjustment_note 调整备注（调整时使用）
  * @param string $expiry_date 保质期（清点时使用）
+ * @param int $quantity 数量（清点时使用）
  * @return array ['success' => bool, 'message' => string, 'package' => array]
  */
-function express_process_package($pdo, $batch_id, $tracking_number, $operation_type, $operator, $content_note = null, $adjustment_note = null, $expiry_date = null) {
+function express_process_package($pdo, $batch_id, $tracking_number, $operation_type, $operator, $content_note = null, $adjustment_note = null, $expiry_date = null, $quantity = null) {
     try {
         $pdo->beginTransaction();
 
@@ -745,7 +746,7 @@ function express_process_package($pdo, $batch_id, $tracking_number, $operation_t
                 $result = express_process_verify($pdo, $package_id, $old_status, $operator);
                 break;
             case 'count':
-                $result = express_process_count($pdo, $package_id, $old_status, $operator, $content_note, $expiry_date);
+                $result = express_process_count($pdo, $package_id, $old_status, $operator, $content_note, $expiry_date, $quantity);
                 break;
             case 'adjust':
                 $result = express_process_adjust($pdo, $package_id, $old_status, $operator, $adjustment_note);
@@ -796,14 +797,16 @@ function express_process_package($pdo, $batch_id, $tracking_number, $operation_t
 }
 
 /**
- * 更新包裹的内容备注
+ * 更新包裹的内容备注、保质期和数量
  * @param PDO $pdo
  * @param int $package_id
  * @param string $operator
  * @param string $content_note
+ * @param string $expiry_date
+ * @param int $quantity
  * @return array
  */
-function express_update_content_note($pdo, $package_id, $operator, $content_note) {
+function express_update_content_note($pdo, $package_id, $operator, $content_note, $expiry_date = null, $quantity = null) {
     try {
         $pdo->beginTransaction();
 
@@ -826,6 +829,8 @@ function express_update_content_note($pdo, $package_id, $operator, $content_note
             $update = $pdo->prepare("
                 UPDATE express_package
                 SET content_note = :content_note,
+                    expiry_date = :expiry_date,
+                    quantity = :quantity,
                     package_status = :new_status,
                     counted_at = NOW(),
                     counted_by = :counted_by,
@@ -837,21 +842,27 @@ function express_update_content_note($pdo, $package_id, $operator, $content_note
             $update->execute([
                 'package_id' => $package_id,
                 'content_note' => $content_note,
+                'expiry_date' => $expiry_date,
+                'quantity' => $quantity,
                 'new_status' => $new_status,
                 'counted_by' => $operator,
                 'verified_by' => $operator
             ]);
         } else {
-            // 已经是counted或adjusted状态，只更新内容备注
+            // 已经是counted或adjusted状态，只更新内容备注、保质期和数量
             $update = $pdo->prepare("
                 UPDATE express_package
-                SET content_note = :content_note
+                SET content_note = :content_note,
+                    expiry_date = :expiry_date,
+                    quantity = :quantity
                 WHERE package_id = :package_id
             ");
 
             $update->execute([
                 'package_id' => $package_id,
-                'content_note' => $content_note
+                'content_note' => $content_note,
+                'expiry_date' => $expiry_date,
+                'quantity' => $quantity
             ]);
         }
 
@@ -877,7 +888,7 @@ function express_update_content_note($pdo, $package_id, $operator, $content_note
 
         return [
             'success' => true,
-            'message' => ($old_status !== $new_status) ? '内容备注已更新，状态已变为已清点' : '内容备注已更新',
+            'message' => ($old_status !== $new_status) ? '内容信息已更新，状态已变为已清点' : '内容信息已更新',
             'package' => express_get_package_by_id($pdo, $package_id)
         ];
     } catch (PDOException $e) {
@@ -885,7 +896,7 @@ function express_update_content_note($pdo, $package_id, $operator, $content_note
             $pdo->rollBack();
         }
         express_log('Failed to update content note: ' . $e->getMessage(), 'ERROR');
-        return ['success' => false, 'message' => '更新内容备注失败'];
+        return ['success' => false, 'message' => '更新内容信息失败'];
     }
 }
 
@@ -927,9 +938,10 @@ function express_process_verify($pdo, $package_id, $old_status, $operator) {
  * @param string $operator
  * @param string $content_note
  * @param string $expiry_date 保质期
+ * @param int $quantity 数量
  * @return array
  */
-function express_process_count($pdo, $package_id, $old_status, $operator, $content_note, $expiry_date = null) {
+function express_process_count($pdo, $package_id, $old_status, $operator, $content_note, $expiry_date = null, $quantity = null) {
     // 清点操作自动包含核实，同时更新两个时间戳
     $stmt = $pdo->prepare("
         UPDATE express_package SET
@@ -939,7 +951,8 @@ function express_process_count($pdo, $package_id, $old_status, $operator, $conte
             counted_at = NOW(),
             counted_by = :counted_by,
             content_note = :content_note,
-            expiry_date = :expiry_date
+            expiry_date = :expiry_date,
+            quantity = :quantity
         WHERE package_id = :package_id
     ");
 
@@ -948,7 +961,8 @@ function express_process_count($pdo, $package_id, $old_status, $operator, $conte
         'verified_by' => $operator,
         'counted_by' => $operator,
         'content_note' => $content_note,
-        'expiry_date' => $expiry_date
+        'expiry_date' => $expiry_date,
+        'quantity' => $quantity
     ]);
 
     return [

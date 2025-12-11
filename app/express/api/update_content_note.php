@@ -10,18 +10,16 @@ if (!defined('EXPRESS_ENTRY')) {
 
 $input = express_get_json_input();
 $package_id = $input['package_id'] ?? 0;
-$content_note = trim($input['content_note'] ?? '');
+$content_note = isset($input['content_note']) ? trim($input['content_note']) : null;
+$expiry_date = $input['expiry_date'] ?? null;
+$quantity = $input['quantity'] ?? null;
 $operator = $_SESSION['user_display_name'] ?? $_SESSION['user_login'] ?? 'system';
 
 if (empty($package_id)) {
     express_json_response(false, null, '缺少包裹ID');
 }
 
-if ($content_note === '') {
-    express_json_response(false, null, '内容备注不能为空');
-}
-
-$result = express_update_content_note($pdo, $package_id, $operator, $content_note);
+$result = express_update_content_note($pdo, $package_id, $operator, $content_note, $expiry_date, $quantity);
 
 if ($result['success']) {
     express_json_response(true, $result['package'], $result['message']);

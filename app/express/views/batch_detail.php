@@ -175,64 +175,77 @@ $content_summary = express_get_content_summary($pdo, $batch_id);
 
             <!-- 包裹列表 -->
             <div class="packages-section">
-                <h2>包裹列表 (共 <?= count($packages) ?> 个)</h2>
+                <div class="section-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h2 style="margin: 0;">包裹列表 (共 <?= count($packages) ?> 个)</h2>
+                    <button id="toggle-time-columns" class="btn btn-sm btn-secondary" onclick="toggleTimeColumns()">
+                        <span id="toggle-time-text">显示更多时间</span>
+                    </button>
+                </div>
                 <div id="update-message" class="message" style="display: none;"></div>
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>包裹ID</th>
-                            <th>快递单号</th>
-                            <th>状态</th>
-                            <th>内容备注</th>
-                            <th>调整备注</th>
-                            <th>创建时间</th>
-                            <th>核实时间</th>
-                            <th>清点时间</th>
-                            <th>调整时间</th>
-                            <th>操作</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php if (empty($packages)): ?>
+                <div style="overflow-x: auto;">
+                    <table class="data-table">
+                        <thead>
                             <tr>
-                                <td colspan="9" class="text-center">暂无包裹数据</td>
+                                <th>包裹ID</th>
+                                <th>快递单号</th>
+                                <th>状态</th>
+                                <th>内容备注</th>
+                                <th>保质期</th>
+                                <th>数量</th>
+                                <th>调整备注</th>
+                                <th class="time-col-default">创建时间</th>
+                                <th class="time-col-extra" style="display: none;">核实时间</th>
+                                <th class="time-col-default">清点时间</th>
+                                <th class="time-col-extra" style="display: none;">调整时间</th>
+                                <th>操作</th>
                             </tr>
-                        <?php else: ?>
-                            <?php foreach ($packages as $package): ?>
+                        </thead>
+                        <tbody>
+                            <?php if (empty($packages)): ?>
                                 <tr>
-                                    <td><?= $package['package_id'] ?></td>
-                                    <td><?= htmlspecialchars($package['tracking_number']) ?></td>
-                                    <td>
-                                        <span class="badge badge-<?= $package['package_status'] ?>">
-                                            <?php
-                                            $status_map = [
-                                                'pending' => '待处理',
-                                                'verified' => '已核实',
-                                                'counted' => '已清点',
-                                                'adjusted' => '已调整'
-                                            ];
-                                            echo $status_map[$package['package_status']] ?? $package['package_status'];
-                                            ?>
-                                        </span>
-                                    </td>
-                                    <td><?= htmlspecialchars($package['content_note'] ?? '-') ?></td>
-                                    <td><?= htmlspecialchars($package['adjustment_note'] ?? '-') ?></td>
-                                    <td><?= $package['created_at'] ? date('Y-m-d H:i', strtotime($package['created_at'])) : '-' ?></td>
-                                    <td><?= $package['verified_at'] ? date('Y-m-d H:i', strtotime($package['verified_at'])) : '-' ?></td>
-                                    <td><?= $package['counted_at'] ? date('Y-m-d H:i', strtotime($package['counted_at'])) : '-' ?></td>
-                                    <td><?= $package['adjusted_at'] ? date('Y-m-d H:i', strtotime($package['adjusted_at'])) : '-' ?></td>
-                                    <td>
-                                        <button class="btn btn-sm btn-primary btn-edit-content"
-                                                data-package-id="<?= $package['package_id'] ?>"
-                                                data-current-note="<?= htmlspecialchars($package['content_note'] ?? '', ENT_QUOTES) ?>">
-                                            修改内容
-                                        </button>
-                                    </td>
+                                    <td colspan="12" class="text-center">暂无包裹数据</td>
                                 </tr>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
+                            <?php else: ?>
+                                <?php foreach ($packages as $package): ?>
+                                    <tr>
+                                        <td><?= $package['package_id'] ?></td>
+                                        <td><?= htmlspecialchars($package['tracking_number']) ?></td>
+                                        <td>
+                                            <span class="badge badge-<?= $package['package_status'] ?>">
+                                                <?php
+                                                $status_map = [
+                                                    'pending' => '待处理',
+                                                    'verified' => '已核实',
+                                                    'counted' => '已清点',
+                                                    'adjusted' => '已调整'
+                                                ];
+                                                echo $status_map[$package['package_status']] ?? $package['package_status'];
+                                                ?>
+                                            </span>
+                                        </td>
+                                        <td><?= htmlspecialchars($package['content_note'] ?? '-') ?></td>
+                                        <td><?= $package['expiry_date'] ? date('Y-m-d', strtotime($package['expiry_date'])) : '-' ?></td>
+                                        <td><?= $package['quantity'] ?? '-' ?></td>
+                                        <td><?= htmlspecialchars($package['adjustment_note'] ?? '-') ?></td>
+                                        <td class="time-col-default"><?= $package['created_at'] ? date('m-d H:i', strtotime($package['created_at'])) : '-' ?></td>
+                                        <td class="time-col-extra" style="display: none;"><?= $package['verified_at'] ? date('m-d H:i', strtotime($package['verified_at'])) : '-' ?></td>
+                                        <td class="time-col-default"><?= $package['counted_at'] ? date('m-d H:i', strtotime($package['counted_at'])) : '-' ?></td>
+                                        <td class="time-col-extra" style="display: none;"><?= $package['adjusted_at'] ? date('m-d H:i', strtotime($package['adjusted_at'])) : '-' ?></td>
+                                        <td>
+                                            <button class="btn btn-sm btn-primary btn-edit-content"
+                                                    data-package-id="<?= $package['package_id'] ?>"
+                                                    data-current-note="<?= htmlspecialchars($package['content_note'] ?? '', ENT_QUOTES) ?>"
+                                                    data-expiry-date="<?= htmlspecialchars($package['expiry_date'] ?? '', ENT_QUOTES) ?>"
+                                                    data-quantity="<?= htmlspecialchars($package['quantity'] ?? '', ENT_QUOTES) ?>">
+                                                修改内容
+                                            </button>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
             <!-- 内容备注统计 -->
@@ -404,19 +417,32 @@ $content_summary = express_get_content_summary($pdo, $batch_id);
                 const packageId = button.getAttribute('data-package-id');
                 const currentNote = button.getAttribute('data-current-note') || '';
 
+                const currentExpiry = button.getAttribute('data-expiry-date') || '';
+                const currentQuantity = button.getAttribute('data-quantity') || '';
+
                 // 使用模态框输入
                 const formHtml = `
                     <form id="contentNoteForm" style="padding: 20px;">
                         <div class="modal-form-group">
-                            <label class="modal-form-label">内容备注 *</label>
+                            <label class="modal-form-label">内容备注</label>
                             <input type="text" name="content_note" class="modal-form-control"
-                                   value="${currentNote}" placeholder="如：香蕉、苹果等" required>
+                                   value="${currentNote}" placeholder="如：香蕉、苹果等">
+                        </div>
+                        <div class="modal-form-group">
+                            <label class="modal-form-label">保质期（选填）</label>
+                            <input type="date" name="expiry_date" class="modal-form-control"
+                                   value="${currentExpiry}">
+                        </div>
+                        <div class="modal-form-group">
+                            <label class="modal-form-label">数量（选填）</label>
+                            <input type="number" name="quantity" class="modal-form-control"
+                                   value="${currentQuantity}" placeholder="输入数量" min="1" step="1">
                         </div>
                     </form>
                 `;
 
                 await showModal({
-                    title: '修改内容备注',
+                    title: '修改内容信息',
                     content: formHtml,
                     footer: `
                         <div class="modal-footer">
@@ -427,6 +453,19 @@ $content_summary = express_get_content_summary($pdo, $batch_id);
                 });
             });
         });
+
+        // 切换时间列显示
+        function toggleTimeColumns() {
+            const extraCols = document.querySelectorAll('.time-col-extra');
+            const toggleText = document.getElementById('toggle-time-text');
+            const isHidden = extraCols[0].style.display === 'none';
+
+            extraCols.forEach(col => {
+                col.style.display = isHidden ? '' : 'none';
+            });
+
+            toggleText.textContent = isHidden ? '隐藏额外时间' : '显示更多时间';
+        }
     </script>
 
     <script src="../js/modal.js"></script>
@@ -434,23 +473,24 @@ $content_summary = express_get_content_summary($pdo, $batch_id);
     async function submitContentNote(packageId) {
         const form = document.getElementById('contentNoteForm');
         const newNote = form.querySelector('[name="content_note"]').value.trim();
+        const expiryDate = form.querySelector('[name="expiry_date"]').value.trim();
+        const quantity = form.querySelector('[name="quantity"]').value.trim();
         const messageDiv = document.getElementById('update-message');
 
-        if (!newNote) {
-            await showAlert('内容备注不能为空', '提示', 'warning');
-            return;
-        }
-
         try {
+            const payload = {
+                package_id: packageId,
+                content_note: newNote || null,
+                expiry_date: expiryDate || null,
+                quantity: quantity ? parseInt(quantity) : null
+            };
+
             const resp = await fetch('/express/exp/index.php?action=update_content_note', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({
-                    package_id: packageId,
-                    content_note: newNote
-                })
+                body: JSON.stringify(payload)
             });
 
             const data = await resp.json();

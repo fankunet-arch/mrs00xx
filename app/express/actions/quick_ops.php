@@ -122,6 +122,15 @@ $batches = express_get_batches($pdo, 'active', 50);
                 <div class="expiry-date-hint">点击输入框选择保质期日期</div>
             </div>
 
+            <div id="quantity-group" class="input-group" style="display: none;">
+                <label for="quantity">数量 (选填):</label>
+                <div class="quantity-wrapper">
+                    <input type="number" id="quantity" class="form-control quantity-input"
+                           placeholder="输入数量" min="1" step="1">
+                    <button type="button" id="btn-clear-quantity" class="btn-clear-quantity" title="清空数量">×</button>
+                </div>
+            </div>
+
             <div id="adjustment-note-group" class="input-group" style="display: none;">
                 <label for="adjustment-note">调整备注:</label>
                 <textarea id="adjustment-note" class="form-control" rows="3"
