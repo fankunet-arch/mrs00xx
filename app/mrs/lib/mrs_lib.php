@@ -451,7 +451,15 @@ function mrs_get_inventory_summary($pdo, $content_note = '') {
  * 获取库存明细 (某个物料的所有在库包裹)
  * @param PDO $pdo
  * @param string $content_note 物料名称（content_note）
- * @param string $order_by 排序方式: 'fifo' (先进先出), 'batch' (按批次)
+ * @param string $order_by 排序方式:
+ *   - 'fifo' (先进先出，按入库时间升序)
+ *   - 'batch' (按批次)
+ *   - 'expiry_date_asc' (有效期升序，最早到期在前)
+ *   - 'expiry_date_desc' (有效期降序，最晚到期在前)
+ *   - 'inbound_time_asc' (入库时间升序)
+ *   - 'inbound_time_desc' (入库时间降序)
+ *   - 'days_in_stock_asc' (库存天数升序，库龄最短在前)
+ *   - 'days_in_stock_desc' (库存天数降序，库龄最长在前)
  * @return array
  */
 function mrs_get_inventory_detail($pdo, $content_note, $order_by = 'fifo') {
@@ -474,10 +482,38 @@ function mrs_get_inventory_detail($pdo, $content_note, $order_by = 'fifo') {
             WHERE content_note = :content_note AND status = 'in_stock'
         ";
 
-        if ($order_by === 'fifo') {
-            $sql .= " ORDER BY inbound_time ASC, batch_name ASC, box_number ASC";
-        } else {
-            $sql .= " ORDER BY batch_name ASC, box_number ASC";
+        // 根据排序方式选择 ORDER BY 子句
+        switch ($order_by) {
+            case 'expiry_date_asc':
+                // 有效期升序，NULL值排在最后
+                $sql .= " ORDER BY CASE WHEN expiry_date IS NULL THEN 1 ELSE 0 END, expiry_date ASC, inbound_time ASC";
+                break;
+            case 'expiry_date_desc':
+                // 有效期降序，NULL值排在最后
+                $sql .= " ORDER BY CASE WHEN expiry_date IS NULL THEN 1 ELSE 0 END, expiry_date DESC, inbound_time ASC";
+                break;
+            case 'inbound_time_asc':
+            case 'fifo':
+                // 入库时间升序（先进先出）
+                $sql .= " ORDER BY inbound_time ASC, batch_name ASC, box_number ASC";
+                break;
+            case 'inbound_time_desc':
+                // 入库时间降序（后进先出）
+                $sql .= " ORDER BY inbound_time DESC, batch_name ASC, box_number ASC";
+                break;
+            case 'days_in_stock_asc':
+                // 库存天数升序（库龄最短）
+                $sql .= " ORDER BY days_in_stock ASC, inbound_time ASC";
+                break;
+            case 'days_in_stock_desc':
+                // 库存天数降序（库龄最长）
+                $sql .= " ORDER BY days_in_stock DESC, inbound_time ASC";
+                break;
+            case 'batch':
+            default:
+                // 按批次排序
+                $sql .= " ORDER BY batch_name ASC, box_number ASC";
+                break;
         }
 
         $stmt = $pdo->prepare($sql);
@@ -759,9 +795,10 @@ function mrs_search_packages($pdo, $content_note = '', $batch_name = '', $box_nu
  * @param PDO $pdo
  * @param string $search_type 搜索类型: content_note|box_number|tracking_tail|batch_name
  * @param string $search_value 搜索值
+ * @param string $order_by 排序方式: fifo|expiry_date_asc|expiry_date_desc|inbound_time_asc|inbound_time_desc|days_in_stock_asc|days_in_stock_desc
  * @return array
  */
-function mrs_search_instock_packages($pdo, $search_type, $search_value) {
+function mrs_search_instock_packages($pdo, $search_type, $search_value, $order_by = 'fifo') {
     try {
         $sql = "SELECT
                     ledger_id,
@@ -802,7 +839,33 @@ function mrs_search_instock_packages($pdo, $search_type, $search_value) {
             }
         }
 
-        $sql .= " ORDER BY inbound_time ASC LIMIT 200";
+        // 根据排序方式选择 ORDER BY 子句
+        switch ($order_by) {
+            case 'expiry_date_asc':
+                $sql .= " ORDER BY CASE WHEN expiry_date IS NULL THEN 1 ELSE 0 END, expiry_date ASC, inbound_time ASC";
+                break;
+            case 'expiry_date_desc':
+                $sql .= " ORDER BY CASE WHEN expiry_date IS NULL THEN 1 ELSE 0 END, expiry_date DESC, inbound_time ASC";
+                break;
+            case 'inbound_time_asc':
+            case 'fifo':
+                $sql .= " ORDER BY inbound_time ASC, batch_name ASC, box_number ASC";
+                break;
+            case 'inbound_time_desc':
+                $sql .= " ORDER BY inbound_time DESC, batch_name ASC, box_number ASC";
+                break;
+            case 'days_in_stock_asc':
+                $sql .= " ORDER BY days_in_stock ASC, inbound_time ASC";
+                break;
+            case 'days_in_stock_desc':
+                $sql .= " ORDER BY days_in_stock DESC, inbound_time ASC";
+                break;
+            default:
+                $sql .= " ORDER BY inbound_time ASC";
+                break;
+        }
+
+        $sql .= " LIMIT 200";
 
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);

@@ -18,17 +18,18 @@ $destinations = mrs_get_destinations($pdo);
 $search_type = $_GET['search_type'] ?? '';
 $search_value = $_GET['search_value'] ?? '';
 $selected_sku = $_GET['sku'] ?? '';
+$order_by = $_GET['order_by'] ?? 'fifo';
 
 $packages = [];
 $search_mode = false;
 
 // 如果有搜索条件，使用搜索
 if (!empty($search_type) && !empty($search_value)) {
-    $packages = mrs_search_instock_packages($pdo, $search_type, $search_value);
+    $packages = mrs_search_instock_packages($pdo, $search_type, $search_value, $order_by);
     $search_mode = true;
 } elseif (!empty($selected_sku)) {
     // 如果选择了物料，加载库存明细
-    $packages = mrs_get_inventory_detail($pdo, $selected_sku, 'fifo');
+    $packages = mrs_get_inventory_detail($pdo, $selected_sku, $order_by);
 }
 
 // 格式化快递单号：末尾4位红色加粗
@@ -144,12 +145,25 @@ function format_tracking_number($tracking_number) {
                 <!-- 步骤2: 选择包裹 -->
                 <h3 style="margin-top: 30px; margin-bottom: 15px;">步骤2: 选择要出库的包裹</h3>
 
-                <div style="margin-bottom: 15px;">
-                    <button type="button" class="btn btn-sm btn-secondary" onclick="selectAll()">全选</button>
-                    <button type="button" class="btn btn-sm btn-secondary" onclick="selectNone()">取消全选</button>
-                    <span style="margin-left: 20px; color: #666;">
-                        已选择: <strong id="selectedCount">0</strong> 箱
-                    </span>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+                    <div>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="selectAll()">全选</button>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="selectNone()">取消全选</button>
+                        <span style="margin-left: 20px; color: #666;">
+                            已选择: <strong id="selectedCount">0</strong> 箱
+                        </span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <label for="sort-select-outbound" style="margin: 0; font-weight: 500;">排序方式:</label>
+                        <select id="sort-select-outbound" class="form-control" style="width: auto; min-width: 180px;" onchange="changeSortOrder(this.value)">
+                            <option value="fifo" <?= $order_by === 'fifo' ? 'selected' : '' ?>>入库时间↑ (先进先出)</option>
+                            <option value="inbound_time_desc" <?= $order_by === 'inbound_time_desc' ? 'selected' : '' ?>>入库时间↓ (后进先出)</option>
+                            <option value="expiry_date_asc" <?= $order_by === 'expiry_date_asc' ? 'selected' : '' ?>>有效期↑ (最早到期)</option>
+                            <option value="expiry_date_desc" <?= $order_by === 'expiry_date_desc' ? 'selected' : '' ?>>有效期↓ (最晚到期)</option>
+                            <option value="days_in_stock_asc" <?= $order_by === 'days_in_stock_asc' ? 'selected' : '' ?>>库存天数↑ (库龄最短)</option>
+                            <option value="days_in_stock_desc" <?= $order_by === 'days_in_stock_desc' ? 'selected' : '' ?>>库存天数↓ (库龄最长)</option>
+                        </select>
+                    </div>
                 </div>
 
                 <form id="outboundForm">
@@ -253,6 +267,13 @@ function format_tracking_number($tracking_number) {
         } else {
             window.location.href = '/mrs/ap/index.php?action=outbound';
         }
+    }
+
+    // 改变排序方式
+    function changeSortOrder(orderBy) {
+        const urlParams = new URLSearchParams(window.location.search);
+        urlParams.set('order_by', orderBy);
+        window.location.search = urlParams.toString();
     }
 
     async function performSearch() {
