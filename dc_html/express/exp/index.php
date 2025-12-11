@@ -42,6 +42,7 @@ $allowed_actions = [
     'batch_edit_save',          // 保存批次编辑
     'bulk_import',              // 批量导入页面
     'bulk_import_save',         // 保存批量导入
+    'create_custom_packages',   // 创建自定义包裹
     'content_search',           // 内容备注搜索页面
     'content_search_api',       // 内容备注搜索API
     'update_content_note'       // 更新内容备注API
@@ -72,6 +73,7 @@ $api_actions = [
     'batch_create_save',
     'batch_edit_save',
     'bulk_import_save',
+    'create_custom_packages',
     'logout',
     'content_search_api',
     'update_content_note'

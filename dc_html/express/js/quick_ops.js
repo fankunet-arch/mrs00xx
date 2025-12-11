@@ -32,6 +32,9 @@ function initializeApp() {
 
     // 初始显示空的历史区域
     displayHistory();
+
+    // [FIX] 监听页面可见性变化，解决手机熄屏后状态丢失的问题
+    setupVisibilityListener();
 }
 
 function bindEvents() {
@@ -666,4 +669,24 @@ function syncLastCountNote(records) {
     if (latestCountRecord) {
         state.lastCountNote = latestCountRecord.notes.trim();
     }
+}
+
+// [FIX] 监听页面可见性变化，解决手机熄屏后批次选择状态丢失的问题
+function setupVisibilityListener() {
+    document.addEventListener('visibilitychange', function() {
+        // 当页面从隐藏状态恢复到可见状态时
+        if (!document.hidden) {
+            const batchSelect = document.getElementById('batch-select');
+
+            // 检查批次选择器是否有值，但 JavaScript 状态为空
+            // 这种情况说明页面被冻结后恢复，DOM 状态和 JS 状态不一致
+            if (batchSelect && batchSelect.value && !state.currentBatchId) {
+                console.log('[页面恢复] 检测到批次选择状态不一致，正在同步...');
+
+                // 手动触发批次选择事件，恢复页面状态
+                const event = new Event('change', { bubbles: true });
+                batchSelect.dispatchEvent(event);
+            }
+        }
+    });
 }
