@@ -34,13 +34,22 @@ $batches = express_get_batches($pdo, 'active', 50);
             <div class="batch-selector">
                 <select id="batch-select" class="form-control">
                     <option value="">-- 请选择批次 --</option>
-                    <?php foreach ($batches as $batch): ?>
+                    <?php foreach ($batches as $batch):
+                        // 判断批次清点状态并添加标识符
+                        $prefix = '';
+                        if ($batch['count_status'] === 'counting') {
+                            $prefix = '→ ';  // 正在清点
+                        } elseif ($batch['count_status'] === 'completed') {
+                            $prefix = '√ ';  // 已完成清点
+                        }
+                    ?>
                         <option value="<?= $batch['batch_id'] ?>"
                                 data-total="<?= $batch['total_count'] ?>"
                                 data-verified="<?= $batch['verified_count'] ?>"
                                 data-counted="<?= $batch['counted_count'] ?>"
-                                data-adjusted="<?= $batch['adjusted_count'] ?>">
-                            <?= htmlspecialchars($batch['batch_name']) ?>
+                                data-adjusted="<?= $batch['adjusted_count'] ?>"
+                                data-count-status="<?= $batch['count_status'] ?>">
+                            <?= $prefix . htmlspecialchars($batch['batch_name']) ?>
                             (<?= $batch['total_count'] ?>个包裹)
                         </option>
                     <?php endforeach; ?>
@@ -101,6 +110,24 @@ $batches = express_get_batches($pdo, 'active', 50);
                     <span class="suggestion-label">上次清点:</span>
                     <button type="button" id="btn-apply-last-count" class="suggestion-chip"
                             title="点击将上次内容填入备注"></button>
+                </div>
+            </div>
+
+            <div id="expiry-date-group" class="input-group" style="display: none;">
+                <label for="expiry-date">保质期 (选填):</label>
+                <div class="expiry-date-wrapper">
+                    <input type="date" id="expiry-date" class="form-control expiry-date-input">
+                    <button type="button" id="btn-clear-expiry" class="btn-clear-expiry" title="清空保质期">×</button>
+                </div>
+                <div class="expiry-date-hint">点击输入框选择保质期日期</div>
+            </div>
+
+            <div id="quantity-group" class="input-group" style="display: none;">
+                <label for="quantity">数量 (选填):</label>
+                <div class="quantity-wrapper">
+                    <input type="number" id="quantity" class="form-control quantity-input"
+                           placeholder="输入数量" min="1" step="1">
+                    <button type="button" id="btn-clear-quantity" class="btn-clear-quantity" title="清空数量">×</button>
                 </div>
             </div>
 

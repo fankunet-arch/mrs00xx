@@ -136,13 +136,28 @@ function express_require_login() {
  */
 function express_get_batches($pdo, $status = 'all', $limit = 100) {
     try {
-        $sql = "SELECT * FROM express_batch";
+        // 添加清点状态判断字段
+        $sql = "SELECT *,
+                CASE
+                    WHEN counted_count > 0 AND counted_count < total_count THEN 'counting'
+                    WHEN counted_count = total_count AND total_count > 0 THEN 'completed'
+                    ELSE 'pending'
+                END AS count_status
+                FROM express_batch";
 
         if ($status !== 'all') {
             $sql .= " WHERE status = :status";
         }
 
-        $sql .= " ORDER BY created_at DESC LIMIT :limit";
+        // 优化排序：正在清点的靠前，已完成的靠后，其他按创建时间倒序
+        $sql .= " ORDER BY
+                  CASE
+                      WHEN counted_count > 0 AND counted_count < total_count THEN 1
+                      WHEN counted_count = 0 OR total_count = 0 THEN 2
+                      WHEN counted_count = total_count AND total_count > 0 THEN 3
+                  END,
+                  created_at DESC
+                  LIMIT :limit";
 
         $stmt = $pdo->prepare($sql);
 
@@ -536,18 +551,22 @@ function express_get_recent_operations($pdo, $batch_id, $operation_type = null, 
  * @param PDO $pdo
  * @param int $batch_id
  * @param string $tracking_number
+ * @param string|null $expiry_date 有效期（选填）
+ * @param int|null $quantity 数量（选填，参考用途）
  * @return int|false
  */
-function express_create_package($pdo, $batch_id, $tracking_number) {
+function express_create_package($pdo, $batch_id, $tracking_number, $expiry_date = null, $quantity = null) {
     try {
         $stmt = $pdo->prepare("
-            INSERT INTO express_package (batch_id, tracking_number)
-            VALUES (:batch_id, :tracking_number)
+            INSERT INTO express_package (batch_id, tracking_number, expiry_date, quantity)
+            VALUES (:batch_id, :tracking_number, :expiry_date, :quantity)
         ");
 
         $stmt->execute([
             'batch_id' => $batch_id,
-            'tracking_number' => trim($tracking_number)
+            'tracking_number' => trim($tracking_number),
+            'expiry_date' => $expiry_date,
+            'quantity' => $quantity
         ]);
 
         return $pdo->lastInsertId();
@@ -692,9 +711,11 @@ function express_create_custom_packages($pdo, $batch_id, $count, $operator = '')
  * @param string $operator
  * @param string $content_note 内容备注（清点时使用）
  * @param string $adjustment_note 调整备注（调整时使用）
+ * @param string $expiry_date 保质期（清点时使用）
+ * @param int $quantity 数量（清点时使用）
  * @return array ['success' => bool, 'message' => string, 'package' => array]
  */
-function express_process_package($pdo, $batch_id, $tracking_number, $operation_type, $operator, $content_note = null, $adjustment_note = null) {
+function express_process_package($pdo, $batch_id, $tracking_number, $operation_type, $operator, $content_note = null, $adjustment_note = null, $expiry_date = null, $quantity = null) {
     try {
         $pdo->beginTransaction();
 
@@ -729,7 +750,7 @@ function express_process_package($pdo, $batch_id, $tracking_number, $operation_t
                 $result = express_process_verify($pdo, $package_id, $old_status, $operator);
                 break;
             case 'count':
-                $result = express_process_count($pdo, $package_id, $old_status, $operator, $content_note);
+                $result = express_process_count($pdo, $package_id, $old_status, $operator, $content_note, $expiry_date, $quantity);
                 break;
             case 'adjust':
                 $result = express_process_adjust($pdo, $package_id, $old_status, $operator, $adjustment_note);
@@ -780,14 +801,16 @@ function express_process_package($pdo, $batch_id, $tracking_number, $operation_t
 }
 
 /**
- * 更新包裹的内容备注
+ * 更新包裹的内容备注、保质期和数量
  * @param PDO $pdo
  * @param int $package_id
  * @param string $operator
  * @param string $content_note
+ * @param string $expiry_date
+ * @param int $quantity
  * @return array
  */
-function express_update_content_note($pdo, $package_id, $operator, $content_note) {
+function express_update_content_note($pdo, $package_id, $operator, $content_note, $expiry_date = null, $quantity = null) {
     try {
         $pdo->beginTransaction();
 
@@ -810,6 +833,8 @@ function express_update_content_note($pdo, $package_id, $operator, $content_note
             $update = $pdo->prepare("
                 UPDATE express_package
                 SET content_note = :content_note,
+                    expiry_date = :expiry_date,
+                    quantity = :quantity,
                     package_status = :new_status,
                     counted_at = NOW(),
                     counted_by = :counted_by,
@@ -821,21 +846,27 @@ function express_update_content_note($pdo, $package_id, $operator, $content_note
             $update->execute([
                 'package_id' => $package_id,
                 'content_note' => $content_note,
+                'expiry_date' => $expiry_date,
+                'quantity' => $quantity,
                 'new_status' => $new_status,
                 'counted_by' => $operator,
                 'verified_by' => $operator
             ]);
         } else {
-            // 已经是counted或adjusted状态，只更新内容备注
+            // 已经是counted或adjusted状态，只更新内容备注、保质期和数量
             $update = $pdo->prepare("
                 UPDATE express_package
-                SET content_note = :content_note
+                SET content_note = :content_note,
+                    expiry_date = :expiry_date,
+                    quantity = :quantity
                 WHERE package_id = :package_id
             ");
 
             $update->execute([
                 'package_id' => $package_id,
-                'content_note' => $content_note
+                'content_note' => $content_note,
+                'expiry_date' => $expiry_date,
+                'quantity' => $quantity
             ]);
         }
 
@@ -861,7 +892,7 @@ function express_update_content_note($pdo, $package_id, $operator, $content_note
 
         return [
             'success' => true,
-            'message' => ($old_status !== $new_status) ? '内容备注已更新，状态已变为已清点' : '内容备注已更新',
+            'message' => ($old_status !== $new_status) ? '内容信息已更新，状态已变为已清点' : '内容信息已更新',
             'package' => express_get_package_by_id($pdo, $package_id)
         ];
     } catch (PDOException $e) {
@@ -869,7 +900,7 @@ function express_update_content_note($pdo, $package_id, $operator, $content_note
             $pdo->rollBack();
         }
         express_log('Failed to update content note: ' . $e->getMessage(), 'ERROR');
-        return ['success' => false, 'message' => '更新内容备注失败'];
+        return ['success' => false, 'message' => '更新内容信息失败'];
     }
 }
 
@@ -910,9 +941,11 @@ function express_process_verify($pdo, $package_id, $old_status, $operator) {
  * @param string $old_status
  * @param string $operator
  * @param string $content_note
+ * @param string $expiry_date 保质期
+ * @param int $quantity 数量
  * @return array
  */
-function express_process_count($pdo, $package_id, $old_status, $operator, $content_note) {
+function express_process_count($pdo, $package_id, $old_status, $operator, $content_note, $expiry_date = null, $quantity = null) {
     // 清点操作自动包含核实，同时更新两个时间戳
     $stmt = $pdo->prepare("
         UPDATE express_package SET
@@ -921,7 +954,9 @@ function express_process_count($pdo, $package_id, $old_status, $operator, $conte
             verified_by = COALESCE(verified_by, :verified_by),
             counted_at = NOW(),
             counted_by = :counted_by,
-            content_note = :content_note
+            content_note = :content_note,
+            expiry_date = :expiry_date,
+            quantity = :quantity
         WHERE package_id = :package_id
     ");
 
@@ -929,7 +964,9 @@ function express_process_count($pdo, $package_id, $old_status, $operator, $conte
         'package_id' => $package_id,
         'verified_by' => $operator,
         'counted_by' => $operator,
-        'content_note' => $content_note
+        'content_note' => $content_note,
+        'expiry_date' => $expiry_date,
+        'quantity' => $quantity
     ]);
 
     return [
@@ -984,7 +1021,7 @@ function express_process_adjust($pdo, $package_id, $old_status, $operator, $adju
  * 批量导入快递单号
  * @param PDO $pdo
  * @param int $batch_id
- * @param array $tracking_numbers
+ * @param array $tracking_numbers 支持格式：单号 或 单号|有效期|数量
  * @return array ['success' => bool, 'imported' => int, 'duplicates' => int, 'errors' => array]
  */
 function express_bulk_import($pdo, $batch_id, $tracking_numbers) {
@@ -995,15 +1032,32 @@ function express_bulk_import($pdo, $batch_id, $tracking_numbers) {
     try {
         $pdo->beginTransaction();
 
-        foreach ($tracking_numbers as $tracking_number) {
-            $tracking_number = trim($tracking_number);
+        foreach ($tracking_numbers as $line) {
+            $line = trim($line);
 
             // 跳过空行
+            if (empty($line)) {
+                continue;
+            }
+
+            // 解析导入格式：单号|有效期|数量（字段可选）
+            $parts = array_map('trim', explode('|', $line));
+            $tracking_number = $parts[0] ?? '';
+            $expiry_date = !empty($parts[1]) ? $parts[1] : null;
+            $quantity = !empty($parts[2]) && is_numeric($parts[2]) ? (int)$parts[2] : null;
+
+            // 跳过无效单号
             if (empty($tracking_number)) {
                 continue;
             }
 
-            $result = express_create_package($pdo, $batch_id, $tracking_number);
+            // 验证有效期格式（如果提供）
+            if ($expiry_date && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $expiry_date)) {
+                $errors[] = $tracking_number . ' (有效期格式错误)';
+                continue;
+            }
+
+            $result = express_create_package($pdo, $batch_id, $tracking_number, $expiry_date, $quantity);
 
             if ($result) {
                 $imported++;

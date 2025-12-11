@@ -15,6 +15,8 @@ $batch_id = $input['batch_id'] ?? 0;
 $tracking_number = $input['tracking_number'] ?? '';
 $operation_type = $input['operation_type'] ?? '';
 $content_note = $input['content_note'] ?? null;
+$expiry_date = $input['expiry_date'] ?? null;
+$quantity = $input['quantity'] ?? null;
 $adjustment_note = $input['adjustment_note'] ?? null;
 $operator = $input['operator'] ?? 'system';
 
@@ -36,7 +38,9 @@ $result = express_process_package(
     $operation_type,
     $operator,
     $content_note,
-    $adjustment_note
+    $adjustment_note,
+    $expiry_date,
+    $quantity
 );
 
 // 同时返回更新后的批次统计
