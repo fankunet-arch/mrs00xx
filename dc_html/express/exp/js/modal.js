@@ -1,7 +1,7 @@
 /**
  * 现代化模态框组件
  * 文件路径: dc_html/mrs/ap/js/modal.js
- * 说明: 替代传统的alert()和confirm()
+ * 说明: 替代传统的alert()和confirm()，支持中间模态框和抽屉式模态框
  */
 
 class Modal {
@@ -10,26 +10,35 @@ class Modal {
         this.container = null;
         this.resolveCallback = null;
         this.rejectCallback = null;
+        this.currentType = 'center'; // 'center' or 'drawer'
     }
 
     /**
      * 创建模态框DOM结构
+     * @param {string} type - 模态框类型：'center' 或 'drawer'
      */
-    createModal() {
+    createModal(type = 'center') {
+        // 如果已有模态框，先清理
         if (this.overlay) {
-            return;
+            this.cleanup();
         }
+
+        this.currentType = type;
 
         this.overlay = document.createElement('div');
         this.overlay.className = 'modal-overlay';
-        this.overlay.addEventListener('click', (e) => {
-            if (e.target === this.overlay) {
-                this.close(false);
-            }
-        });
+
+        // 只有中间模态框才支持点击遮罩关闭
+        if (type === 'center') {
+            this.overlay.addEventListener('click', (e) => {
+                if (e.target === this.overlay) {
+                    this.close(false);
+                }
+            });
+        }
 
         this.container = document.createElement('div');
-        this.container.className = 'modal-container';
+        this.container.className = type === 'drawer' ? 'modal-drawer' : 'modal-container';
 
         this.overlay.appendChild(this.container);
         document.body.appendChild(this.overlay);
@@ -44,7 +53,7 @@ class Modal {
      */
     alert(message, title = '提示', type = 'info') {
         return new Promise((resolve) => {
-            this.createModal();
+            this.createModal('center');
 
             const icons = {
                 info: 'ℹ️',
@@ -81,7 +90,7 @@ class Modal {
      */
     confirm(message, title = '确认', options = {}) {
         return new Promise((resolve) => {
-            this.createModal();
+            this.createModal('center');
 
             const {
                 type = 'warning',
@@ -124,17 +133,18 @@ class Modal {
      */
     custom(config) {
         return new Promise((resolve, reject) => {
-            this.createModal();
-
             const {
                 title = '提示',
                 content = '',
                 showClose = true,
                 footer = null,
-                width = null
+                width = null,
+                type = 'center' // 'center' 或 'drawer'
             } = config;
 
-            if (width) {
+            this.createModal(type);
+
+            if (width && type === 'center') {
                 this.container.style.width = width;
             }
 
@@ -167,6 +177,15 @@ class Modal {
     }
 
     /**
+     * 显示抽屉式模态框（便捷方法）
+     * @param {object} config - 配置对象
+     * @returns {Promise}
+     */
+    drawer(config) {
+        return this.custom({ ...config, type: 'drawer' });
+    }
+
+    /**
      * 显示模态框
      */
     show() {
@@ -175,11 +194,15 @@ class Modal {
         // 添加事件监听
         this.container.addEventListener('click', this.handleClick.bind(this));
 
-        // 显示模态框
-        this.overlay.style.display = 'flex';
-        setTimeout(() => {
-            this.overlay.classList.add('active');
-        }, 10);
+        // 先设置display，再添加active类触发动画
+        this.overlay.style.display = 'block';
+
+        // 使用requestAnimationFrame确保DOM更新后再添加active类
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                this.overlay.classList.add('active');
+            });
+        });
 
         // 禁用页面滚动
         document.body.style.overflow = 'hidden';
@@ -200,30 +223,44 @@ class Modal {
     close(result) {
         if (!this.overlay) return;
 
+        // 移除active类，触发退出动画
         this.overlay.classList.remove('active');
 
+        // 等待动画完成后再清理DOM
         setTimeout(() => {
-            this.overlay.style.display = 'none';
+            this.cleanup();
+
+            // 恢复页面滚动
             document.body.style.overflow = '';
 
+            // 调用回调
             if (this.resolveCallback) {
                 this.resolveCallback(result);
                 this.resolveCallback = null;
             }
+        }, 300); // 与CSS transition时间一致
+    }
 
-            if (this.container) {
-                this.container.removeEventListener('click', this.handleClick);
-            }
+    /**
+     * 清理DOM和事件监听
+     */
+    cleanup() {
+        if (this.container) {
+            this.container.removeEventListener('click', this.handleClick);
+        }
 
+        if (this.escHandler) {
             document.removeEventListener('keydown', this.escHandler);
+            this.escHandler = null;
+        }
 
-            // 清理DOM
-            if (this.overlay && this.overlay.parentNode) {
-                this.overlay.parentNode.removeChild(this.overlay);
-            }
-            this.overlay = null;
-            this.container = null;
-        }, 300);
+        // 移除DOM
+        if (this.overlay && this.overlay.parentNode) {
+            this.overlay.parentNode.removeChild(this.overlay);
+        }
+
+        this.overlay = null;
+        this.container = null;
     }
 
     /**
@@ -261,3 +298,4 @@ window.modal = new Modal();
 window.showAlert = (message, title, type) => window.modal.alert(message, title, type);
 window.showConfirm = (message, title, options) => window.modal.confirm(message, title, options);
 window.showModal = (config) => window.modal.custom(config);
+window.showDrawer = (config) => window.modal.drawer(config);
