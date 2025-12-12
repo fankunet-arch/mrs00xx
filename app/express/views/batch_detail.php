@@ -66,13 +66,28 @@ $content_summary = express_get_content_summary($pdo, $batch_id);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>批次详情 - <?= htmlspecialchars($batch['batch_name']) ?></title>
     <link rel="stylesheet" href="../css/backend.css">
-    <link rel="stylesheet" href="../css/modal.css">
+    <link rel="stylesheet" href="css/modal.css">
+    <style>
+        /* [UX优化] 让日期输入框点击任意位置都能弹出选择面板 */
+        /* 通过将选择器指示器(小图标)透明并铺满整个输入框来实现 */
+        input[type="date"] {
+            position: relative;
+        }
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+    </style>
 </head>
 <body>
     <?php include EXPRESS_VIEW_PATH . '/shared/sidebar.php'; ?>
 
     <div class="main-content">
-        <!-- 版本标记: 2024-12-02 自定义包裹功能已添加 -->
         <header class="page-header">
             <h1>批次详情: <?= htmlspecialchars($batch['batch_name']) ?></h1>
             <div class="header-actions">
@@ -82,7 +97,6 @@ $content_summary = express_get_content_summary($pdo, $batch_id);
         </header>
 
         <div class="content-wrapper">
-            <!-- 批次信息卡片 -->
             <div class="info-card">
                 <h2>批次信息</h2>
                 <div class="info-grid">
@@ -116,7 +130,6 @@ $content_summary = express_get_content_summary($pdo, $batch_id);
                 <?php endif; ?>
             </div>
 
-            <!-- 统计卡片 -->
             <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-number"><?= $batch['total_count'] ?></div>
@@ -136,7 +149,6 @@ $content_summary = express_get_content_summary($pdo, $batch_id);
                 </div>
             </div>
 
-            <!-- 批量导入区域 -->
             <div class="bulk-import-section">
                 <h2>批量导入快递单号</h2>
                 <form id="bulk-import-form">
@@ -159,7 +171,6 @@ $content_summary = express_get_content_summary($pdo, $batch_id);
                 <div id="import-message" class="message" style="display: none; margin-top: 15px;"></div>
             </div>
 
-            <!-- 添加自定义包裹区域 -->
             <div class="bulk-import-section" style="margin-top: 30px; background-color: #f8f9fa; padding: 20px; border-radius: 5px; border: 2px dashed #28a745;">
                 <h2 style="color: #28a745;">📦 添加自定义包裹（拆分箱子功能）</h2>
                 <p class="form-text" style="margin-bottom: 15px; color: #666;">
@@ -179,7 +190,6 @@ $content_summary = express_get_content_summary($pdo, $batch_id);
                 <div id="custom-message" class="message" style="display: none; margin-top: 15px;"></div>
             </div>
 
-            <!-- 包裹列表 -->
             <div class="packages-section">
                 <div class="section-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                     <h2 style="margin: 0;">包裹列表 (共 <?= count($packages) ?> 个)</h2>
@@ -254,7 +264,6 @@ $content_summary = express_get_content_summary($pdo, $batch_id);
                 </div>
             </div>
 
-            <!-- 内容备注统计 -->
             <div class="packages-section" style="margin-top: 20px;">
                 <div class="section-header">
                     <h2>批次内物品内容统计</h2>
@@ -422,7 +431,6 @@ $content_summary = express_get_content_summary($pdo, $batch_id);
             button.addEventListener('click', async () => {
                 const packageId = button.getAttribute('data-package-id');
                 const currentNote = button.getAttribute('data-current-note') || '';
-
                 const currentExpiry = button.getAttribute('data-expiry-date') || '';
                 const currentQuantity = button.getAttribute('data-quantity') || '';
 
@@ -447,7 +455,8 @@ $content_summary = express_get_content_summary($pdo, $batch_id);
                     </form>
                 `;
 
-                await showModal({
+                // [FIX] 改为使用 showDrawer，且移除了不支持的 width 参数
+                await showDrawer({
                     title: '修改内容信息',
                     content: formHtml,
                     footer: `
@@ -474,7 +483,7 @@ $content_summary = express_get_content_summary($pdo, $batch_id);
         }
     </script>
 
-    <script src="../js/modal.js"></script>
+    <script src="js/modal.js"></script>
     <script>
     async function submitContentNote(packageId) {
         const form = document.getElementById('contentNoteForm');
