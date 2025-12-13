@@ -91,6 +91,8 @@ $packages = mrs_get_inventory_detail($pdo, $content_note, $order_by);
                                 <td><?= $pkg['days_in_stock'] ?> 天</td>
                                 <td><span class="badge badge-in-stock">在库</span></td>
                                 <td>
+                                    <button class="btn btn-sm btn-primary"
+                                            onclick="editPackage(<?= $pkg['ledger_id'] ?>, '<?= htmlspecialchars($pkg['spec_info'], ENT_QUOTES) ?>', '<?= $pkg['expiry_date'] ?? '' ?>', '<?= htmlspecialchars($pkg['quantity'] ?? '', ENT_QUOTES) ?>')">修改</button>
                                     <button class="btn btn-sm btn-danger"
                                             onclick="markVoid(<?= $pkg['ledger_id'] ?>)">标记损耗</button>
                                 </td>
@@ -109,6 +111,76 @@ $packages = mrs_get_inventory_detail($pdo, $content_note, $order_by);
         const urlParams = new URLSearchParams(window.location.search);
         urlParams.set('order_by', orderBy);
         window.location.search = urlParams.toString();
+    }
+
+    // 修改包裹信息
+    async function editPackage(ledgerId, specInfo, expiryDate, quantity) {
+        const formHtml = `
+            <form id="editPackageForm" style="padding: 20px;">
+                <div class="modal-form-group">
+                    <label class="modal-form-label">规格</label>
+                    <input type="text" name="spec_info" class="modal-form-control"
+                           value="${specInfo}" placeholder="请输入规格信息">
+                </div>
+                <div class="modal-form-group">
+                    <label class="modal-form-label">有效期</label>
+                    <input type="date" name="expiry_date" class="modal-form-control"
+                           value="${expiryDate}">
+                </div>
+                <div class="modal-form-group">
+                    <label class="modal-form-label">数量</label>
+                    <input type="text" name="quantity" class="modal-form-control"
+                           value="${quantity}" placeholder="请输入数量(可以是数字或文字,如'80'或'80包')">
+                </div>
+            </form>
+        `;
+
+        const confirmed = await showModal({
+            title: '修改包裹信息',
+            content: formHtml,
+            footer: `
+                <div class="modal-footer">
+                    <button class="modal-btn modal-btn-secondary" data-action="cancel">取消</button>
+                    <button class="modal-btn modal-btn-primary" onclick="submitEdit(${ledgerId})">保存</button>
+                </div>
+            `
+        });
+    }
+
+    async function submitEdit(ledgerId) {
+        const form = document.getElementById('editPackageForm');
+        const specInfo = form.querySelector('[name="spec_info"]').value.trim();
+        const expiryDate = form.querySelector('[name="expiry_date"]').value.trim();
+        const quantity = form.querySelector('[name="quantity"]').value.trim();
+
+        try {
+            const response = await fetch('/mrs/ap/index.php?action=update_package', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    ledger_id: ledgerId,
+                    spec_info: specInfo,
+                    expiry_date: expiryDate || null,
+                    quantity: quantity || null
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                await showAlert('修改成功', '成功', 'success');
+                location.reload();
+            } else {
+                await showAlert('修改失败: ' + data.message, '错误', 'error');
+            }
+        } catch (error) {
+            await showAlert('网络错误: ' + error.message, '错误', 'error');
+        }
+
+        // 关闭模态框
+        window.modal.close(true);
     }
 
     async function markVoid(ledgerId) {

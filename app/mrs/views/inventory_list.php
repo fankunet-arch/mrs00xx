@@ -59,6 +59,7 @@ $total_boxes = array_sum(array_column($inventory, 'total_boxes'));
                         <tr>
                             <th>物料名称</th>
                             <th class="text-center">在库数量</th>
+                            <th class="text-center">数量</th>
                             <th class="text-center">操作</th>
                         </tr>
                     </thead>
@@ -67,6 +68,13 @@ $total_boxes = array_sum(array_column($inventory, 'total_boxes'));
                             <tr>
                                 <td><?= htmlspecialchars($item['sku_name']) ?></td>
                                 <td class="text-center"><strong><?= $item['total_boxes'] ?></strong> 箱</td>
+                                <td class="text-center">
+                                    <?php if ($item['total_quantity'] > 0): ?>
+                                        约:<strong><?= number_format($item['total_quantity']) ?></strong>
+                                    <?php else: ?>
+                                        -
+                                    <?php endif; ?>
+                                </td>
                                 <td class="text-center">
                                     <a href="/mrs/ap/index.php?action=inventory_detail&sku=<?= urlencode($item['sku_name']) ?>"
                                        class="btn btn-sm btn-primary">查看明细</a>

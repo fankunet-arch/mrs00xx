@@ -422,7 +422,16 @@ function mrs_get_inventory_summary($pdo, $content_note = '') {
         $sql = "
             SELECT
                 content_note AS sku_name,
-                COUNT(*) as total_boxes
+                COUNT(*) as total_boxes,
+                SUM(
+                    CASE
+                        WHEN quantity IS NOT NULL
+                        AND quantity != ''
+                        AND quantity REGEXP '^[0-9]+$'
+                        THEN CAST(quantity AS UNSIGNED)
+                        ELSE 0
+                    END
+                ) as total_quantity
             FROM mrs_package_ledger
             WHERE status = 'in_stock'
         ";
@@ -623,6 +632,78 @@ function mrs_change_status($pdo, $ledger_id, $new_status, $reason = '', $operato
         return [
             'success' => false,
             'message' => '状态更新失败: ' . $e->getMessage()
+        ];
+    }
+}
+
+/**
+ * 更新包裹信息 (规格、有效期、数量)
+ * @param PDO $pdo
+ * @param int $ledger_id 台账ID
+ * @param string $spec_info 规格信息
+ * @param string|null $expiry_date 有效期
+ * @param string|null $quantity 数量
+ * @param string $operator 操作员
+ * @return array
+ */
+function mrs_update_package_info($pdo, $ledger_id, $spec_info, $expiry_date, $quantity, $operator = '') {
+    try {
+        // 检查包裹是否存在且在库
+        $stmt = $pdo->prepare("SELECT status FROM mrs_package_ledger WHERE ledger_id = :ledger_id");
+        $stmt->execute(['ledger_id' => $ledger_id]);
+        $package = $stmt->fetch();
+
+        if (!$package) {
+            return [
+                'success' => false,
+                'message' => '包裹不存在'
+            ];
+        }
+
+        if ($package['status'] !== 'in_stock') {
+            return [
+                'success' => false,
+                'message' => '只能修改在库状态的包裹'
+            ];
+        }
+
+        $pdo->beginTransaction();
+
+        $stmt = $pdo->prepare("
+            UPDATE mrs_package_ledger
+            SET spec_info = :spec_info,
+                expiry_date = :expiry_date,
+                quantity = :quantity,
+                updated_by = :operator,
+                updated_at = NOW()
+            WHERE ledger_id = :ledger_id
+        ");
+
+        $stmt->execute([
+            'spec_info' => $spec_info,
+            'expiry_date' => $expiry_date,
+            'quantity' => $quantity,
+            'operator' => $operator,
+            'ledger_id' => $ledger_id
+        ]);
+
+        $pdo->commit();
+
+        mrs_log("Package info updated: ledger_id=$ledger_id", 'INFO', ['operator' => $operator]);
+
+        return [
+            'success' => true,
+            'message' => '包裹信息已更新'
+        ];
+
+    } catch (PDOException $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        mrs_log('Failed to update package info: ' . $e->getMessage(), 'ERROR');
+        return [
+            'success' => false,
+            'message' => '更新失败: ' . $e->getMessage()
         ];
     }
 }
