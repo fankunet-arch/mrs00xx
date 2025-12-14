@@ -39,6 +39,7 @@ $allowed_actions = [
     'sku_save',             // 保存物料
     'status_change',        // 状态变更
     'update_package',       // 修改包裹信息
+    'get_package_items',    // 获取包裹产品明细
     'batch_print',          // 批次箱贴打印
     'destination_manage',   // 去向管理
     'destination_save',     // 保存去向
@@ -72,6 +73,7 @@ $api_actions = [
     'sku_save',
     'status_change',
     'update_package',
+    'get_package_items',
     'destination_save'
 ];
 

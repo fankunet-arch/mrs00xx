@@ -14,7 +14,8 @@ const state = {
     searchTimeout: null,
     operationHistory: [],
     searchResults: new Map(),
-    lastCountNote: ''
+    lastCountNote: '',
+    productItemCounter: 0  // 产品项计数器
 };
 
 // 初始化
@@ -135,6 +136,12 @@ function bindEvents() {
             }
         });
     }
+
+    // 添加产品按钮
+    const btnAddProduct = document.getElementById('btn-add-product');
+    if (btnAddProduct) {
+        btnAddProduct.addEventListener('click', addProductItem);
+    }
 }
 
 // 时间更新
@@ -252,14 +259,15 @@ function selectOperation(operation) {
     document.getElementById('operation-name').textContent = operationNames[operation];
 
     // 显示/隐藏相应的备注输入框
-    document.getElementById('content-note-group').style.display =
-        operation === 'count' ? 'block' : 'none';
-    document.getElementById('expiry-date-group').style.display =
-        operation === 'count' ? 'block' : 'none';
-    document.getElementById('quantity-group').style.display =
+    document.getElementById('products-group').style.display =
         operation === 'count' ? 'block' : 'none';
     document.getElementById('adjustment-note-group').style.display =
         operation === 'adjust' ? 'block' : 'none';
+
+    // 如果是清点操作,初始化至少一个产品项
+    if (operation === 'count') {
+        initializeProductItems();
+    }
 
     // 显示输入区域
     document.getElementById('input-section').style.display = 'block';
@@ -390,16 +398,13 @@ function handleDirectInput() {
 // 清空输入
 function clearInput() {
     document.getElementById('tracking-input').value = '';
-    document.getElementById('content-note').value = '';
     document.getElementById('adjustment-note').value = '';
-    const expiryField = document.getElementById('expiry-date');
-    if (expiryField) {
-        expiryField.value = '';
+
+    // 清空产品项
+    if (state.currentOperation === 'count') {
+        clearProductItems();
     }
-    const quantityField = document.getElementById('quantity');
-    if (quantityField) {
-        quantityField.value = '';
-    }
+
     hideSearchResults();
     hideLastCountSuggestion();
     document.getElementById('tracking-input').focus();
@@ -427,15 +432,13 @@ async function submitOperation() {
     };
 
     if (state.currentOperation === 'count') {
-        payload.content_note = document.getElementById('content-note').value.trim();
-        const expiryField = document.getElementById('expiry-date');
-        if (expiryField && expiryField.value) {
-            payload.expiry_date = expiryField.value;
+        // 收集多产品数据
+        const products = collectProductItems();
+        if (products.length === 0) {
+            showMessage('请至少填写一个产品信息', 'error');
+            return;
         }
-        const quantityField = document.getElementById('quantity');
-        if (quantityField && quantityField.value) {
-            payload.quantity = parseInt(quantityField.value);
-        }
+        payload.products = products;
     }
 
     if (state.currentOperation === 'adjust') {
@@ -597,38 +600,17 @@ function updateNotesPrefill(trackingNumber) {
 
     const pkg = state.searchResults.get(trackingNumber);
     if (state.currentOperation === 'count') {
-        const noteField = document.getElementById('content-note');
-        const expiryField = document.getElementById('expiry-date');
-        const quantityField = document.getElementById('quantity');
-        const savedContent = pkg && pkg.content_note ? pkg.content_note : '';
-        const savedExpiry = pkg && pkg.expiry_date ? pkg.expiry_date : '';
-        const savedQuantity = pkg && pkg.quantity ? pkg.quantity : '';
-
-        if (pkg && savedContent) {
+        // 如果包裹已有产品数据,则预填
+        if (pkg && pkg.items && Array.isArray(pkg.items) && pkg.items.length > 0) {
             hideLastCountSuggestion();
-            if (noteField) {
-                noteField.value = savedContent;
-            }
-            if (expiryField && savedExpiry) {
-                expiryField.value = savedExpiry;
-            }
-            if (quantityField && savedQuantity) {
-                quantityField.value = savedQuantity;
-            }
+            fillProductItems(pkg.items);
             return;
         }
 
-        if (noteField) {
-            noteField.value = '';
-        }
-        if (expiryField) {
-            expiryField.value = savedExpiry || '';
-        }
-        if (quantityField) {
-            quantityField.value = savedQuantity || '';
-        }
-
-        showLastCountSuggestion(state.lastCountNote);
+        // 清空产品项
+        clearProductItems();
+        // 显示上次清点建议(如果有)
+        // showLastCountSuggestion(state.lastCountNote);
     } else {
         hideLastCountSuggestion();
     }
@@ -763,6 +745,192 @@ function setupVisibilityListener() {
                 const event = new Event('change', { bubbles: true });
                 batchSelect.dispatchEvent(event);
             }
+        }
+    });
+}
+
+// ============= 多产品支持功能 =============
+
+// 初始化产品项列表(至少一项)
+function initializeProductItems() {
+    const container = document.getElementById('products-container');
+    if (!container) return;
+
+    // 清空容器
+    container.innerHTML = '';
+    state.productItemCounter = 0;
+
+    // 添加第一个产品项
+    addProductItem();
+}
+
+// 添加一个产品项
+function addProductItem() {
+    const container = document.getElementById('products-container');
+    if (!container) return;
+
+    const itemId = ++state.productItemCounter;
+
+    const itemHtml = `
+        <div class="product-item" data-item-id="${itemId}">
+            <div class="product-item-header">
+                <span class="product-item-number">产品 ${itemId}</span>
+                <button type="button" class="btn-remove-product" data-item-id="${itemId}" title="删除此产品">×</button>
+            </div>
+            <div class="product-item-body">
+                <div class="form-group">
+                    <label>产品名称/内容:</label>
+                    <input type="text" class="form-control product-name"
+                           placeholder="例如：番茄酱"
+                           data-item-id="${itemId}">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>数量:</label>
+                        <input type="number" class="form-control product-quantity"
+                               placeholder="数量" min="1" step="1"
+                               data-item-id="${itemId}">
+                    </div>
+                    <div class="form-group">
+                        <label>保质期:</label>
+                        <input type="date" class="form-control product-expiry"
+                               data-item-id="${itemId}">
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    container.insertAdjacentHTML('beforeend', itemHtml);
+
+    // 绑定删除按钮事件
+    const removeBtn = container.querySelector(`[data-item-id="${itemId}"].btn-remove-product`);
+    if (removeBtn) {
+        removeBtn.addEventListener('click', function() {
+            removeProductItem(itemId);
+        });
+    }
+
+    // 绑定日期选择器点击事件
+    const expiryInput = container.querySelector(`.product-expiry[data-item-id="${itemId}"]`);
+    if (expiryInput) {
+        expiryInput.addEventListener('click', function() {
+            this.showPicker && this.showPicker();
+        });
+    }
+}
+
+// 删除一个产品项
+function removeProductItem(itemId) {
+    const container = document.getElementById('products-container');
+    if (!container) return;
+
+    const item = container.querySelector(`.product-item[data-item-id="${itemId}"]`);
+    if (!item) return;
+
+    // 如果只剩一个产品项,不允许删除
+    const remainingItems = container.querySelectorAll('.product-item');
+    if (remainingItems.length <= 1) {
+        showMessage('至少需要保留一个产品项', 'warning');
+        return;
+    }
+
+    item.remove();
+
+    // 重新编号
+    renumberProductItems();
+}
+
+// 重新编号产品项
+function renumberProductItems() {
+    const container = document.getElementById('products-container');
+    if (!container) return;
+
+    const items = container.querySelectorAll('.product-item');
+    items.forEach((item, index) => {
+        const numberSpan = item.querySelector('.product-item-number');
+        if (numberSpan) {
+            numberSpan.textContent = `产品 ${index + 1}`;
+        }
+    });
+}
+
+// 收集所有产品项数据
+function collectProductItems() {
+    const container = document.getElementById('products-container');
+    if (!container) return [];
+
+    const items = container.querySelectorAll('.product-item');
+    const products = [];
+
+    items.forEach((item, index) => {
+        const itemId = item.dataset.itemId;
+        const nameInput = item.querySelector(`.product-name[data-item-id="${itemId}"]`);
+        const quantityInput = item.querySelector(`.product-quantity[data-item-id="${itemId}"]`);
+        const expiryInput = item.querySelector(`.product-expiry[data-item-id="${itemId}"]`);
+
+        const product = {
+            product_name: nameInput ? nameInput.value.trim() : '',
+            quantity: quantityInput && quantityInput.value ? parseInt(quantityInput.value) : null,
+            expiry_date: expiryInput && expiryInput.value ? expiryInput.value : null,
+            sort_order: index
+        };
+
+        // 只添加有内容的产品项
+        if (product.product_name || product.quantity || product.expiry_date) {
+            products.push(product);
+        }
+    });
+
+    return products;
+}
+
+// 清空所有产品项
+function clearProductItems() {
+    const container = document.getElementById('products-container');
+    if (!container) return;
+
+    const items = container.querySelectorAll('.product-item');
+    items.forEach(item => {
+        const itemId = item.dataset.itemId;
+        const nameInput = item.querySelector(`.product-name[data-item-id="${itemId}"]`);
+        const quantityInput = item.querySelector(`.product-quantity[data-item-id="${itemId}"]`);
+        const expiryInput = item.querySelector(`.product-expiry[data-item-id="${itemId}"]`);
+
+        if (nameInput) nameInput.value = '';
+        if (quantityInput) quantityInput.value = '';
+        if (expiryInput) expiryInput.value = '';
+    });
+}
+
+// 填充产品项数据(用于预填)
+function fillProductItems(items) {
+    if (!Array.isArray(items) || items.length === 0) return;
+
+    const container = document.getElementById('products-container');
+    if (!container) return;
+
+    // 清空现有项
+    container.innerHTML = '';
+    state.productItemCounter = 0;
+
+    // 添加每个产品项
+    items.forEach((item, index) => {
+        addProductItem();
+
+        const itemId = state.productItemCounter;
+        const nameInput = container.querySelector(`.product-name[data-item-id="${itemId}"]`);
+        const quantityInput = container.querySelector(`.product-quantity[data-item-id="${itemId}"]`);
+        const expiryInput = container.querySelector(`.product-expiry[data-item-id="${itemId}"]`);
+
+        if (nameInput && item.product_name) {
+            nameInput.value = item.product_name;
+        }
+        if (quantityInput && item.quantity) {
+            quantityInput.value = item.quantity;
+        }
+        if (expiryInput && item.expiry_date) {
+            expiryInput.value = item.expiry_date;
         }
     });
 }

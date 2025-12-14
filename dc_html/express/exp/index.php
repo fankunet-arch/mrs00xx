@@ -45,7 +45,8 @@ $allowed_actions = [
     'create_custom_packages',   // 创建自定义包裹
     'content_search',           // 内容备注搜索页面
     'content_search_api',       // 内容备注搜索API
-    'update_content_note'       // 更新内容备注API
+    'update_content_note',      // 更新内容备注API
+    'get_package_items'         // 获取包裹产品明细API
 ];
 
 // 验证action是否允许
@@ -76,7 +77,8 @@ $api_actions = [
     'create_custom_packages',
     'logout',
     'content_search_api',
-    'update_content_note'
+    'update_content_note',
+    'get_package_items'
 ];
 
 // 路由到对应的action或API文件（在app目录中）
