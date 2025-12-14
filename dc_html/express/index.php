@@ -31,7 +31,8 @@ $allowed_actions = [
     'save_record_api',          // 保存操作记录API
     'get_packages_api',         // 获取包裹列表API
     'get_batch_detail_api',     // 获取批次详情API
-    'get_recent_operations_api' // 获取最近操作记录API（按类型过滤+去重）
+    'get_recent_operations_api', // 获取最近操作记录API（按类型过滤+去重）
+    'get_product_expiry_api'    // 获取产品保质期建议API
 ];
 
 // 验证action是否允许

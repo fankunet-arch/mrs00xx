@@ -822,6 +822,12 @@ function addProductItem() {
                         <label>保质期:</label>
                         <input type="date" class="form-control product-expiry"
                                data-item-id="${itemId}">
+                        <div class="expiry-suggestion" data-item-id="${itemId}" style="display: none;">
+                            <span class="suggestion-label">本批次:</span>
+                            <button type="button" class="btn-apply-expiry suggestion-chip"
+                                    data-item-id="${itemId}"
+                                    title="点击填入建议的保质期"></button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -843,6 +849,26 @@ function addProductItem() {
     if (expiryInput) {
         expiryInput.addEventListener('click', function() {
             this.showPicker && this.showPicker();
+        });
+    }
+
+    // 绑定产品名称输入事件，查询保质期建议
+    const nameInput = container.querySelector(`.product-name[data-item-id="${itemId}"]`);
+    if (nameInput) {
+        nameInput.addEventListener('blur', function() {
+            checkProductExpirySuggestion(itemId, this.value.trim());
+        });
+    }
+
+    // 绑定保质期建议按钮点击事件
+    const expiryBtn = container.querySelector(`.btn-apply-expiry[data-item-id="${itemId}"]`);
+    if (expiryBtn) {
+        expiryBtn.addEventListener('click', function() {
+            const expiryDate = this.dataset.expiryDate || '';
+            if (expiryDate && expiryInput) {
+                expiryInput.value = expiryDate;
+                expiryInput.focus();
+            }
         });
     }
 }
@@ -960,4 +986,62 @@ function fillProductItems(items) {
             expiryInput.value = item.expiry_date;
         }
     });
+}
+
+// ============= 保质期建议功能 =============
+
+// 检查产品保质期建议
+async function checkProductExpirySuggestion(itemId, productName) {
+    const container = document.getElementById('products-container');
+    if (!container) return;
+
+    const suggestionDiv = container.querySelector(`.expiry-suggestion[data-item-id="${itemId}"]`);
+    const suggestionBtn = container.querySelector(`.btn-apply-expiry[data-item-id="${itemId}"]`);
+
+    if (!suggestionDiv || !suggestionBtn) return;
+
+    // 如果产品名称为空，隐藏建议
+    if (!productName) {
+        suggestionDiv.style.display = 'none';
+        suggestionBtn.textContent = '';
+        suggestionBtn.dataset.expiryDate = '';
+        return;
+    }
+
+    // 如果没有选择批次，无法查询
+    if (!state.currentBatchId) {
+        suggestionDiv.style.display = 'none';
+        return;
+    }
+
+    try {
+        const params = new URLSearchParams({
+            batch_id: state.currentBatchId,
+            product_name: productName
+        });
+
+        const response = await fetch(`/express/index.php?action=get_product_expiry_api&${params.toString()}`);
+        const data = await response.json();
+
+        if (data.success && data.data && data.data.expiry_date) {
+            const expiryDate = data.data.expiry_date;
+            const usageCount = data.data.usage_count || 1;
+
+            // 格式化日期显示
+            const dateObj = new Date(expiryDate);
+            const displayText = `${expiryDate} (已用${usageCount}次)`;
+
+            suggestionBtn.textContent = displayText;
+            suggestionBtn.dataset.expiryDate = expiryDate;
+            suggestionDiv.style.display = 'flex';
+        } else {
+            // 没有找到建议，隐藏
+            suggestionDiv.style.display = 'none';
+            suggestionBtn.textContent = '';
+            suggestionBtn.dataset.expiryDate = '';
+        }
+    } catch (error) {
+        console.error('Failed to get expiry suggestion:', error);
+        suggestionDiv.style.display = 'none';
+    }
 }

@@ -46,7 +46,8 @@ $allowed_actions = [
     'content_search',           // 内容备注搜索页面
     'content_search_api',       // 内容备注搜索API
     'update_content_note',      // 更新内容备注API
-    'get_package_items'         // 获取包裹产品明细API
+    'get_package_items',        // 获取包裹产品明细API
+    'get_product_expiry'        // 获取产品保质期建议API
 ];
 
 // 验证action是否允许
@@ -78,7 +79,8 @@ $api_actions = [
     'logout',
     'content_search_api',
     'update_content_note',
-    'get_package_items'
+    'get_package_items',
+    'get_product_expiry'
 ];
 
 // 路由到对应的action或API文件（在app目录中）
