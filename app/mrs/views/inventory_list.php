@@ -8,8 +8,8 @@ if (!defined('MRS_ENTRY')) {
     die('Access denied');
 }
 
-// 获取库存汇总
-$inventory = mrs_get_inventory_summary($pdo);
+// 获取库存汇总（使用真正的多产品统计）
+$inventory = mrs_get_true_inventory_summary($pdo);
 $total_boxes = array_sum(array_column($inventory, 'total_boxes'));
 ?>
 <!DOCTYPE html>

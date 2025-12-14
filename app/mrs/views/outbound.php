@@ -8,8 +8,8 @@ if (!defined('MRS_ENTRY')) {
     die('Access denied');
 }
 
-// 获取库存汇总供选择
-$inventory = mrs_get_inventory_summary($pdo);
+// 获取库存汇总供选择（使用真正的多产品统计）
+$inventory = mrs_get_true_inventory_summary($pdo);
 
 // 获取所有有效去向
 $destinations = mrs_get_destinations($pdo);
@@ -28,8 +28,8 @@ if (!empty($search_type) && !empty($search_value)) {
     $packages = mrs_search_instock_packages($pdo, $search_type, $search_value, $order_by);
     $search_mode = true;
 } elseif (!empty($selected_sku)) {
-    // 如果选择了物料，加载库存明细
-    $packages = mrs_get_inventory_detail($pdo, $selected_sku, $order_by);
+    // 如果选择了物料，加载库存明细（使用真正的多产品查询）
+    $packages = mrs_get_true_inventory_detail($pdo, $selected_sku, $order_by);
 }
 
 // 格式化快递单号：末尾4位红色加粗
@@ -176,10 +176,8 @@ function format_tracking_number($tracking_number) {
                                 <th>批次名称</th>
                                 <th>快递单号</th>
                                 <th>箱号</th>
-                                <th>内容备注</th>
+                                <th>产品明细</th>
                                 <th>规格</th>
-                                <th>有效期</th>
-                                <th>数量</th>
                                 <th>入库时间</th>
                                 <th>库存天数</th>
                             </tr>
@@ -195,10 +193,28 @@ function format_tracking_number($tracking_number) {
                                     <td><?= htmlspecialchars($pkg['batch_name']) ?></td>
                                     <td><?= format_tracking_number($pkg['tracking_number']) ?></td>
                                     <td><?= htmlspecialchars($pkg['box_number']) ?></td>
-                                    <td><strong><?= htmlspecialchars($pkg['content_note']) ?></strong></td>
+                                    <td>
+                                        <?php if (!empty($pkg['items']) && is_array($pkg['items'])): ?>
+                                            <div style="display: flex; flex-direction: column; gap: 4px;">
+                                                <?php foreach ($pkg['items'] as $item): ?>
+                                                    <div style="padding: 4px 8px; background: #f8f9fa; border-radius: 4px; font-size: 13px;">
+                                                        <strong><?= htmlspecialchars($item['product_name']) ?></strong>
+                                                        <?php if (!empty($item['quantity'])): ?>
+                                                            × <?= htmlspecialchars($item['quantity']) ?>
+                                                        <?php endif; ?>
+                                                        <?php if (!empty($item['expiry_date'])): ?>
+                                                            <span style="color: #666; margin-left: 8px;">
+                                                                <?= htmlspecialchars($item['expiry_date']) ?>
+                                                            </span>
+                                                        <?php endif; ?>
+                                                    </div>
+                                                <?php endforeach; ?>
+                                            </div>
+                                        <?php else: ?>
+                                            <span style="color: #999;">-</span>
+                                        <?php endif; ?>
+                                    </td>
                                     <td><?= htmlspecialchars($pkg['spec_info']) ?></td>
-                                    <td><?= $pkg['expiry_date'] ? htmlspecialchars($pkg['expiry_date']) : '-' ?></td>
-                                    <td><?= $pkg['quantity'] ? htmlspecialchars($pkg['quantity']) : '-' ?></td>
                                     <td><?= date('Y-m-d H:i', strtotime($pkg['inbound_time'])) ?></td>
                                     <td><?= $pkg['days_in_stock'] ?> 天</td>
                                 </tr>

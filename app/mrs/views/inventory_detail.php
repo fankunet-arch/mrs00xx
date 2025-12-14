@@ -8,16 +8,16 @@ if (!defined('MRS_ENTRY')) {
     die('Access denied');
 }
 
-$content_note = $_GET['sku'] ?? '';
+$product_name = $_GET['sku'] ?? ''; // sku参数现在表示产品名称，不再是content_note组合
 $order_by = $_GET['order_by'] ?? 'fifo';
 
-if (empty($content_note)) {
+if (empty($product_name)) {
     header('Location: /mrs/ap/index.php?action=inventory_list');
     exit;
 }
 
-// 获取库存明细
-$packages = mrs_get_inventory_detail($pdo, $content_note, $order_by);
+// 获取库存明细（使用真正的多产品查询）
+$packages = mrs_get_true_inventory_detail($pdo, $product_name, $order_by);
 ?>
 <!DOCTYPE html>
 <html lang="zh">
@@ -33,7 +33,7 @@ $packages = mrs_get_inventory_detail($pdo, $content_note, $order_by);
 
     <div class="main-content">
         <div class="page-header">
-            <h1>库存明细: <?= htmlspecialchars($content_note) ?></h1>
+            <h1>库存明细: <?= htmlspecialchars($product_name) ?></h1>
             <div class="header-actions">
                 <a href="/mrs/ap/index.php?action=inventory_list" class="btn btn-secondary">返回</a>
             </div>
@@ -70,8 +70,7 @@ $packages = mrs_get_inventory_detail($pdo, $content_note, $order_by);
                             <th>快递单号</th>
                             <th>箱号</th>
                             <th>规格</th>
-                            <th>有效期</th>
-                            <th>数量</th>
+                            <th>产品明细</th>
                             <th>入库时间</th>
                             <th>库存天数</th>
                             <th>状态</th>
@@ -82,17 +81,47 @@ $packages = mrs_get_inventory_detail($pdo, $content_note, $order_by);
                         <?php foreach ($packages as $pkg): ?>
                             <tr>
                                 <td><?= htmlspecialchars($pkg['batch_name']) ?></td>
-                                <td><?= htmlspecialchars($pkg['tracking_number']) ?></td>
+                                <td>
+                                    <?php
+                                    $tracking = htmlspecialchars($pkg['tracking_number']);
+                                    if (mb_strlen($tracking) >= 4) {
+                                        $prefix = mb_substr($tracking, 0, -4);
+                                        $suffix = mb_substr($tracking, -4);
+                                        echo $prefix . '<span style="color: #dc3545; font-weight: bold;">' . $suffix . '</span>';
+                                    } else {
+                                        echo $tracking;
+                                    }
+                                    ?>
+                                </td>
                                 <td><?= htmlspecialchars($pkg['box_number']) ?></td>
                                 <td><?= htmlspecialchars($pkg['spec_info']) ?></td>
-                                <td><?= $pkg['expiry_date'] ? htmlspecialchars($pkg['expiry_date']) : '-' ?></td>
-                                <td><?= $pkg['quantity'] ? htmlspecialchars($pkg['quantity']) : '-' ?></td>
+                                <td>
+                                    <?php if (!empty($pkg['items']) && is_array($pkg['items'])): ?>
+                                        <div style="display: flex; flex-direction: column; gap: 4px;">
+                                            <?php foreach ($pkg['items'] as $item): ?>
+                                                <div style="padding: 4px 8px; background: #f8f9fa; border-radius: 4px; font-size: 13px;">
+                                                    <strong><?= htmlspecialchars($item['product_name']) ?></strong>
+                                                    <?php if (!empty($item['quantity'])): ?>
+                                                        × <?= htmlspecialchars($item['quantity']) ?>
+                                                    <?php endif; ?>
+                                                    <?php if (!empty($item['expiry_date'])): ?>
+                                                        <span style="color: #666; margin-left: 8px;">
+                                                            <?= htmlspecialchars($item['expiry_date']) ?>
+                                                        </span>
+                                                    <?php endif; ?>
+                                                </div>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    <?php else: ?>
+                                        <span style="color: #999;">-</span>
+                                    <?php endif; ?>
+                                </td>
                                 <td><?= date('Y-m-d H:i', strtotime($pkg['inbound_time'])) ?></td>
                                 <td><?= $pkg['days_in_stock'] ?> 天</td>
                                 <td><span class="badge badge-in-stock">在库</span></td>
                                 <td>
                                     <button class="btn btn-sm btn-primary"
-                                            onclick="editPackage(<?= $pkg['ledger_id'] ?>, '<?= htmlspecialchars($pkg['tracking_number'], ENT_QUOTES) ?>', '<?= htmlspecialchars($pkg['box_number'], ENT_QUOTES) ?>', '<?= htmlspecialchars($pkg['spec_info'], ENT_QUOTES) ?>', '<?= htmlspecialchars($pkg['content_note'], ENT_QUOTES) ?>', '<?= $pkg['expiry_date'] ?? '' ?>', '<?= htmlspecialchars($pkg['quantity'] ?? '', ENT_QUOTES) ?>')">修改</button>
+                                            onclick="editPackage(<?= $pkg['ledger_id'] ?>, '<?= htmlspecialchars($pkg['tracking_number'], ENT_QUOTES) ?>', '<?= htmlspecialchars($pkg['box_number'], ENT_QUOTES) ?>', '<?= htmlspecialchars($pkg['spec_info'], ENT_QUOTES) ?>', '<?= htmlspecialchars($pkg['content_note'], ENT_QUOTES) ?>', '<?= $pkg['ledger_expiry_date'] ?? '' ?>', '<?= htmlspecialchars($pkg['ledger_quantity'] ?? '', ENT_QUOTES) ?>')">修改</button>
                                     <button class="btn btn-sm btn-danger"
                                             onclick="markVoid(<?= $pkg['ledger_id'] ?>)">标记损耗</button>
                                 </td>

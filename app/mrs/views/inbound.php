@@ -137,13 +137,33 @@ if (!empty($selected_batch)) {
                                            value="<?= htmlspecialchars(json_encode([
                                                'batch_name' => $pkg['batch_name'],
                                                'tracking_number' => $pkg['tracking_number'],
-                                               'content_note' => $pkg['content_note']
+                                               'content_note' => $pkg['content_note'],
+                                               'expiry_date' => $pkg['expiry_date'] ?? null,
+                                               'quantity' => $pkg['quantity'] ?? null,
+                                               'items' => $pkg['items'] ?? []
                                            ])) ?>"
                                            class="package-checkbox">
-                                    <div>
+                                    <div style="flex: 1;">
                                         <strong>单号:</strong> <?= htmlspecialchars($pkg['tracking_number']) ?> |
-                                        <strong>物料:</strong> <?= htmlspecialchars($pkg['content_note'] ?? '') ?: '未填写' ?> |
                                         <strong>清点时间:</strong> <?= date('Y-m-d H:i', strtotime($pkg['counted_at'])) ?>
+                                        <div style="margin-top: 8px;">
+                                            <?php if (!empty($pkg['items']) && is_array($pkg['items'])): ?>
+                                                <strong>产品:</strong>
+                                                <?php foreach ($pkg['items'] as $idx => $item): ?>
+                                                    <span style="display: inline-block; margin-right: 12px; padding: 2px 8px; background: #e8f5e9; border-radius: 4px; font-size: 12px;">
+                                                        <?= htmlspecialchars($item['product_name']) ?>
+                                                        <?php if (!empty($item['quantity'])): ?>
+                                                            ×<?= htmlspecialchars($item['quantity']) ?>
+                                                        <?php endif; ?>
+                                                        <?php if (!empty($item['expiry_date'])): ?>
+                                                            <span style="color: #666;">(<?= htmlspecialchars($item['expiry_date']) ?>)</span>
+                                                        <?php endif; ?>
+                                                    </span>
+                                                <?php endforeach; ?>
+                                            <?php else: ?>
+                                                <strong>物料:</strong> <?= htmlspecialchars($pkg['content_note'] ?? '') ?: '未填写' ?>
+                                            <?php endif; ?>
+                                        </div>
                                     </div>
                                 </div>
                             <?php endforeach; ?>

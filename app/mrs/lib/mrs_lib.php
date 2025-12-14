@@ -182,10 +182,13 @@ function mrs_get_express_counted_packages($mrs_pdo, $batch_name) {
         $stmt = $express_pdo->prepare("
             SELECT
                 b.batch_name,
+                p.package_id,
                 p.tracking_number,
                 p.content_note,
                 p.package_status,
-                p.counted_at
+                p.counted_at,
+                p.expiry_date,
+                p.quantity
             FROM express_package p
             INNER JOIN express_batch b ON p.batch_id = b.batch_id
             WHERE b.batch_name = :batch_name
@@ -196,7 +199,7 @@ function mrs_get_express_counted_packages($mrs_pdo, $batch_name) {
         $stmt->execute(['batch_name' => $batch_name]);
         $express_packages = $stmt->fetchAll();
 
-        // 过滤掉已入库的包裹
+        // 过滤掉已入库的包裹，并加载产品明细
         $available_packages = [];
 
         foreach ($express_packages as $pkg) {
@@ -215,6 +218,16 @@ function mrs_get_express_counted_packages($mrs_pdo, $batch_name) {
 
             // 如果不存在，则可入库
             if (!$check_stmt->fetch()) {
+                // 加载产品明细
+                $items_stmt = $express_pdo->prepare("
+                    SELECT product_name, quantity, expiry_date, sort_order
+                    FROM express_package_items
+                    WHERE package_id = :package_id
+                    ORDER BY sort_order ASC
+                ");
+                $items_stmt->execute(['package_id' => $pkg['package_id']]);
+                $pkg['items'] = $items_stmt->fetchAll();
+
                 $available_packages[] = $pkg;
             }
         }
@@ -1262,6 +1275,223 @@ function mrs_delete_destination($pdo, $destination_id) {
             'success' => false,
             'message' => '删除失败: ' . $e->getMessage()
         ];
+    }
+}
+
+// ============================================
+// 真正的多产品库存统计函数（基于mrs_package_items表）
+// ============================================
+
+/**
+ * 获取真正的库存汇总（按单个产品聚合，不是按组合）
+ *
+ * 重要说明：
+ * - 旧函数mrs_get_inventory_summary()按content_note分组，导致"AA,BB"和"AA,CC"被当作不同SKU
+ * - 本函数按product_name分组，正确统计每个独立产品的库存
+ * - 这是仓储系统应有的正确行为
+ *
+ * @param PDO $pdo
+ * @param string $product_name 产品名称（可选，用于筛选）
+ * @return array
+ */
+function mrs_get_true_inventory_summary($pdo, $product_name = '') {
+    try {
+        $sql = "
+            SELECT
+                i.product_name AS sku_name,
+                COUNT(DISTINCT l.ledger_id) as total_boxes,
+                SUM(
+                    CASE
+                        WHEN i.quantity IS NOT NULL
+                        AND i.quantity != ''
+                        AND i.quantity REGEXP '^[0-9]+$'
+                        THEN CAST(i.quantity AS UNSIGNED)
+                        ELSE 0
+                    END
+                ) as total_quantity,
+                MIN(
+                    CASE
+                        WHEN i.expiry_date IS NOT NULL
+                        THEN i.expiry_date
+                        ELSE NULL
+                    END
+                ) as nearest_expiry_date
+            FROM mrs_package_items i
+            INNER JOIN mrs_package_ledger l ON i.ledger_id = l.ledger_id
+            WHERE l.status = 'in_stock'
+        ";
+
+        if (!empty($product_name)) {
+            $sql .= " AND i.product_name = :product_name";
+        }
+
+        $sql .= " GROUP BY i.product_name ORDER BY i.product_name ASC";
+
+        $stmt = $pdo->prepare($sql);
+
+        if (!empty($product_name)) {
+            $stmt->bindValue(':product_name', $product_name, PDO::PARAM_STR);
+        }
+
+        $stmt->execute();
+        return $stmt->fetchAll();
+    } catch (PDOException $e) {
+        mrs_log('Failed to get true inventory summary: ' . $e->getMessage(), 'ERROR');
+        return [];
+    }
+}
+
+/**
+ * 获取某个产品的真正库存明细（所有包含该产品的包裹）
+ *
+ * @param PDO $pdo
+ * @param string $product_name 产品名称
+ * @param string $order_by 排序方式（同旧函数）
+ * @return array 返回包含该产品的所有包裹，每个包裹包含items数组
+ */
+function mrs_get_true_inventory_detail($pdo, $product_name, $order_by = 'fifo') {
+    try {
+        // 根据排序参数构建ORDER BY子句
+        $order_clause = match($order_by) {
+            'batch' => 'l.batch_name ASC, l.inbound_time ASC',
+            'expiry_date_asc' => 'i.expiry_date ASC, l.inbound_time ASC',
+            'expiry_date_desc' => 'i.expiry_date DESC, l.inbound_time ASC',
+            'inbound_time_desc' => 'l.inbound_time DESC',
+            'days_in_stock_asc' => 'l.inbound_time DESC',
+            'days_in_stock_desc' => 'l.inbound_time ASC',
+            default => 'l.inbound_time ASC' // fifo 或 inbound_time_asc
+        };
+
+        // 首先获取包含该产品的所有包裹
+        $sql = "
+            SELECT DISTINCT
+                l.ledger_id,
+                l.batch_name,
+                l.tracking_number,
+                l.content_note,
+                l.box_number,
+                l.spec_info,
+                l.expiry_date AS ledger_expiry_date,
+                l.quantity AS ledger_quantity,
+                l.warehouse_location,
+                l.status,
+                l.inbound_time,
+                DATEDIFF(NOW(), l.inbound_time) as days_in_stock
+            FROM mrs_package_ledger l
+            INNER JOIN mrs_package_items i ON l.ledger_id = i.ledger_id
+            WHERE i.product_name = :product_name AND l.status = 'in_stock'
+            ORDER BY {$order_clause}
+        ";
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->bindValue(':product_name', $product_name, PDO::PARAM_STR);
+        $stmt->execute();
+        $packages = $stmt->fetchAll();
+
+        // 为每个包裹加载其产品明细
+        foreach ($packages as &$package) {
+            $items_stmt = $pdo->prepare("
+                SELECT product_name, quantity, expiry_date, sort_order
+                FROM mrs_package_items
+                WHERE ledger_id = :ledger_id
+                ORDER BY sort_order ASC
+            ");
+            $items_stmt->execute(['ledger_id' => $package['ledger_id']]);
+            $package['items'] = $items_stmt->fetchAll();
+        }
+
+        return $packages;
+    } catch (PDOException $e) {
+        mrs_log('Failed to get true inventory detail: ' . $e->getMessage(), 'ERROR');
+        return [];
+    }
+}
+
+/**
+ * 获取包裹的产品明细
+ *
+ * @param PDO $pdo
+ * @param int $ledger_id 台账ID
+ * @return array
+ */
+function mrs_get_package_items($pdo, $ledger_id) {
+    try {
+        $stmt = $pdo->prepare("
+            SELECT item_id, product_name, quantity, expiry_date, sort_order
+            FROM mrs_package_items
+            WHERE ledger_id = :ledger_id
+            ORDER BY sort_order ASC
+        ");
+        $stmt->execute(['ledger_id' => $ledger_id]);
+        return $stmt->fetchAll();
+    } catch (PDOException $e) {
+        mrs_log('Failed to get package items: ' . $e->getMessage(), 'ERROR');
+        return [];
+    }
+}
+
+/**
+ * 更新包裹的产品明细（删除旧的，插入新的）
+ *
+ * @param PDO $pdo
+ * @param int $ledger_id 台账ID
+ * @param array $items 产品数组，每个元素包含 product_name, quantity, expiry_date
+ * @return bool
+ */
+function mrs_update_package_items($pdo, $ledger_id, $items) {
+    try {
+        $pdo->beginTransaction();
+
+        // 删除旧的产品明细
+        $delete_stmt = $pdo->prepare("DELETE FROM mrs_package_items WHERE ledger_id = :ledger_id");
+        $delete_stmt->execute(['ledger_id' => $ledger_id]);
+
+        // 插入新的产品明细
+        if (!empty($items) && is_array($items)) {
+            $insert_stmt = $pdo->prepare("
+                INSERT INTO mrs_package_items (ledger_id, product_name, quantity, expiry_date, sort_order)
+                VALUES (:ledger_id, :product_name, :quantity, :expiry_date, :sort_order)
+            ");
+
+            foreach ($items as $index => $item) {
+                if (empty($item['product_name'])) continue;
+
+                $insert_stmt->execute([
+                    'ledger_id' => $ledger_id,
+                    'product_name' => trim($item['product_name']),
+                    'quantity' => !empty($item['quantity']) ? (int)$item['quantity'] : null,
+                    'expiry_date' => !empty($item['expiry_date']) ? $item['expiry_date'] : null,
+                    'sort_order' => $index
+                ]);
+            }
+
+            // 同时更新主表的content_note（仅用于显示）
+            $product_names = array_map(function($item) {
+                return trim($item['product_name']);
+            }, array_filter($items, function($item) {
+                return !empty($item['product_name']);
+            }));
+
+            $content_note = implode(', ', $product_names);
+
+            $update_main = $pdo->prepare("
+                UPDATE mrs_package_ledger
+                SET content_note = :content_note
+                WHERE ledger_id = :ledger_id
+            ");
+            $update_main->execute([
+                'content_note' => $content_note,
+                'ledger_id' => $ledger_id
+            ]);
+        }
+
+        $pdo->commit();
+        mrs_log("Package items updated: ledger_id=$ledger_id", 'INFO');
+        return true;
+    } catch (PDOException $e) {
+        $pdo->rollBack();
+        mrs_log('Failed to update package items: ' . $e->getMessage(), 'ERROR');
+        return false;
     }
 }
 
