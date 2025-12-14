@@ -85,14 +85,41 @@ function bindEvents() {
     const lastCountButton = document.getElementById('btn-apply-last-count');
     if (lastCountButton) {
         lastCountButton.addEventListener('click', function() {
-            const noteField = document.getElementById('content-note');
             const content = this.dataset.content || '';
 
-            if (noteField && content) {
-                noteField.value = content;
-                noteField.focus();
+            if (!content) return;
+
+            // 填充到第一个空的产品项，如果都有内容则填充到最后一个
+            const container = document.getElementById('products-container');
+            if (!container) return;
+
+            const productItems = container.querySelectorAll('.product-item');
+            if (productItems.length === 0) return;
+
+            // 查找第一个产品名称为空的产品项
+            let targetItem = null;
+            for (let item of productItems) {
+                const itemId = item.dataset.itemId;
+                const nameField = item.querySelector(`.product-name[data-item-id="${itemId}"]`);
+                if (nameField && !nameField.value.trim()) {
+                    targetItem = item;
+                    break;
+                }
+            }
+
+            // 如果所有产品项都有内容，则使用最后一个产品项
+            if (!targetItem) {
+                targetItem = productItems[productItems.length - 1];
+            }
+
+            const targetItemId = targetItem.dataset.itemId;
+            const nameField = targetItem.querySelector(`.product-name[data-item-id="${targetItemId}"]`);
+
+            if (nameField) {
+                nameField.value = content;
+                nameField.focus();
                 const length = content.length;
-                noteField.setSelectionRange(length, length);
+                nameField.setSelectionRange(length, length);
             }
         });
     }
@@ -610,7 +637,7 @@ function updateNotesPrefill(trackingNumber) {
         // 清空产品项
         clearProductItems();
         // 显示上次清点建议(如果有)
-        // showLastCountSuggestion(state.lastCountNote);
+        showLastCountSuggestion(state.lastCountNote);
     } else {
         hideLastCountSuggestion();
     }
