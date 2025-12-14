@@ -936,20 +936,19 @@ function express_update_content_note($pdo, $package_id, $operator, $content_note
                     }
                 }
 
-                // 生成汇总的content_note
-                $parts = [];
+                // 生成content_note（只包含产品名称，不包含数量）
+                $product_names = [];
                 foreach ($items as $item) {
                     if (!empty($item['product_name'])) {
-                        $text = trim($item['product_name']);
-                        if (!empty($item['quantity'])) {
-                            $text .= '×' . $item['quantity'];
-                        }
-                        $parts[] = $text;
+                        // 只使用产品名称，不加数量
+                        $product_names[] = trim($item['product_name']);
                     }
                 }
-                if (count($parts) > 0) {
-                    $generated_note = implode(', ', $parts);
-                    // 更新content_note为生成的汇总
+                if (count($product_names) > 0) {
+                    // 如果只有一个产品，直接使用产品名
+                    // 如果有多个产品，用逗号分隔（如："番茄酱, 辣椒酱"）
+                    $generated_note = implode(', ', $product_names);
+                    // 更新content_note
                     $update_note = $pdo->prepare("
                         UPDATE express_package
                         SET content_note = :content_note
@@ -1043,22 +1042,21 @@ function express_process_verify($pdo, $package_id, $old_status, $operator) {
 function express_process_count($pdo, $package_id, $old_status, $operator, $content_note, $expiry_date = null, $quantity = null, $products = null) {
     // 清点操作自动包含核实，同时更新两个时间戳
 
-    // 为了向后兼容，生成content_note汇总
+    // 生成content_note（只包含产品名称，不包含数量）
     $summary_note = $content_note;
     if ($products && is_array($products) && count($products) > 0) {
-        // 从products数组生成汇总文本
-        $parts = [];
+        // 从products数组生成产品名称列表（不含数量）
+        $product_names = [];
         foreach ($products as $item) {
             if (!empty($item['product_name'])) {
-                $text = $item['product_name'];
-                if (!empty($item['quantity'])) {
-                    $text .= '×' . $item['quantity'];
-                }
-                $parts[] = $text;
+                // 只使用产品名称，不加数量
+                $product_names[] = trim($item['product_name']);
             }
         }
-        if (count($parts) > 0) {
-            $summary_note = implode(', ', $parts);
+        if (count($product_names) > 0) {
+            // 如果只有一个产品，直接使用产品名
+            // 如果有多个产品，用逗号分隔（如："番茄酱, 辣椒酱"）
+            $summary_note = implode(', ', $product_names);
         }
     }
 
