@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- 主机： mhdlmskp2kpxguj.mysql.db
--- 生成日期： 2025-12-11 23:12:47
+-- 生成日期： 2025-12-14 13:25:41
 -- 服务器版本： 8.4.6-6
 -- PHP 版本： 8.1.33
 
@@ -117,12 +117,12 @@ CREATE TABLE `mrs_destinations` (
 --
 DROP VIEW IF EXISTS `mrs_destination_stats`;
 CREATE TABLE `mrs_destination_stats` (
-`days_used` bigint
-,`destination_id` int unsigned
+`destination_id` int unsigned
 ,`destination_name` varchar(100)
-,`last_used_time` datetime
-,`total_shipments` bigint
 ,`type_name` varchar(50)
+,`total_shipments` bigint
+,`days_used` bigint
+,`last_used_time` datetime
 );
 
 -- --------------------------------------------------------
@@ -156,6 +156,8 @@ CREATE TABLE `mrs_package_ledger` (
   `box_number` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '箱号',
   `warehouse_location` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '仓库位置',
   `spec_info` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '规格备注',
+  `expiry_date` date DEFAULT NULL COMMENT '保质期（非生产日期，选填）',
+  `quantity` int UNSIGNED DEFAULT NULL COMMENT '数量（选填，参考用途）',
   `status` enum('in_stock','shipped','void') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'in_stock' COMMENT '状态',
   `inbound_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '入库时间',
   `outbound_time` datetime DEFAULT NULL COMMENT '出库时间',
@@ -248,7 +250,8 @@ ALTER TABLE `mrs_package_ledger`
   ADD KEY `idx_batch_name` (`batch_name`),
   ADD KEY `idx_inbound_time` (`inbound_time`),
   ADD KEY `idx_outbound_time` (`outbound_time`),
-  ADD KEY `idx_destination` (`destination_id`);
+  ADD KEY `idx_destination` (`destination_id`),
+  ADD KEY `idx_expiry_date` (`expiry_date`);
 
 --
 -- 表的索引 `sys_users`
