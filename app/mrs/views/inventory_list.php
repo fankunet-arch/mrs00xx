@@ -60,6 +60,7 @@ $total_boxes = array_sum(array_column($inventory, 'total_boxes'));
                             <th>物料名称</th>
                             <th class="text-center">在库数量</th>
                             <th class="text-center">数量</th>
+                            <th class="text-center">最近到期</th>
                             <th class="text-center">操作</th>
                         </tr>
                     </thead>
@@ -73,6 +74,38 @@ $total_boxes = array_sum(array_column($inventory, 'total_boxes'));
                                         约:<strong><?= number_format($item['total_quantity']) ?></strong>
                                     <?php else: ?>
                                         -
+                                    <?php endif; ?>
+                                </td>
+                                <td class="text-center">
+                                    <?php if (!empty($item['nearest_expiry_date'])): ?>
+                                        <?php
+                                        $expiry = new DateTime($item['nearest_expiry_date']);
+                                        $today = new DateTime();
+                                        $diff = $today->diff($expiry);
+                                        $days_to_expiry = (int)$today->diff($expiry)->format('%r%a');
+
+                                        // 根据到期天数显示不同颜色
+                                        $color_class = '';
+                                        if ($days_to_expiry < 0) {
+                                            $color_class = 'style="color: #999; text-decoration: line-through;"'; // 已过期：灰色删除线
+                                        } elseif ($days_to_expiry <= 7) {
+                                            $color_class = 'style="color: #dc3545; font-weight: bold;"'; // 7天内：红色加粗
+                                        } elseif ($days_to_expiry <= 30) {
+                                            $color_class = 'style="color: #ff9800; font-weight: bold;"'; // 30天内：橙色加粗
+                                        } elseif ($days_to_expiry <= 90) {
+                                            $color_class = 'style="color: #ffc107;"'; // 90天内：黄色
+                                        }
+                                        ?>
+                                        <span <?= $color_class ?>>
+                                            <?= $expiry->format('Y-m-d') ?>
+                                            <?php if ($days_to_expiry >= 0): ?>
+                                                <small>(<?= $days_to_expiry ?>天)</small>
+                                            <?php else: ?>
+                                                <small>(已过期)</small>
+                                            <?php endif; ?>
+                                        </span>
+                                    <?php else: ?>
+                                        <span style="color: #999;">-</span>
                                     <?php endif; ?>
                                 </td>
                                 <td class="text-center">

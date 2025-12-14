@@ -455,7 +455,14 @@ function mrs_get_inventory_summary($pdo, $content_note = '') {
                         THEN CAST(quantity AS UNSIGNED)
                         ELSE 0
                     END
-                ) as total_quantity
+                ) as total_quantity,
+                MIN(
+                    CASE
+                        WHEN expiry_date IS NOT NULL
+                        THEN expiry_date
+                        ELSE NULL
+                    END
+                ) as nearest_expiry_date
             FROM mrs_package_ledger
             WHERE status = 'in_stock'
         ";
@@ -694,21 +701,20 @@ function mrs_update_package_info($pdo, $ledger_id, $spec_info, $expiry_date, $qu
 
         $pdo->beginTransaction();
 
-        // 如果有多产品数据，生成content_note汇总
+        // 如果有多产品数据，生成content_note（只包含产品名称，不包含数量）
         $content_note = $package['content_note'];
         if ($items && is_array($items) && count($items) > 0) {
-            $parts = [];
+            $product_names = [];
             foreach ($items as $item) {
                 if (!empty($item['product_name'])) {
-                    $text = $item['product_name'];
-                    if (!empty($item['quantity'])) {
-                        $text .= '×' . $item['quantity'];
-                    }
-                    $parts[] = $text;
+                    // 只使用产品名称，不加数量
+                    $product_names[] = trim($item['product_name']);
                 }
             }
-            if (count($parts) > 0) {
-                $content_note = implode(', ', $parts);
+            if (count($product_names) > 0) {
+                // 如果只有一个产品，直接使用产品名
+                // 如果有多个产品，用逗号分隔（如："番茄酱, 辣椒酱"）
+                $content_note = implode(', ', $product_names);
             }
 
             // 使用第一个产品的有效期和数量（向后兼容）
