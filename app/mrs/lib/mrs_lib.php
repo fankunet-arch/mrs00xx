@@ -287,9 +287,12 @@ function mrs_inbound_packages($pdo, $packages, $spec_info = '', $operator = '') 
                     $content_note = '未填写';
                 }
 
-                // 获取有效期和数量（可选字段）
+                // 获取有效期和数量（可选字段，向后兼容）
                 $expiry_date = $pkg['expiry_date'] ?? null;
                 $quantity = $pkg['quantity'] ?? null;
+
+                // 获取产品明细数组（新增）
+                $items = $pkg['items'] ?? [];
 
                 // 自动生成箱号
                 $box_number = mrs_get_next_box_number($pdo, $batch_name);
@@ -312,6 +315,27 @@ function mrs_inbound_packages($pdo, $packages, $spec_info = '', $operator = '') 
                     'quantity' => $quantity,
                     'operator' => $operator
                 ]);
+
+                $ledger_id = $pdo->lastInsertId();
+
+                // 保存产品明细数据（如果有）
+                if (is_array($items) && count($items) > 0) {
+                    $stmt = $pdo->prepare("
+                        INSERT INTO mrs_package_items
+                        (ledger_id, product_name, quantity, expiry_date, sort_order)
+                        VALUES (:ledger_id, :product_name, :quantity, :expiry_date, :sort_order)
+                    ");
+
+                    foreach ($items as $item) {
+                        $stmt->execute([
+                            'ledger_id' => $ledger_id,
+                            'product_name' => $item['product_name'] ?? null,
+                            'quantity' => $item['quantity'] ?? null,
+                            'expiry_date' => $item['expiry_date'] ?? null,
+                            'sort_order' => $item['sort_order'] ?? 0
+                        ]);
+                    }
+                }
 
                 $created++;
 
@@ -637,19 +661,20 @@ function mrs_change_status($pdo, $ledger_id, $new_status, $reason = '', $operato
 }
 
 /**
- * 更新包裹信息 (规格、有效期、数量)
+ * 更新包裹信息（支持多产品）
  * @param PDO $pdo
  * @param int $ledger_id 台账ID
  * @param string $spec_info 规格信息
- * @param string|null $expiry_date 有效期
- * @param string|null $quantity 数量
+ * @param string|null $expiry_date 有效期（向后兼容）
+ * @param string|null $quantity 数量（向后兼容）
  * @param string $operator 操作员
+ * @param array|null $items 产品明细数组（新增）
  * @return array
  */
-function mrs_update_package_info($pdo, $ledger_id, $spec_info, $expiry_date, $quantity, $operator = '') {
+function mrs_update_package_info($pdo, $ledger_id, $spec_info, $expiry_date, $quantity, $operator = '', $items = null) {
     try {
         // 检查包裹是否存在且在库
-        $stmt = $pdo->prepare("SELECT status FROM mrs_package_ledger WHERE ledger_id = :ledger_id");
+        $stmt = $pdo->prepare("SELECT status, content_note FROM mrs_package_ledger WHERE ledger_id = :ledger_id");
         $stmt->execute(['ledger_id' => $ledger_id]);
         $package = $stmt->fetch();
 
@@ -669,9 +694,32 @@ function mrs_update_package_info($pdo, $ledger_id, $spec_info, $expiry_date, $qu
 
         $pdo->beginTransaction();
 
+        // 如果有多产品数据，生成content_note汇总
+        $content_note = $package['content_note'];
+        if ($items && is_array($items) && count($items) > 0) {
+            $parts = [];
+            foreach ($items as $item) {
+                if (!empty($item['product_name'])) {
+                    $text = $item['product_name'];
+                    if (!empty($item['quantity'])) {
+                        $text .= '×' . $item['quantity'];
+                    }
+                    $parts[] = $text;
+                }
+            }
+            if (count($parts) > 0) {
+                $content_note = implode(', ', $parts);
+            }
+
+            // 使用第一个产品的有效期和数量（向后兼容）
+            $expiry_date = $items[0]['expiry_date'] ?? null;
+            $quantity = $items[0]['quantity'] ?? null;
+        }
+
         $stmt = $pdo->prepare("
             UPDATE mrs_package_ledger
             SET spec_info = :spec_info,
+                content_note = :content_note,
                 expiry_date = :expiry_date,
                 quantity = :quantity,
                 updated_by = :operator,
@@ -681,11 +729,39 @@ function mrs_update_package_info($pdo, $ledger_id, $spec_info, $expiry_date, $qu
 
         $stmt->execute([
             'spec_info' => $spec_info,
+            'content_note' => $content_note,
             'expiry_date' => $expiry_date,
             'quantity' => $quantity,
             'operator' => $operator,
             'ledger_id' => $ledger_id
         ]);
+
+        // 更新产品明细数据（如果有）
+        if ($items && is_array($items) && count($items) > 0) {
+            // 先删除旧的产品明细
+            $stmt = $pdo->prepare("DELETE FROM mrs_package_items WHERE ledger_id = :ledger_id");
+            $stmt->execute(['ledger_id' => $ledger_id]);
+
+            // 插入新的产品明细
+            $stmt = $pdo->prepare("
+                INSERT INTO mrs_package_items
+                (ledger_id, product_name, quantity, expiry_date, sort_order)
+                VALUES (:ledger_id, :product_name, :quantity, :expiry_date, :sort_order)
+            ");
+
+            foreach ($items as $item) {
+                // 只插入有产品名称的项
+                if (!empty($item['product_name'])) {
+                    $stmt->execute([
+                        'ledger_id' => $ledger_id,
+                        'product_name' => trim($item['product_name']),
+                        'quantity' => $item['quantity'] ?? null,
+                        'expiry_date' => $item['expiry_date'] ?? null,
+                        'sort_order' => $item['sort_order'] ?? 0
+                    ]);
+                }
+            }
+        }
 
         $pdo->commit();
 

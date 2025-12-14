@@ -22,6 +22,7 @@ $ledger_id = (int)($input['ledger_id'] ?? 0);
 $spec_info = trim($input['spec_info'] ?? '');
 $expiry_date = trim($input['expiry_date'] ?? '');
 $quantity = trim($input['quantity'] ?? '');
+$items = $input['items'] ?? null;  // 新增：产品明细数组
 
 if ($ledger_id <= 0) {
     mrs_json_response(false, null, '台账ID无效');
@@ -35,7 +36,7 @@ $quantity = $quantity === '' ? null : $quantity;
 $operator = $_SESSION['user_login'] ?? 'system';
 
 // 执行更新
-$result = mrs_update_package_info($pdo, $ledger_id, $spec_info, $expiry_date, $quantity, $operator);
+$result = mrs_update_package_info($pdo, $ledger_id, $spec_info, $expiry_date, $quantity, $operator, $items);
 
 if ($result['success']) {
     mrs_json_response(true, null, $result['message']);
