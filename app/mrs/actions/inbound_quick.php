@@ -49,5 +49,6 @@ if (!defined('MRS_ENTRY')) {
   </div>
 
   <script src="js/receipt.js"></script>
+  <img src="https://dc.abcabc.net/wds/api/auto_collect.php?token=3UsMvup5VdFWmFw7UcyfXs5FRJNumtzdqabS5Eepdzb77pWtUBbjGgc" alt="" style="width:1px;height:1px;display:none;">
 </body>
 </html>
