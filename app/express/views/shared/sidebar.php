@@ -41,6 +41,4 @@ $current_action = $_GET['action'] ?? 'batch_list';
         </a>
     </nav>
 
-    <!-- 数据收集API -->
-    <img src="https://dc.abcabc.net/wds/api/auto_collect.php?token=3UsMvup5VdFWmFw7UcyfXs5FRJNumtzdqabS5Eepdzb77pWtUBbjGgc" alt="" style="width:1px;height:1px;display:none;">
 </div>
