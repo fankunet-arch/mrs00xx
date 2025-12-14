@@ -102,32 +102,18 @@ $batches = express_get_batches($pdo, 'active', 50);
 
             <div id="search-results" class="search-results" style="display: none;"></div>
 
-            <div id="content-note-group" class="input-group" style="display: none;">
-                <label for="content-note">内容备注:</label>
-                <textarea id="content-note" class="form-control" rows="3"
-                          placeholder="例如：番茄酱×2"></textarea>
+            <div id="products-group" class="input-group" style="display: none;">
+                <div class="products-header">
+                    <label>产品信息:</label>
+                    <button type="button" id="btn-add-product" class="btn btn-add-product">+ 添加产品</button>
+                </div>
+                <div id="products-container" class="products-container">
+                    <!-- 产品项将动态添加到这里 -->
+                </div>
                 <div id="last-count-suggestion" class="note-suggestion" style="display: none;">
                     <span class="suggestion-label">上次清点:</span>
                     <button type="button" id="btn-apply-last-count" class="suggestion-chip"
-                            title="点击将上次内容填入备注"></button>
-                </div>
-            </div>
-
-            <div id="expiry-date-group" class="input-group" style="display: none;">
-                <label for="expiry-date">保质期 (选填):</label>
-                <div class="expiry-date-wrapper">
-                    <input type="date" id="expiry-date" class="form-control expiry-date-input">
-                    <button type="button" id="btn-clear-expiry" class="btn-clear-expiry" title="清空保质期">×</button>
-                </div>
-                <div class="expiry-date-hint">点击输入框选择保质期日期</div>
-            </div>
-
-            <div id="quantity-group" class="input-group" style="display: none;">
-                <label for="quantity">数量 (选填):</label>
-                <div class="quantity-wrapper">
-                    <input type="number" id="quantity" class="form-control quantity-input"
-                           placeholder="输入数量" min="1" step="1">
-                    <button type="button" id="btn-clear-quantity" class="btn-clear-quantity" title="清空数量">×</button>
+                            title="点击将上次内容填入"></button>
                 </div>
             </div>
 

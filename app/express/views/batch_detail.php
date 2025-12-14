@@ -250,6 +250,7 @@ $content_summary = express_get_content_summary($pdo, $batch_id);
                                         <td>
                                             <button class="btn btn-sm btn-primary btn-edit-content"
                                                     data-package-id="<?= $package['package_id'] ?>"
+                                                    data-tracking-number="<?= htmlspecialchars($package['tracking_number'], ENT_QUOTES) ?>"
                                                     data-current-note="<?= htmlspecialchars($package['content_note'] ?? '', ENT_QUOTES) ?>"
                                                     data-expiry-date="<?= htmlspecialchars($package['expiry_date'] ?? '', ENT_QUOTES) ?>"
                                                     data-quantity="<?= htmlspecialchars($package['quantity'] ?? '', ENT_QUOTES) ?>">
@@ -430,34 +431,61 @@ $content_summary = express_get_content_summary($pdo, $batch_id);
         document.querySelectorAll('.btn-edit-content').forEach(button => {
             button.addEventListener('click', async () => {
                 const packageId = button.getAttribute('data-package-id');
+                const trackingNumber = button.getAttribute('data-tracking-number') || '';
                 const currentNote = button.getAttribute('data-current-note') || '';
                 const currentExpiry = button.getAttribute('data-expiry-date') || '';
                 const currentQuantity = button.getAttribute('data-quantity') || '';
 
-                // 使用模态框输入
+                // 获取现有的产品明细
+                let existingItems = [];
+                try {
+                    const resp = await fetch(`/express/exp/index.php?action=get_package_items&package_id=${packageId}`);
+                    const data = await resp.json();
+                    if (data.success && data.data && data.data.length > 0) {
+                        existingItems = data.data;
+                    }
+                } catch (error) {
+                    console.error('获取产品明细失败:', error);
+                }
+
+                // 如果没有产品明细数据（旧数据），从主表字段初始化第一个产品
+                if (existingItems.length === 0 && currentNote) {
+                    existingItems = [{
+                        product_name: currentNote,
+                        quantity: currentQuantity || '',
+                        expiry_date: currentExpiry || ''
+                    }];
+                }
+
+                // 使用模态框输入 - 多产品支持
                 const formHtml = `
                     <form id="contentNoteForm" style="padding: 20px;">
-                        <div class="modal-form-group">
-                            <label class="modal-form-label">内容备注</label>
-                            <input type="text" name="content_note" class="modal-form-control"
-                                   value="${currentNote}" placeholder="如：香蕉、苹果等">
+                        <div style="background: #f0f4ff; border: 1px solid #d0ddff; border-radius: 6px; padding: 12px; margin-bottom: 16px;">
+                            <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; font-size: 13px;">
+                                <span style="color: #666; font-weight: 500;">包裹ID:</span>
+                                <span style="color: #333; font-weight: 600;">#${packageId}</span>
+                                <span style="color: #666; font-weight: 500;">快递单号:</span>
+                                <span style="color: #333; font-weight: 600;">${trackingNumber || '-'}</span>
+                            </div>
                         </div>
                         <div class="modal-form-group">
-                            <label class="modal-form-label">保质期（选填）</label>
-                            <input type="date" name="expiry_date" class="modal-form-control"
-                                   value="${currentExpiry}">
-                        </div>
-                        <div class="modal-form-group">
-                            <label class="modal-form-label">数量（选填）</label>
-                            <input type="number" name="quantity" class="modal-form-control"
-                                   value="${currentQuantity}" placeholder="输入数量" min="1" step="1">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                <label class="modal-form-label" style="margin: 0;">产品信息</label>
+                                <button type="button" class="modal-btn modal-btn-secondary"
+                                        onclick="addProductItem()" style="padding: 4px 12px; font-size: 13px;">
+                                    + 添加产品
+                                </button>
+                            </div>
+                            <div id="products-container" style="max-height: 400px; overflow-y: auto;">
+                                <!-- 产品项将动态添加到这里 -->
+                            </div>
                         </div>
                     </form>
                 `;
 
                 // [FIX] 改为使用 showDrawer，且移除了不支持的 width 参数
-                await showDrawer({
-                    title: '修改内容信息',
+                showDrawer({
+                    title: `修改内容信息 - ${trackingNumber || '包裹#' + packageId}`,
                     content: formHtml,
                     footer: `
                         <div class="modal-footer">
@@ -466,6 +494,18 @@ $content_summary = express_get_content_summary($pdo, $batch_id);
                         </div>
                     `
                 });
+
+                // 等待DOM渲染完成后，渲染现有产品或添加空白产品
+                setTimeout(() => {
+                    if (existingItems.length > 0) {
+                        existingItems.forEach(item => {
+                            addProductItem(item);
+                        });
+                    } else {
+                        // 如果完全没有数据，添加一个空白产品
+                        addProductItem();
+                    }
+                }, 50);
             });
         });
 
@@ -485,19 +525,114 @@ $content_summary = express_get_content_summary($pdo, $batch_id);
 
     <script src="js/modal.js"></script>
     <script>
+    let productItemCounter = 0;
+
+    // 添加产品项
+    function addProductItem(existingItem = null) {
+        const container = document.getElementById('products-container');
+        const itemId = productItemCounter++;
+        const productName = existingItem?.product_name || '';
+        const quantity = existingItem?.quantity || '';
+        const expiryDate = existingItem?.expiry_date || '';
+
+        const itemHtml = `
+            <div class="product-item" data-item-id="${itemId}" style="border: 1px solid #ddd; padding: 12px; margin-bottom: 10px; border-radius: 4px; background: #f9f9f9;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <strong style="font-size: 14px;">产品 #<span class="product-number">${container.children.length + 1}</span></strong>
+                    <button type="button" class="modal-btn modal-btn-secondary"
+                            onclick="removeProductItem(${itemId})" style="padding: 2px 8px; font-size: 12px;">
+                        删除
+                    </button>
+                </div>
+                <div style="margin-bottom: 8px;">
+                    <label style="display: block; margin-bottom: 4px; font-size: 13px; color: #666;">产品名称 *</label>
+                    <input type="text" class="modal-form-control product-name"
+                           value="${productName}" placeholder="如：香蕉、苹果等" style="width: 100%;">
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                    <div>
+                        <label style="display: block; margin-bottom: 4px; font-size: 13px; color: #666;">数量（选填）</label>
+                        <input type="number" class="modal-form-control product-quantity"
+                               value="${quantity}" placeholder="数量" min="1" step="1">
+                    </div>
+                    <div>
+                        <label style="display: block; margin-bottom: 4px; font-size: 13px; color: #666;">保质期（选填）</label>
+                        <input type="date" class="modal-form-control product-expiry"
+                               value="${expiryDate}">
+                    </div>
+                </div>
+            </div>
+        `;
+
+        container.insertAdjacentHTML('beforeend', itemHtml);
+    }
+
+    // 删除产品项
+    function removeProductItem(itemId) {
+        const container = document.getElementById('products-container');
+        const item = container.querySelector(`[data-item-id="${itemId}"]`);
+
+        // 如果只剩一个产品，不允许删除
+        if (container.children.length <= 1) {
+            showAlert('至少需要保留一个产品', '提示', 'warning');
+            return;
+        }
+
+        if (item) {
+            item.remove();
+            // 重新编号
+            renumberProductItems();
+        }
+    }
+
+    // 重新编号产品
+    function renumberProductItems() {
+        const container = document.getElementById('products-container');
+        Array.from(container.children).forEach((item, index) => {
+            const numberSpan = item.querySelector('.product-number');
+            if (numberSpan) {
+                numberSpan.textContent = index + 1;
+            }
+        });
+    }
+
+    // 收集产品数据
+    function collectProductItems() {
+        const container = document.getElementById('products-container');
+        const items = [];
+
+        Array.from(container.children).forEach(item => {
+            const productName = item.querySelector('.product-name').value.trim();
+            const quantity = item.querySelector('.product-quantity').value.trim();
+            const expiryDate = item.querySelector('.product-expiry').value.trim();
+
+            if (productName) {  // 只收集有产品名称的项
+                items.push({
+                    product_name: productName,
+                    quantity: quantity || null,
+                    expiry_date: expiryDate || null
+                });
+            }
+        });
+
+        return items;
+    }
+
     async function submitContentNote(packageId) {
-        const form = document.getElementById('contentNoteForm');
-        const newNote = form.querySelector('[name="content_note"]').value.trim();
-        const expiryDate = form.querySelector('[name="expiry_date"]').value.trim();
-        const quantity = form.querySelector('[name="quantity"]').value.trim();
         const messageDiv = document.getElementById('update-message');
 
         try {
+            // 收集产品数据
+            const items = collectProductItems();
+
+            if (items.length === 0) {
+                await showAlert('请至少填写一个产品信息', '提示', 'warning');
+                return;
+            }
+
             const payload = {
                 package_id: packageId,
-                content_note: newNote || null,
-                expiry_date: expiryDate || null,
-                quantity: quantity ? parseInt(quantity) : null
+                items: items
             };
 
             const resp = await fetch('/express/exp/index.php?action=update_content_note', {

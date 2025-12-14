@@ -14,9 +14,10 @@ $input = express_get_json_input();
 $batch_id = $input['batch_id'] ?? 0;
 $tracking_number = $input['tracking_number'] ?? '';
 $operation_type = $input['operation_type'] ?? '';
-$content_note = $input['content_note'] ?? null;
-$expiry_date = $input['expiry_date'] ?? null;
-$quantity = $input['quantity'] ?? null;
+$content_note = $input['content_note'] ?? null;  // 保留向后兼容
+$expiry_date = $input['expiry_date'] ?? null;  // 保留向后兼容
+$quantity = $input['quantity'] ?? null;  // 保留向后兼容
+$products = $input['products'] ?? null;  // 新增:多产品数据数组
 $adjustment_note = $input['adjustment_note'] ?? null;
 $operator = $input['operator'] ?? 'system';
 
@@ -40,7 +41,8 @@ $result = express_process_package(
     $content_note,
     $adjustment_note,
     $expiry_date,
-    $quantity
+    $quantity,
+    $products  // 传递多产品数据
 );
 
 // 同时返回更新后的批次统计

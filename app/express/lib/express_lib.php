@@ -351,7 +351,20 @@ function express_search_tracking($pdo, $batch_id, $keyword, $limit = 20) {
         $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
         $stmt->execute();
 
-        return $stmt->fetchAll();
+        $packages = $stmt->fetchAll();
+
+        // 为每个包裹获取产品明细
+        foreach ($packages as &$package) {
+            $stmt = $pdo->prepare("
+                SELECT * FROM express_package_items
+                WHERE package_id = :package_id
+                ORDER BY sort_order ASC
+            ");
+            $stmt->execute(['package_id' => $package['package_id']]);
+            $package['items'] = $stmt->fetchAll();
+        }
+
+        return $packages;
     } catch (PDOException $e) {
         express_log('Failed to search tracking: ' . $e->getMessage(), 'ERROR');
         return [];
@@ -407,7 +420,20 @@ function express_get_package_by_id($pdo, $package_id) {
     try {
         $stmt = $pdo->prepare("SELECT * FROM express_package WHERE package_id = :package_id");
         $stmt->execute(['package_id' => $package_id]);
-        return $stmt->fetch();
+        $package = $stmt->fetch();
+
+        if ($package) {
+            // 获取产品明细
+            $stmt = $pdo->prepare("
+                SELECT * FROM express_package_items
+                WHERE package_id = :package_id
+                ORDER BY sort_order ASC
+            ");
+            $stmt->execute(['package_id' => $package_id]);
+            $package['items'] = $stmt->fetchAll();
+        }
+
+        return $package;
     } catch (PDOException $e) {
         express_log('Failed to get package: ' . $e->getMessage(), 'ERROR');
         return null;
@@ -439,7 +465,20 @@ function express_get_packages_by_batch($pdo, $batch_id, $status = 'all') {
         }
 
         $stmt->execute();
-        return $stmt->fetchAll();
+        $packages = $stmt->fetchAll();
+
+        // 为每个包裹获取产品明细
+        foreach ($packages as &$package) {
+            $stmt = $pdo->prepare("
+                SELECT * FROM express_package_items
+                WHERE package_id = :package_id
+                ORDER BY sort_order ASC
+            ");
+            $stmt->execute(['package_id' => $package['package_id']]);
+            $package['items'] = $stmt->fetchAll();
+        }
+
+        return $packages;
     } catch (PDOException $e) {
         express_log('Failed to get packages: ' . $e->getMessage(), 'ERROR');
         return [];
@@ -709,13 +748,14 @@ function express_create_custom_packages($pdo, $batch_id, $count, $operator = '')
  * @param string $tracking_number
  * @param string $operation_type 'verify', 'count', 'adjust'
  * @param string $operator
- * @param string $content_note 内容备注（清点时使用）
+ * @param string $content_note 内容备注（清点时使用,向后兼容）
  * @param string $adjustment_note 调整备注（调整时使用）
- * @param string $expiry_date 保质期（清点时使用）
- * @param int $quantity 数量（清点时使用）
+ * @param string $expiry_date 保质期（清点时使用,向后兼容）
+ * @param int $quantity 数量（清点时使用,向后兼容）
+ * @param array $products 多产品数据数组（清点时使用,新增）
  * @return array ['success' => bool, 'message' => string, 'package' => array]
  */
-function express_process_package($pdo, $batch_id, $tracking_number, $operation_type, $operator, $content_note = null, $adjustment_note = null, $expiry_date = null, $quantity = null) {
+function express_process_package($pdo, $batch_id, $tracking_number, $operation_type, $operator, $content_note = null, $adjustment_note = null, $expiry_date = null, $quantity = null, $products = null) {
     try {
         $pdo->beginTransaction();
 
@@ -750,7 +790,7 @@ function express_process_package($pdo, $batch_id, $tracking_number, $operation_t
                 $result = express_process_verify($pdo, $package_id, $old_status, $operator);
                 break;
             case 'count':
-                $result = express_process_count($pdo, $package_id, $old_status, $operator, $content_note, $expiry_date, $quantity);
+                $result = express_process_count($pdo, $package_id, $old_status, $operator, $content_note, $expiry_date, $quantity, $products);
                 break;
             case 'adjust':
                 $result = express_process_adjust($pdo, $package_id, $old_status, $operator, $adjustment_note);
@@ -810,7 +850,7 @@ function express_process_package($pdo, $batch_id, $tracking_number, $operation_t
  * @param int $quantity
  * @return array
  */
-function express_update_content_note($pdo, $package_id, $operator, $content_note, $expiry_date = null, $quantity = null) {
+function express_update_content_note($pdo, $package_id, $operator, $content_note, $expiry_date = null, $quantity = null, $items = null) {
     try {
         $pdo->beginTransaction();
 
@@ -868,6 +908,60 @@ function express_update_content_note($pdo, $package_id, $operator, $content_note
                 'expiry_date' => $expiry_date,
                 'quantity' => $quantity
             ]);
+        }
+
+        // 处理产品明细
+        if ($items !== null && is_array($items)) {
+            // 先删除旧的产品明细
+            $delete = $pdo->prepare("DELETE FROM express_package_items WHERE package_id = :package_id");
+            $delete->execute(['package_id' => $package_id]);
+
+            // 插入新的产品明细
+            if (count($items) > 0) {
+                $insert = $pdo->prepare("
+                    INSERT INTO express_package_items
+                    (package_id, product_name, quantity, expiry_date, sort_order)
+                    VALUES (:package_id, :product_name, :quantity, :expiry_date, :sort_order)
+                ");
+
+                foreach ($items as $index => $item) {
+                    if (!empty($item['product_name'])) {
+                        $insert->execute([
+                            'package_id' => $package_id,
+                            'product_name' => trim($item['product_name']),
+                            'quantity' => !empty($item['quantity']) ? (int)$item['quantity'] : null,
+                            'expiry_date' => !empty($item['expiry_date']) ? $item['expiry_date'] : null,
+                            'sort_order' => $index + 1
+                        ]);
+                    }
+                }
+
+                // 生成汇总的content_note
+                $parts = [];
+                foreach ($items as $item) {
+                    if (!empty($item['product_name'])) {
+                        $text = trim($item['product_name']);
+                        if (!empty($item['quantity'])) {
+                            $text .= '×' . $item['quantity'];
+                        }
+                        $parts[] = $text;
+                    }
+                }
+                if (count($parts) > 0) {
+                    $generated_note = implode(', ', $parts);
+                    // 更新content_note为生成的汇总
+                    $update_note = $pdo->prepare("
+                        UPDATE express_package
+                        SET content_note = :content_note
+                        WHERE package_id = :package_id
+                    ");
+                    $update_note->execute([
+                        'package_id' => $package_id,
+                        'content_note' => $generated_note
+                    ]);
+                    $content_note = $generated_note;  // 用于日志
+                }
+            }
         }
 
         $log = $pdo->prepare("
@@ -940,13 +1034,42 @@ function express_process_verify($pdo, $package_id, $old_status, $operator) {
  * @param int $package_id
  * @param string $old_status
  * @param string $operator
- * @param string $content_note
- * @param string $expiry_date 保质期
- * @param int $quantity 数量
+ * @param string $content_note 向后兼容
+ * @param string $expiry_date 保质期（向后兼容）
+ * @param int $quantity 数量（向后兼容）
+ * @param array $products 多产品数据数组（新增）
  * @return array
  */
-function express_process_count($pdo, $package_id, $old_status, $operator, $content_note, $expiry_date = null, $quantity = null) {
+function express_process_count($pdo, $package_id, $old_status, $operator, $content_note, $expiry_date = null, $quantity = null, $products = null) {
     // 清点操作自动包含核实，同时更新两个时间戳
+
+    // 为了向后兼容，生成content_note汇总
+    $summary_note = $content_note;
+    if ($products && is_array($products) && count($products) > 0) {
+        // 从products数组生成汇总文本
+        $parts = [];
+        foreach ($products as $item) {
+            if (!empty($item['product_name'])) {
+                $text = $item['product_name'];
+                if (!empty($item['quantity'])) {
+                    $text .= '×' . $item['quantity'];
+                }
+                $parts[] = $text;
+            }
+        }
+        if (count($parts) > 0) {
+            $summary_note = implode(', ', $parts);
+        }
+    }
+
+    // 如果有多产品数据，使用第一个产品的有效期和数量（向后兼容）
+    $first_expiry = $expiry_date;
+    $first_quantity = $quantity;
+    if ($products && is_array($products) && count($products) > 0) {
+        $first_expiry = $products[0]['expiry_date'] ?? null;
+        $first_quantity = $products[0]['quantity'] ?? null;
+    }
+
     $stmt = $pdo->prepare("
         UPDATE express_package SET
             package_status = 'counted',
@@ -964,10 +1087,34 @@ function express_process_count($pdo, $package_id, $old_status, $operator, $conte
         'package_id' => $package_id,
         'verified_by' => $operator,
         'counted_by' => $operator,
-        'content_note' => $content_note,
-        'expiry_date' => $expiry_date,
-        'quantity' => $quantity
+        'content_note' => $summary_note,
+        'expiry_date' => $first_expiry,
+        'quantity' => $first_quantity
     ]);
+
+    // 保存多产品明细数据
+    if ($products && is_array($products) && count($products) > 0) {
+        // 先删除旧的产品明细
+        $stmt = $pdo->prepare("DELETE FROM express_package_items WHERE package_id = :package_id");
+        $stmt->execute(['package_id' => $package_id]);
+
+        // 插入新的产品明细
+        $stmt = $pdo->prepare("
+            INSERT INTO express_package_items
+            (package_id, product_name, quantity, expiry_date, sort_order)
+            VALUES (:package_id, :product_name, :quantity, :expiry_date, :sort_order)
+        ");
+
+        foreach ($products as $item) {
+            $stmt->execute([
+                'package_id' => $package_id,
+                'product_name' => $item['product_name'] ?? null,
+                'quantity' => $item['quantity'] ?? null,
+                'expiry_date' => $item['expiry_date'] ?? null,
+                'sort_order' => $item['sort_order'] ?? 0
+            ]);
+        }
+    }
 
     return [
         'success' => true,
