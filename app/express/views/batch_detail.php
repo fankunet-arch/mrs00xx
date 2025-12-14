@@ -225,7 +225,18 @@ $content_summary = express_get_content_summary($pdo, $batch_id);
                                 <?php foreach ($packages as $package): ?>
                                     <tr>
                                         <td><?= $package['package_id'] ?></td>
-                                        <td><?= htmlspecialchars($package['tracking_number']) ?></td>
+                                        <td>
+                                            <?php
+                                            $tracking = htmlspecialchars($package['tracking_number']);
+                                            if (mb_strlen($tracking) >= 4) {
+                                                $prefix = mb_substr($tracking, 0, -4);
+                                                $suffix = mb_substr($tracking, -4);
+                                                echo $prefix . '<span style="color: #dc3545; font-weight: bold;">' . $suffix . '</span>';
+                                            } else {
+                                                echo $tracking;
+                                            }
+                                            ?>
+                                        </td>
                                         <td>
                                             <span class="badge badge-<?= $package['package_status'] ?>">
                                                 <?php
@@ -239,9 +250,41 @@ $content_summary = express_get_content_summary($pdo, $batch_id);
                                                 ?>
                                             </span>
                                         </td>
-                                        <td><?= htmlspecialchars($package['content_note'] ?? '-') ?></td>
-                                        <td><?= $package['expiry_date'] ? date('Y-m-d', strtotime($package['expiry_date'])) : '-' ?></td>
-                                        <td><?= $package['quantity'] ?? '-' ?></td>
+                                        <td>
+                                            <?php if (!empty($package['items']) && is_array($package['items'])): ?>
+                                                <?php foreach ($package['items'] as $index => $item): ?>
+                                                    <?php if ($index > 0) echo '<br>'; ?>
+                                                    <span style="color: #333;">
+                                                        <?= htmlspecialchars($item['product_name'] ?? '') ?>
+                                                        <?php if (!empty($item['quantity'])): ?>
+                                                            <small style="color: #666;"> ×<?= htmlspecialchars($item['quantity']) ?></small>
+                                                        <?php endif; ?>
+                                                    </span>
+                                                <?php endforeach; ?>
+                                            <?php else: ?>
+                                                <?= htmlspecialchars($package['content_note'] ?? '-') ?>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td>
+                                            <?php if (!empty($package['items']) && is_array($package['items'])): ?>
+                                                <?php foreach ($package['items'] as $index => $item): ?>
+                                                    <?php if ($index > 0) echo '<br>'; ?>
+                                                    <?= !empty($item['expiry_date']) ? date('Y-m-d', strtotime($item['expiry_date'])) : '-' ?>
+                                                <?php endforeach; ?>
+                                            <?php else: ?>
+                                                <?= $package['expiry_date'] ? date('Y-m-d', strtotime($package['expiry_date'])) : '-' ?>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td>
+                                            <?php if (!empty($package['items']) && is_array($package['items'])): ?>
+                                                <?php foreach ($package['items'] as $index => $item): ?>
+                                                    <?php if ($index > 0) echo '<br>'; ?>
+                                                    <?= $item['quantity'] ?? '-' ?>
+                                                <?php endforeach; ?>
+                                            <?php else: ?>
+                                                <?= $package['quantity'] ?? '-' ?>
+                                            <?php endif; ?>
+                                        </td>
                                         <td><?= htmlspecialchars($package['adjustment_note'] ?? '-') ?></td>
                                         <td class="time-col-default"><?= $package['created_at'] ? date('m-d H:i', strtotime($package['created_at'])) : '-' ?></td>
                                         <td class="time-col-extra" style="display: none;"><?= $package['verified_at'] ? date('m-d H:i', strtotime($package['verified_at'])) : '-' ?></td>
