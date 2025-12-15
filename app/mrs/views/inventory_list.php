@@ -131,6 +131,12 @@ $total_boxes = array_sum(array_column($inventory, 'total_boxes'));
     }
 
     async function openPartialOutbound(skuName) {
+        // 兜底：当 modal.js 未加载时给出提示，避免按钮点击无反应
+        if (typeof window.showModal !== 'function' || typeof window.showAlert !== 'function') {
+            alert('页面脚本未完全加载，请刷新后重试（缺少 modal.js）');
+            return;
+        }
+
         try {
             const response = await fetch(`/mrs/ap/index.php?action=outbound&sku=${encodeURIComponent(skuName)}&order_by=fifo&format=json`);
             const data = await response.json();

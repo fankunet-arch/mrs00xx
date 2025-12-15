@@ -422,6 +422,12 @@ function format_tracking_number($tracking_number) {
     // 拆零出货功能
     // ==========================================
     async function partialOutbound(ledgerId, productName, currentQty) {
+        // 兜底：如果模态脚本未能加载，给出明确提示并阻止静默失败
+        if (typeof window.showModal !== 'function' || typeof window.showAlert !== 'function') {
+            alert('页面脚本未完全加载，请刷新后重试（缺少 modal.js）');
+            return;
+        }
+
         // 清洗数量字段（移除非数字字符）
         const cleanQty = (qty) => {
             if (!qty || qty === '') return 0;

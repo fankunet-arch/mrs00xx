@@ -472,6 +472,12 @@ $packages = mrs_get_true_inventory_detail($pdo, $product_name, $order_by);
     // 拆零出货功能
     // ==========================================
     async function partialOutbound(ledgerId, productName, currentQty) {
+        // 兜底：如果 modal.js 未加载，给出提示避免点击无响应
+        if (typeof window.showModal !== 'function' || typeof window.showAlert !== 'function') {
+            alert('页面脚本未完全加载，请刷新后重试（缺少 modal.js）');
+            return;
+        }
+
         // 清洗数量字段（移除非数字字符）
         const cleanQty = (qty) => {
             if (!qty || qty === '') return 0;

@@ -315,6 +315,11 @@ if (empty($sku)) {
 
     // 从outbound.php复制的partialOutbound函数
     async function partialOutbound(ledgerId, productName, currentQty) {
+        if (typeof window.showModal !== 'function' || typeof window.showAlert !== 'function') {
+            alert('页面脚本未完全加载，请刷新后重试（缺少 modal.js）');
+            return;
+        }
+
         // 清洗数量字段（移除非数字字符）
         const cleanQty = (qty) => {
             if (!qty || qty === '') return 0;
