@@ -180,6 +180,7 @@ function format_tracking_number($tracking_number) {
                                 <th>规格</th>
                                 <th>入库时间</th>
                                 <th>库存天数</th>
+                                <th>操作</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -217,6 +218,10 @@ function format_tracking_number($tracking_number) {
                                     <td><?= htmlspecialchars($pkg['spec_info']) ?></td>
                                     <td><?= date('Y-m-d H:i', strtotime($pkg['inbound_time'])) ?></td>
                                     <td><?= $pkg['days_in_stock'] ?> 天</td>
+                                    <td onclick="event.stopPropagation()">
+                                        <button class="btn btn-sm btn-success"
+                                                onclick="partialOutbound(<?= $pkg['ledger_id'] ?>, '<?= htmlspecialchars($pkg['content_note'], ENT_QUOTES) ?>', '<?= htmlspecialchars($pkg['ledger_quantity'] ?? '', ENT_QUOTES) ?>')">拆零出货</button>
+                                    </td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
@@ -399,6 +404,109 @@ function format_tracking_number($tracking_number) {
                 window.location.href = '/mrs/ap/index.php?action=inventory_list';
             } else {
                 await showAlert('出库失败: ' + result.message, '错误', 'error');
+            }
+        } catch (error) {
+            await showAlert('网络错误: ' + error.message, '错误', 'error');
+        }
+    }
+
+    // ==========================================
+    // 拆零出货功能
+    // ==========================================
+    async function partialOutbound(ledgerId, productName, currentQty) {
+        // 清洗数量字段（移除非数字字符）
+        const cleanQty = (qty) => {
+            if (!qty || qty === '') return 0;
+            const cleaned = String(qty).replace(/[^0-9.]/g, '');
+            return cleaned ? parseFloat(cleaned) : 0;
+        };
+
+        const availableQty = cleanQty(currentQty);
+
+        const content = `
+            <div class="modal-section">
+                <div style="background: #e3f2fd; padding: 12px; border-radius: 4px; margin-bottom: 20px;">
+                    <strong>商品名称：</strong>${productName}<br>
+                    <strong>当前库存：</strong><span style="color: #1976d2; font-size: 18px; font-weight: bold;">${availableQty}</span> 件
+                </div>
+
+                <div class="form-group">
+                    <label for="outbound-qty">出货数量 <span style="color: red;">*</span></label>
+                    <input type="number" id="outbound-qty" class="form-control"
+                           placeholder="请输入出货数量" min="0.01" step="0.01" max="${availableQty}" required>
+                    <small style="color: #666;">可出货数量：${availableQty} 件</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="destination">目的地（门店） <span style="color: red;">*</span></label>
+                    <input type="text" id="destination" class="form-control"
+                           placeholder="请输入门店名称" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="remark">备注</label>
+                    <textarea id="remark" class="form-control" rows="2"
+                              placeholder="选填"></textarea>
+                </div>
+            </div>
+        `;
+
+        const confirmed = await window.modal.show('拆零出货', content, {
+            confirmText: '确认出货',
+            cancelText: '取消',
+            size: 'medium'
+        });
+
+        if (!confirmed) return;
+
+        // 获取表单数据
+        const deductQty = parseFloat(document.getElementById('outbound-qty').value);
+        const destination = document.getElementById('destination').value.trim();
+        const remark = document.getElementById('remark').value.trim();
+
+        // 验证
+        if (!deductQty || deductQty <= 0) {
+            await showAlert('请输入有效的出货数量', '错误', 'error');
+            return;
+        }
+
+        if (deductQty > availableQty) {
+            await showAlert(`出货数量（${deductQty}）超过库存（${availableQty}）`, '错误', 'error');
+            return;
+        }
+
+        if (!destination) {
+            await showAlert('请输入目的地（门店）', '错误', 'error');
+            return;
+        }
+
+        // 提交数据
+        try {
+            const response = await fetch('/mrs/ap/index.php?action=partial_outbound', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    ledger_id: ledgerId,
+                    deduct_qty: deductQty,
+                    destination: destination,
+                    remark: remark
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                await showAlert(
+                    `拆零出货成功！\\n\\n已从包裹中扣减 ${deductQty} 件\\n剩余 ${data.data.remaining_qty} 件\\n目的地：${destination}`,
+                    '成功',
+                    'success'
+                );
+                // 刷新页面
+                window.location.reload();
+            } else {
+                await showAlert('操作失败: ' + data.message, '错误', 'error');
             }
         } catch (error) {
             await showAlert('网络错误: ' + error.message, '错误', 'error');

@@ -593,8 +593,27 @@ function mrs_outbound_packages($pdo, $ledger_ids, $operator = '', $destination_i
     try {
         $pdo->beginTransaction();
 
+        // 1. 先获取包裹信息（用于记录到 usage_log）
         $placeholders = implode(',', array_fill(0, count($ledger_ids), '?'));
+        $fetch_stmt = $pdo->prepare("
+            SELECT ledger_id, content_note, quantity
+            FROM mrs_package_ledger
+            WHERE ledger_id IN ($placeholders)
+              AND status = 'in_stock'
+        ");
+        $fetch_stmt->execute($ledger_ids);
+        $packages = $fetch_stmt->fetchAll();
 
+        if (empty($packages)) {
+            $pdo->rollBack();
+            return [
+                'success' => false,
+                'shipped' => 0,
+                'message' => '没有可出库的包裹'
+            ];
+        }
+
+        // 2. 更新包裹状态
         $stmt = $pdo->prepare("
             UPDATE mrs_package_ledger
             SET status = 'shipped',
@@ -610,6 +629,46 @@ function mrs_outbound_packages($pdo, $ledger_ids, $operator = '', $destination_i
         $stmt->execute($params);
 
         $shipped = $stmt->rowCount();
+
+        // 3. 记录到统计表 mrs_usage_log（整箱出库）
+        $usage_stmt = $pdo->prepare("
+            INSERT INTO mrs_usage_log (
+                ledger_id,
+                product_name,
+                outbound_type,
+                deduct_qty,
+                destination,
+                operator,
+                created_at
+            ) VALUES (
+                :ledger_id,
+                :product_name,
+                'whole',
+                :deduct_qty,
+                :destination,
+                :operator,
+                NOW()
+            )
+        ");
+
+        foreach ($packages as $pkg) {
+            // 清洗数量字段（处理不规范数据）
+            $quantity_str = $pkg['quantity'] ?? '';
+            if ($quantity_str === null || $quantity_str === '') {
+                $qty = 0.0;
+            } else {
+                $cleaned = preg_replace('/[^0-9.]/', '', trim((string)$quantity_str));
+                $qty = $cleaned !== '' ? floatval($cleaned) : 0.0;
+            }
+
+            $usage_stmt->execute([
+                'ledger_id' => $pkg['ledger_id'],
+                'product_name' => $pkg['content_note'],
+                'deduct_qty' => $qty,
+                'destination' => $destination_note ?: "门店ID:{$destination_id}",
+                'operator' => $operator
+            ]);
+        }
 
         $pdo->commit();
 

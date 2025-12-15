@@ -109,8 +109,10 @@ $total_boxes = array_sum(array_column($inventory, 'total_boxes'));
                                     <?php endif; ?>
                                 </td>
                                 <td class="text-center">
+                                    <a href="/mrs/ap/index.php?action=outbound&sku=<?= urlencode($item['sku_name']) ?>"
+                                       class="btn btn-sm btn-success">拆零出货</a>
                                     <a href="/mrs/ap/index.php?action=inventory_detail&sku=<?= urlencode($item['sku_name']) ?>"
-                                       class="btn btn-sm btn-primary">查看明细</a>
+                                       class="btn btn-sm btn-secondary">查看明细</a>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
