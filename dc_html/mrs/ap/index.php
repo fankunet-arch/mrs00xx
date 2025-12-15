@@ -34,6 +34,9 @@ $allowed_actions = [
     'inbound_save',         // 保存入库
     'outbound',             // 出库页面
     'outbound_save',        // 保存出库
+    'partial_outbound',     // 拆零出货
+    'usage_statistics',     // 用量统计
+    'debug_partial_outbound', // 拆零出货调试
     'reports',              // 统计报表
     'sku_manage',           // 物料管理
     'sku_save',             // 保存物料
@@ -69,6 +72,8 @@ $api_actions = [
     'do_login',
     'inbound_save',
     'outbound_save',
+    'partial_outbound',
+    'usage_statistics',
     'logout',
     'sku_save',
     'status_change',
