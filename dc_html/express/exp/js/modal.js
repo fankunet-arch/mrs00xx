@@ -223,6 +223,12 @@ class Modal {
     close(result) {
         if (!this.overlay) return;
 
+        // 先返回结果，确保调用方在DOM清理前读取用户输入
+        if (this.resolveCallback) {
+            this.resolveCallback(result);
+            this.resolveCallback = null;
+        }
+
         // 移除active类，触发退出动画
         this.overlay.classList.remove('active');
 
@@ -232,12 +238,6 @@ class Modal {
 
             // 恢复页面滚动
             document.body.style.overflow = '';
-
-            // 调用回调
-            if (this.resolveCallback) {
-                this.resolveCallback(result);
-                this.resolveCallback = null;
-            }
         }, 300); // 与CSS transition时间一致
     }
 
