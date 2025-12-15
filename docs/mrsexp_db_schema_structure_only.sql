@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- 主机： mhdlmskp2kpxguj.mysql.db
--- 生成日期： 2025-12-15 09:13:46
+-- 生成日期： 2025-12-15 13:58:05
 -- 服务器版本： 8.4.6-6
 -- PHP 版本： 8.1.33
 
@@ -207,6 +207,25 @@ CREATE TABLE `mrs_package_ledger` (
 -- --------------------------------------------------------
 
 --
+-- 表的结构 `mrs_usage_log`
+--
+
+DROP TABLE IF EXISTS `mrs_usage_log`;
+CREATE TABLE `mrs_usage_log` (
+  `id` int UNSIGNED NOT NULL COMMENT '记录ID',
+  `ledger_id` int UNSIGNED DEFAULT NULL COMMENT '包裹台账ID（关联 mrs_package_ledger）',
+  `product_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '商品名称',
+  `outbound_type` enum('partial','whole') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'partial' COMMENT '出货类型：partial=拆零出货, whole=整箱出货',
+  `deduct_qty` decimal(10,2) NOT NULL DEFAULT '0.00' COMMENT '出货数量（标准单位件数）',
+  `destination` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '目的地（门店名称）',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '出货时间',
+  `operator` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '操作员',
+  `remark` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci COMMENT '备注'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='统一出货记录表（拆零+整箱）';
+
+-- --------------------------------------------------------
+
+--
 -- 表的结构 `sys_users`
 --
 
@@ -306,6 +325,16 @@ ALTER TABLE `mrs_package_ledger`
   ADD KEY `idx_product_status` (`status`);
 
 --
+-- 表的索引 `mrs_usage_log`
+--
+ALTER TABLE `mrs_usage_log`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_product` (`product_name`),
+  ADD KEY `idx_destination` (`destination`),
+  ADD KEY `idx_created_at` (`created_at`),
+  ADD KEY `idx_ledger_id` (`ledger_id`);
+
+--
 -- 表的索引 `sys_users`
 --
 ALTER TABLE `sys_users`
@@ -364,6 +393,12 @@ ALTER TABLE `mrs_package_items`
 --
 ALTER TABLE `mrs_package_ledger`
   MODIFY `ledger_id` bigint UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '台账ID (主键)';
+
+--
+-- 使用表AUTO_INCREMENT `mrs_usage_log`
+--
+ALTER TABLE `mrs_usage_log`
+  MODIFY `id` int UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '记录ID';
 
 --
 -- 使用表AUTO_INCREMENT `sys_users`
