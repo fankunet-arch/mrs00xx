@@ -243,10 +243,10 @@ if (empty($sku)) {
         output += '  currentQty (清洗后): ' + availableQty + '\n\n';
 
         // 检查modal对象
-        if (typeof window.modal !== 'undefined' && typeof window.modal.show === 'function') {
-            output += '✓ window.modal.show 函数存在\n';
+        if (typeof window.showModal === 'function') {
+            output += '✓ window.showModal 函数存在\n';
         } else {
-            output += '✗ window.modal.show 函数不存在！\n';
+            output += '✗ window.showModal 函数不存在！\n';
         }
 
         // 检查showAlert函数
@@ -352,10 +352,16 @@ if (empty($sku)) {
             </div>
         `;
 
-        const confirmed = await window.modal.show('拆零出货', content, {
-            confirmText: '确认出货',
-            cancelText: '取消',
-            size: 'medium'
+        const confirmed = await window.showModal({
+            title: '拆零出货',
+            content,
+            width: '560px',
+            footer: `
+                <div class="modal-footer">
+                    <button class="modal-btn modal-btn-secondary" data-action="cancel">取消</button>
+                    <button class="modal-btn modal-btn-primary" data-action="confirm">确认出货</button>
+                </div>
+            `
         });
 
         if (!confirmed) return;

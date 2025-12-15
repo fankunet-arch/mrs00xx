@@ -466,10 +466,16 @@ function format_tracking_number($tracking_number) {
             </div>
         `;
 
-        const confirmed = await window.modal.show('拆零出货', content, {
-            confirmText: '确认出货',
-            cancelText: '取消',
-            size: 'medium'
+        const confirmed = await window.showModal({
+            title: '拆零出货',
+            content,
+            width: '560px',
+            footer: `
+                <div class="modal-footer">
+                    <button class="modal-btn modal-btn-secondary" data-action="cancel">取消</button>
+                    <button class="modal-btn modal-btn-primary" data-action="confirm">确认出货</button>
+                </div>
+            `
         });
 
         if (!confirmed) return;
