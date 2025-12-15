@@ -32,6 +32,14 @@ if (!empty($search_type) && !empty($search_value)) {
     $packages = mrs_get_true_inventory_detail($pdo, $selected_sku, $order_by);
 }
 
+// 如果需要JSON数据（给其他页面复用拆零出库弹窗）
+if (($_GET['format'] ?? '') === 'json') {
+    mrs_json_response(true, [
+        'packages' => $packages,
+        'selected_sku' => $selected_sku
+    ]);
+}
+
 // 格式化快递单号：末尾4位红色加粗
 function format_tracking_number($tracking_number) {
     $tracking_number = htmlspecialchars($tracking_number);
@@ -219,7 +227,7 @@ function format_tracking_number($tracking_number) {
                                     <td><?= date('Y-m-d H:i', strtotime($pkg['inbound_time'])) ?></td>
                                     <td><?= $pkg['days_in_stock'] ?> 天</td>
                                     <td onclick="event.stopPropagation()">
-                                        <button class="btn btn-sm btn-success"
+                                        <button type="button" class="btn btn-sm btn-success"
                                                 onclick="partialOutbound(<?= $pkg['ledger_id'] ?>, '<?= htmlspecialchars($pkg['content_note'], ENT_QUOTES) ?>', '<?= htmlspecialchars($pkg['ledger_quantity'] ?? '', ENT_QUOTES) ?>')">拆零出货</button>
                                     </td>
                                 </tr>
@@ -423,11 +431,18 @@ function format_tracking_number($tracking_number) {
 
         const availableQty = cleanQty(currentQty);
 
+        const today = new Date().toISOString().split('T')[0];
+
         const content = `
             <div class="modal-section">
                 <div style="background: #e3f2fd; padding: 12px; border-radius: 4px; margin-bottom: 20px;">
                     <strong>商品名称：</strong>${productName}<br>
                     <strong>当前库存：</strong><span style="color: #1976d2; font-size: 18px; font-weight: bold;">${availableQty}</span> 件
+                </div>
+
+                <div class="form-group">
+                    <label for="outbound-date">出库日期 <span style="color: red;">*</span></label>
+                    <input type="date" id="outbound-date" class="form-control" value="${today}" required>
                 </div>
 
                 <div class="form-group">
@@ -463,6 +478,7 @@ function format_tracking_number($tracking_number) {
         const deductQty = parseFloat(document.getElementById('outbound-qty').value);
         const destination = document.getElementById('destination').value.trim();
         const remark = document.getElementById('remark').value.trim();
+        const outboundDate = document.getElementById('outbound-date').value;
 
         // 验证
         if (!deductQty || deductQty <= 0) {
@@ -480,6 +496,11 @@ function format_tracking_number($tracking_number) {
             return;
         }
 
+        if (!outboundDate) {
+            await showAlert('请选择出库日期', '错误', 'error');
+            return;
+        }
+
         // 提交数据
         try {
             const response = await fetch('/mrs/ap/index.php?action=partial_outbound', {
@@ -491,7 +512,8 @@ function format_tracking_number($tracking_number) {
                     ledger_id: ledgerId,
                     deduct_qty: deductQty,
                     destination: destination,
-                    remark: remark
+                    remark: remark,
+                    outbound_date: outboundDate
                 })
             });
 

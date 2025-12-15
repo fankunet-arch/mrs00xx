@@ -120,7 +120,7 @@ $packages = mrs_get_true_inventory_detail($pdo, $product_name, $order_by);
                                 <td><?= $pkg['days_in_stock'] ?> 天</td>
                                 <td><span class="badge badge-in-stock">在库</span></td>
                                 <td>
-                                    <button class="btn btn-sm btn-success"
+                                    <button type="button" class="btn btn-sm btn-success"
                                             onclick="partialOutbound(<?= $pkg['ledger_id'] ?>, '<?= htmlspecialchars($pkg['content_note'], ENT_QUOTES) ?>', '<?= htmlspecialchars($pkg['ledger_quantity'] ?? '', ENT_QUOTES) ?>')">拆零出货</button>
                                     <button class="btn btn-sm btn-primary"
                                             onclick="editPackage(<?= $pkg['ledger_id'] ?>, '<?= htmlspecialchars($pkg['tracking_number'], ENT_QUOTES) ?>', '<?= htmlspecialchars($pkg['box_number'], ENT_QUOTES) ?>', '<?= htmlspecialchars($pkg['spec_info'], ENT_QUOTES) ?>', '<?= htmlspecialchars($pkg['content_note'], ENT_QUOTES) ?>', '<?= $pkg['ledger_expiry_date'] ?? '' ?>', '<?= htmlspecialchars($pkg['ledger_quantity'] ?? '', ENT_QUOTES) ?>')">修改</button>
@@ -481,11 +481,18 @@ $packages = mrs_get_true_inventory_detail($pdo, $product_name, $order_by);
 
         const availableQty = cleanQty(currentQty);
 
+        const today = new Date().toISOString().split('T')[0];
+
         const content = `
             <div class="modal-section">
                 <div style="background: #e3f2fd; padding: 12px; border-radius: 4px; margin-bottom: 20px;">
                     <strong>商品名称：</strong>${productName}<br>
                     <strong>当前库存：</strong><span style="color: #1976d2; font-size: 18px; font-weight: bold;">${availableQty}</span> 件
+                </div>
+
+                <div class="form-group">
+                    <label for="outbound-date">出库日期 <span style="color: red;">*</span></label>
+                    <input type="date" id="outbound-date" class="form-control" value="${today}" required>
                 </div>
 
                 <div class="form-group">
@@ -521,6 +528,7 @@ $packages = mrs_get_true_inventory_detail($pdo, $product_name, $order_by);
         const deductQty = parseFloat(document.getElementById('outbound-qty').value);
         const destination = document.getElementById('destination').value.trim();
         const remark = document.getElementById('remark').value.trim();
+        const outboundDate = document.getElementById('outbound-date').value;
 
         // 验证
         if (!deductQty || deductQty <= 0) {
@@ -538,6 +546,11 @@ $packages = mrs_get_true_inventory_detail($pdo, $product_name, $order_by);
             return;
         }
 
+        if (!outboundDate) {
+            await showAlert('请选择出库日期', '错误', 'error');
+            return;
+        }
+
         // 提交数据
         try {
             const response = await fetch('/mrs/ap/index.php?action=partial_outbound', {
@@ -549,7 +562,8 @@ $packages = mrs_get_true_inventory_detail($pdo, $product_name, $order_by);
                     ledger_id: ledgerId,
                     deduct_qty: deductQty,
                     destination: destination,
-                    remark: remark
+                    remark: remark,
+                    outbound_date: outboundDate
                 })
             });
 

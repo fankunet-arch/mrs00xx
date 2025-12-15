@@ -22,6 +22,8 @@ if (!$input) {
 $ledger_id = (int)($input['ledger_id'] ?? 0);
 $deduct_qty = floatval($input['deduct_qty'] ?? 0);
 $destination = trim($input['destination'] ?? '');
+$remark = trim($input['remark'] ?? '');
+$outbound_date = trim($input['outbound_date'] ?? '');
 
 // 参数验证
 if ($ledger_id <= 0) {
@@ -34,6 +36,17 @@ if ($deduct_qty <= 0) {
 
 if (empty($destination)) {
     mrs_json_response(false, null, '目的地（门店）不能为空');
+}
+
+// 校验出库日期（可选，默认今天）
+$outbound_datetime = new DateTime();
+if (!empty($outbound_date)) {
+    $parsed_date = DateTime::createFromFormat('Y-m-d', $outbound_date);
+    if (!$parsed_date) {
+        mrs_json_response(false, null, '出库日期格式无效，应为YYYY-MM-DD');
+    }
+    // 使用用户选择的日期，时间沿用当前时间
+    $outbound_datetime = DateTime::createFromFormat('Y-m-d H:i:s', $outbound_date . ' ' . date('H:i:s'));
 }
 
 // 获取操作员
@@ -101,7 +114,8 @@ try {
             deduct_qty,
             destination,
             operator,
-            created_at
+            created_at,
+            remark
         ) VALUES (
             :ledger_id,
             :product_name,
@@ -109,7 +123,8 @@ try {
             :deduct_qty,
             :destination,
             :operator,
-            NOW()
+            :created_at,
+            :remark
         )
     ");
     $insert_stmt->execute([
@@ -117,7 +132,9 @@ try {
         'product_name' => $package['content_note'],
         'deduct_qty' => $deduct_qty,
         'destination' => $destination,
-        'operator' => $operator
+        'operator' => $operator,
+        'created_at' => $outbound_datetime->format('Y-m-d H:i:s'),
+        'remark' => $remark ?: null
     ]);
 
     // 8. 提交事务
