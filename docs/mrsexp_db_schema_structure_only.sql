@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- 主机： mhdlmskp2kpxguj.mysql.db
--- 生成日期： 2025-12-14 13:25:41
+-- 生成日期： 2025-12-15 09:13:46
 -- 服务器版本： 8.4.6-6
 -- PHP 版本： 8.1.33
 
@@ -89,6 +89,23 @@ CREATE TABLE `express_package` (
 -- --------------------------------------------------------
 
 --
+-- 表的结构 `express_package_items`
+--
+
+DROP TABLE IF EXISTS `express_package_items`;
+CREATE TABLE `express_package_items` (
+  `item_id` int UNSIGNED NOT NULL COMMENT '明细ID',
+  `package_id` int UNSIGNED NOT NULL COMMENT '包裹ID',
+  `product_name` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '产品名称/内容备注',
+  `quantity` int UNSIGNED DEFAULT NULL COMMENT '数量',
+  `expiry_date` date DEFAULT NULL COMMENT '保质期',
+  `sort_order` int DEFAULT '0' COMMENT '排序',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='快递包裹产品明细表';
+
+-- --------------------------------------------------------
+
+--
 -- 表的结构 `mrs_destinations`
 --
 
@@ -117,12 +134,12 @@ CREATE TABLE `mrs_destinations` (
 --
 DROP VIEW IF EXISTS `mrs_destination_stats`;
 CREATE TABLE `mrs_destination_stats` (
-`destination_id` int unsigned
+`days_used` bigint
+,`destination_id` int unsigned
 ,`destination_name` varchar(100)
-,`type_name` varchar(50)
-,`total_shipments` bigint
-,`days_used` bigint
 ,`last_used_time` datetime
+,`total_shipments` bigint
+,`type_name` varchar(50)
 );
 
 -- --------------------------------------------------------
@@ -140,6 +157,23 @@ CREATE TABLE `mrs_destination_types` (
   `sort_order` int DEFAULT '0' COMMENT '排序',
   `created_at` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='去向类型配置表';
+
+-- --------------------------------------------------------
+
+--
+-- 表的结构 `mrs_package_items`
+--
+
+DROP TABLE IF EXISTS `mrs_package_items`;
+CREATE TABLE `mrs_package_items` (
+  `item_id` int UNSIGNED NOT NULL COMMENT '明细ID',
+  `ledger_id` bigint UNSIGNED NOT NULL COMMENT '台账ID',
+  `product_name` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '产品名称/内容备注',
+  `quantity` int UNSIGNED DEFAULT NULL COMMENT '数量',
+  `expiry_date` date DEFAULT NULL COMMENT '保质期',
+  `sort_order` int DEFAULT '0' COMMENT '排序',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='MRS台账产品明细表';
 
 -- --------------------------------------------------------
 
@@ -224,6 +258,14 @@ ALTER TABLE `express_package`
   ADD KEY `idx_expiry_date` (`expiry_date`);
 
 --
+-- 表的索引 `express_package_items`
+--
+ALTER TABLE `express_package_items`
+  ADD PRIMARY KEY (`item_id`),
+  ADD KEY `idx_package_id` (`package_id`),
+  ADD KEY `idx_expiry_date` (`expiry_date`);
+
+--
 -- 表的索引 `mrs_destinations`
 --
 ALTER TABLE `mrs_destinations`
@@ -239,6 +281,15 @@ ALTER TABLE `mrs_destination_types`
   ADD UNIQUE KEY `uk_type_code` (`type_code`);
 
 --
+-- 表的索引 `mrs_package_items`
+--
+ALTER TABLE `mrs_package_items`
+  ADD PRIMARY KEY (`item_id`),
+  ADD KEY `idx_ledger_id` (`ledger_id`),
+  ADD KEY `idx_expiry_date` (`expiry_date`),
+  ADD KEY `idx_product_lookup` (`product_name`,`expiry_date`);
+
+--
 -- 表的索引 `mrs_package_ledger`
 --
 ALTER TABLE `mrs_package_ledger`
@@ -251,7 +302,8 @@ ALTER TABLE `mrs_package_ledger`
   ADD KEY `idx_inbound_time` (`inbound_time`),
   ADD KEY `idx_outbound_time` (`outbound_time`),
   ADD KEY `idx_destination` (`destination_id`),
-  ADD KEY `idx_expiry_date` (`expiry_date`);
+  ADD KEY `idx_expiry_date` (`expiry_date`),
+  ADD KEY `idx_product_status` (`status`);
 
 --
 -- 表的索引 `sys_users`
@@ -284,6 +336,12 @@ ALTER TABLE `express_package`
   MODIFY `package_id` int UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '包裹ID';
 
 --
+-- 使用表AUTO_INCREMENT `express_package_items`
+--
+ALTER TABLE `express_package_items`
+  MODIFY `item_id` int UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '明细ID';
+
+--
 -- 使用表AUTO_INCREMENT `mrs_destinations`
 --
 ALTER TABLE `mrs_destinations`
@@ -294,6 +352,12 @@ ALTER TABLE `mrs_destinations`
 --
 ALTER TABLE `mrs_destination_types`
   MODIFY `type_id` int UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '类型ID';
+
+--
+-- 使用表AUTO_INCREMENT `mrs_package_items`
+--
+ALTER TABLE `mrs_package_items`
+  MODIFY `item_id` int UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '明细ID';
 
 --
 -- 使用表AUTO_INCREMENT `mrs_package_ledger`
@@ -334,10 +398,22 @@ ALTER TABLE `express_package`
   ADD CONSTRAINT `fk_package_batch` FOREIGN KEY (`batch_id`) REFERENCES `express_batch` (`batch_id`) ON DELETE CASCADE;
 
 --
+-- 限制表 `express_package_items`
+--
+ALTER TABLE `express_package_items`
+  ADD CONSTRAINT `fk_item_package` FOREIGN KEY (`package_id`) REFERENCES `express_package` (`package_id`) ON DELETE CASCADE;
+
+--
 -- 限制表 `mrs_destinations`
 --
 ALTER TABLE `mrs_destinations`
   ADD CONSTRAINT `fk_destination_type` FOREIGN KEY (`type_code`) REFERENCES `mrs_destination_types` (`type_code`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+--
+-- 限制表 `mrs_package_items`
+--
+ALTER TABLE `mrs_package_items`
+  ADD CONSTRAINT `fk_item_ledger` FOREIGN KEY (`ledger_id`) REFERENCES `mrs_package_ledger` (`ledger_id`) ON DELETE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
