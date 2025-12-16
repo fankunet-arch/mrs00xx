@@ -1,5 +1,0 @@
-[2025-11-24 16:02:28] [ERROR] 获取批次列表失败: SQLSTATE[HY000] [2002] php_network_getaddresses: getaddrinfo for mhdlmskp2kpxguj.mysql.db failed: Name or service not known
-[2025-11-24 16:02:28] [ERROR] 获取SKU列表失败: SQLSTATE[HY000] [2002] php_network_getaddresses: getaddrinfo for mhdlmskp2kpxguj.mysql.db failed: Name or service not known
-[2025-11-24 16:02:28] [ERROR] 获取SKU列表失败: SQLSTATE[HY000] [2002] php_network_getaddresses: getaddrinfo for mhdlmskp2kpxguj.mysql.db failed: Name or service not known
-[2025-11-25 01:55:02] [INFO] 批次合并确认成功: batch_id=7, items_count=1
-[2025-11-25 01:56:45] [INFO] 批次合并确认成功: batch_id=8, items_count=1
