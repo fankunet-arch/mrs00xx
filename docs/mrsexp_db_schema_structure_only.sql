@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- 主机： mhdlmskp2kpxguj.mysql.db
--- 生成日期： 2025-12-15 13:58:05
+-- 生成日期： 2025-12-16 01:04:36
 -- 服务器版本： 8.4.6-6
 -- PHP 版本： 8.1.33
 
@@ -106,6 +106,101 @@ CREATE TABLE `express_package_items` (
 -- --------------------------------------------------------
 
 --
+-- 表的结构 `mrs_batch`
+--
+
+DROP TABLE IF EXISTS `mrs_batch`;
+CREATE TABLE `mrs_batch` (
+  `batch_id` int UNSIGNED NOT NULL COMMENT '批次ID',
+  `batch_code` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '批次编号',
+  `batch_name` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '批次名称',
+  `batch_date` date DEFAULT NULL COMMENT '批次日期',
+  `batch_status` enum('draft','receiving','pending_merge','confirmed','closed') COLLATE utf8mb4_unicode_ci DEFAULT 'draft' COMMENT '批次状态',
+  `location_name` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '位置名称',
+  `supplier_name` varchar(200) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '供应商名称',
+  `remark` text COLLATE utf8mb4_unicode_ci COMMENT '备注',
+  `created_by` varchar(60) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '创建人',
+  `created_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
+  `updated_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='MRS-批次表';
+
+-- --------------------------------------------------------
+
+--
+-- 表的结构 `mrs_batch_confirmed_item`
+--
+
+DROP TABLE IF EXISTS `mrs_batch_confirmed_item`;
+CREATE TABLE `mrs_batch_confirmed_item` (
+  `confirmed_item_id` int UNSIGNED NOT NULL COMMENT '确认项ID',
+  `batch_id` int UNSIGNED NOT NULL COMMENT '批次ID',
+  `sku_id` int UNSIGNED NOT NULL COMMENT 'SKU ID',
+  `confirmed_case_qty` decimal(10,2) DEFAULT '0.00' COMMENT '确认箱数',
+  `confirmed_single_qty` decimal(10,2) DEFAULT '0.00' COMMENT '确认散装数',
+  `total_standard_qty` decimal(10,2) DEFAULT '0.00' COMMENT '总标准数量',
+  `created_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
+  `updated_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='MRS-批次确认项表';
+
+-- --------------------------------------------------------
+
+--
+-- 表的结构 `mrs_batch_expected_item`
+--
+
+DROP TABLE IF EXISTS `mrs_batch_expected_item`;
+CREATE TABLE `mrs_batch_expected_item` (
+  `expected_item_id` int UNSIGNED NOT NULL COMMENT '预期项ID',
+  `batch_id` int UNSIGNED NOT NULL COMMENT '批次ID',
+  `sku_id` int UNSIGNED NOT NULL COMMENT 'SKU ID',
+  `expected_case_qty` decimal(10,2) DEFAULT '0.00' COMMENT '预期箱数',
+  `expected_single_qty` decimal(10,2) DEFAULT '0.00' COMMENT '预期散装数',
+  `total_standard_qty` decimal(10,2) DEFAULT '0.00' COMMENT '总标准数量',
+  `created_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
+  `updated_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='MRS-批次预期项表';
+
+-- --------------------------------------------------------
+
+--
+-- 表的结构 `mrs_batch_raw_record`
+--
+
+DROP TABLE IF EXISTS `mrs_batch_raw_record`;
+CREATE TABLE `mrs_batch_raw_record` (
+  `raw_record_id` bigint UNSIGNED NOT NULL COMMENT '原始记录ID',
+  `batch_id` int UNSIGNED NOT NULL COMMENT '批次ID',
+  `input_sku_name` varchar(200) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '输入的SKU名称',
+  `input_case_qty` decimal(10,2) DEFAULT '0.00' COMMENT '输入箱数',
+  `input_single_qty` decimal(10,2) DEFAULT '0.00' COMMENT '输入散装数',
+  `physical_box_count` int DEFAULT NULL COMMENT '实际箱数',
+  `status` enum('pending','matched','confirmed') COLLATE utf8mb4_unicode_ci DEFAULT 'pending' COMMENT '状态',
+  `matched_sku_id` int UNSIGNED DEFAULT NULL COMMENT '匹配的SKU ID',
+  `created_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
+  `updated_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='MRS-批次原始记录表';
+
+-- --------------------------------------------------------
+
+--
+-- 表的结构 `mrs_category`
+--
+
+DROP TABLE IF EXISTS `mrs_category`;
+CREATE TABLE `mrs_category` (
+  `category_id` int UNSIGNED NOT NULL COMMENT '分类ID',
+  `category_name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '分类名称',
+  `category_code` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '分类编码',
+  `description` text COLLATE utf8mb4_unicode_ci COMMENT '分类描述',
+  `is_active` tinyint(1) DEFAULT '1' COMMENT '是否有效',
+  `sort_order` int DEFAULT '0' COMMENT '排序',
+  `created_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
+  `updated_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='MRS-分类表';
+
+-- --------------------------------------------------------
+
+--
 -- 表的结构 `mrs_destinations`
 --
 
@@ -161,6 +256,108 @@ CREATE TABLE `mrs_destination_types` (
 -- --------------------------------------------------------
 
 --
+-- 表的结构 `mrs_inventory`
+--
+
+DROP TABLE IF EXISTS `mrs_inventory`;
+CREATE TABLE `mrs_inventory` (
+  `inventory_id` bigint UNSIGNED NOT NULL COMMENT '库存ID',
+  `sku_id` int UNSIGNED NOT NULL COMMENT 'SKU ID',
+  `current_qty` decimal(10,2) DEFAULT '0.00' COMMENT '当前库存数量',
+  `unit` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT '件' COMMENT '单位',
+  `last_updated_at` datetime(6) DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '最后更新时间',
+  `created_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='MRS-库存主表';
+
+-- --------------------------------------------------------
+
+--
+-- 表的结构 `mrs_inventory_adjustment`
+--
+
+DROP TABLE IF EXISTS `mrs_inventory_adjustment`;
+CREATE TABLE `mrs_inventory_adjustment` (
+  `adjustment_id` int UNSIGNED NOT NULL COMMENT '调整记录ID',
+  `sku_id` int UNSIGNED NOT NULL COMMENT 'SKU ID',
+  `delta_qty` decimal(10,2) NOT NULL COMMENT '调整数量（正数为盘盈，负数为盘亏）',
+  `reason` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '调整原因',
+  `operator_name` varchar(60) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '操作人',
+  `created_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='MRS-库存调整记录表';
+
+-- --------------------------------------------------------
+
+--
+-- 表的结构 `mrs_inventory_transaction`
+--
+
+DROP TABLE IF EXISTS `mrs_inventory_transaction`;
+CREATE TABLE `mrs_inventory_transaction` (
+  `transaction_id` bigint UNSIGNED NOT NULL COMMENT '流水ID',
+  `sku_id` int UNSIGNED NOT NULL COMMENT 'SKU ID',
+  `transaction_type` enum('inbound','outbound','adjustment') COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '交易类型',
+  `transaction_subtype` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '交易子类型（surplus盘盈/deficit盘亏等）',
+  `quantity_change` decimal(10,2) NOT NULL COMMENT '数量变化（正数为增加，负数为减少）',
+  `quantity_before` decimal(10,2) NOT NULL COMMENT '变化前数量',
+  `quantity_after` decimal(10,2) NOT NULL COMMENT '变化后数量',
+  `unit` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT '件' COMMENT '单位',
+  `batch_id` int UNSIGNED DEFAULT NULL COMMENT '关联批次ID',
+  `outbound_order_id` int UNSIGNED DEFAULT NULL COMMENT '关联出库单ID',
+  `adjustment_id` int UNSIGNED DEFAULT NULL COMMENT '关联调整记录ID',
+  `operator_name` varchar(60) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '操作人',
+  `remark` text COLLATE utf8mb4_unicode_ci COMMENT '备注',
+  `created_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='MRS-库存流水表';
+
+-- --------------------------------------------------------
+
+--
+-- 表的结构 `mrs_outbound_order`
+--
+
+DROP TABLE IF EXISTS `mrs_outbound_order`;
+CREATE TABLE `mrs_outbound_order` (
+  `outbound_order_id` int UNSIGNED NOT NULL COMMENT '出库单ID',
+  `outbound_code` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '出库单号',
+  `outbound_date` date NOT NULL COMMENT '出库日期',
+  `outbound_type` tinyint DEFAULT '1' COMMENT '出库类型（1=销售出库，2=调拨出库，3=退货出库等）',
+  `location_name` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '目的地位置',
+  `recipient_name` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '收货人',
+  `recipient_phone` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '收货电话',
+  `recipient_address` text COLLATE utf8mb4_unicode_ci COMMENT '收货地址',
+  `status` enum('draft','confirmed','shipped','completed','cancelled') COLLATE utf8mb4_unicode_ci DEFAULT 'draft' COMMENT '状态',
+  `remark` text COLLATE utf8mb4_unicode_ci COMMENT '备注',
+  `created_by` varchar(60) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '创建人',
+  `created_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
+  `updated_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='MRS-出库单主表';
+
+-- --------------------------------------------------------
+
+--
+-- 表的结构 `mrs_outbound_order_item`
+--
+
+DROP TABLE IF EXISTS `mrs_outbound_order_item`;
+CREATE TABLE `mrs_outbound_order_item` (
+  `outbound_order_item_id` int UNSIGNED NOT NULL COMMENT '出库单明细ID',
+  `outbound_order_id` int UNSIGNED NOT NULL COMMENT '出库单ID',
+  `sku_id` int UNSIGNED NOT NULL COMMENT 'SKU ID',
+  `sku_name` varchar(200) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'SKU名称（冗余字段）',
+  `unit_name` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT '件' COMMENT '单位名称',
+  `case_unit_name` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT '箱' COMMENT '箱单位名称',
+  `case_to_standard_qty` decimal(10,2) DEFAULT '1.00' COMMENT '每箱标准数量',
+  `outbound_case_qty` decimal(10,2) DEFAULT '0.00' COMMENT '出库箱数',
+  `outbound_single_qty` decimal(10,2) DEFAULT '0.00' COMMENT '出库散装数',
+  `total_standard_qty` decimal(10,2) DEFAULT '0.00' COMMENT '总标准数量',
+  `remark` text COLLATE utf8mb4_unicode_ci COMMENT '备注',
+  `created_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
+  `updated_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='MRS-出库单明细表';
+
+-- --------------------------------------------------------
+
+--
 -- 表的结构 `mrs_package_items`
 --
 
@@ -203,6 +400,29 @@ CREATE TABLE `mrs_package_ledger` (
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='MRS 包裹台账表';
+
+-- --------------------------------------------------------
+
+--
+-- 表的结构 `mrs_sku`
+--
+
+DROP TABLE IF EXISTS `mrs_sku`;
+CREATE TABLE `mrs_sku` (
+  `sku_id` int UNSIGNED NOT NULL COMMENT 'SKU ID',
+  `category_id` int UNSIGNED DEFAULT NULL COMMENT '分类ID',
+  `sku_code` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'SKU编码',
+  `sku_name` varchar(200) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'SKU名称',
+  `brand_name` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '品牌名称',
+  `spec_info` varchar(200) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '规格信息',
+  `standard_unit` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT '件' COMMENT '标准单位（件、个、瓶等）',
+  `case_unit_name` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT '箱' COMMENT '箱单位名称',
+  `case_to_standard_qty` decimal(10,2) DEFAULT '1.00' COMMENT '每箱标准数量',
+  `status` enum('active','inactive') COLLATE utf8mb4_unicode_ci DEFAULT 'active' COMMENT '状态',
+  `remark` text COLLATE utf8mb4_unicode_ci COMMENT '备注',
+  `created_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
+  `updated_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='MRS-SKU商品表';
 
 -- --------------------------------------------------------
 
@@ -285,6 +505,50 @@ ALTER TABLE `express_package_items`
   ADD KEY `idx_expiry_date` (`expiry_date`);
 
 --
+-- 表的索引 `mrs_batch`
+--
+ALTER TABLE `mrs_batch`
+  ADD PRIMARY KEY (`batch_id`),
+  ADD UNIQUE KEY `uk_batch_code` (`batch_code`),
+  ADD KEY `idx_batch_status` (`batch_status`),
+  ADD KEY `idx_batch_date` (`batch_date`);
+
+--
+-- 表的索引 `mrs_batch_confirmed_item`
+--
+ALTER TABLE `mrs_batch_confirmed_item`
+  ADD PRIMARY KEY (`confirmed_item_id`),
+  ADD UNIQUE KEY `uk_batch_sku` (`batch_id`,`sku_id`),
+  ADD KEY `idx_batch_id` (`batch_id`),
+  ADD KEY `idx_sku_id` (`sku_id`);
+
+--
+-- 表的索引 `mrs_batch_expected_item`
+--
+ALTER TABLE `mrs_batch_expected_item`
+  ADD PRIMARY KEY (`expected_item_id`),
+  ADD UNIQUE KEY `uk_batch_sku` (`batch_id`,`sku_id`),
+  ADD KEY `idx_batch_id` (`batch_id`),
+  ADD KEY `idx_sku_id` (`sku_id`);
+
+--
+-- 表的索引 `mrs_batch_raw_record`
+--
+ALTER TABLE `mrs_batch_raw_record`
+  ADD PRIMARY KEY (`raw_record_id`),
+  ADD KEY `idx_batch_id` (`batch_id`),
+  ADD KEY `idx_matched_sku_id` (`matched_sku_id`),
+  ADD KEY `idx_status` (`status`);
+
+--
+-- 表的索引 `mrs_category`
+--
+ALTER TABLE `mrs_category`
+  ADD PRIMARY KEY (`category_id`),
+  ADD UNIQUE KEY `uk_category_name` (`category_name`),
+  ADD KEY `idx_category_code` (`category_code`);
+
+--
 -- 表的索引 `mrs_destinations`
 --
 ALTER TABLE `mrs_destinations`
@@ -298,6 +562,50 @@ ALTER TABLE `mrs_destinations`
 ALTER TABLE `mrs_destination_types`
   ADD PRIMARY KEY (`type_id`),
   ADD UNIQUE KEY `uk_type_code` (`type_code`);
+
+--
+-- 表的索引 `mrs_inventory`
+--
+ALTER TABLE `mrs_inventory`
+  ADD PRIMARY KEY (`inventory_id`),
+  ADD UNIQUE KEY `uk_sku_id` (`sku_id`);
+
+--
+-- 表的索引 `mrs_inventory_adjustment`
+--
+ALTER TABLE `mrs_inventory_adjustment`
+  ADD PRIMARY KEY (`adjustment_id`),
+  ADD KEY `idx_sku_id` (`sku_id`),
+  ADD KEY `idx_created_at` (`created_at`);
+
+--
+-- 表的索引 `mrs_inventory_transaction`
+--
+ALTER TABLE `mrs_inventory_transaction`
+  ADD PRIMARY KEY (`transaction_id`),
+  ADD KEY `idx_sku_id` (`sku_id`),
+  ADD KEY `idx_transaction_type` (`transaction_type`),
+  ADD KEY `idx_batch_id` (`batch_id`),
+  ADD KEY `idx_outbound_order_id` (`outbound_order_id`),
+  ADD KEY `idx_created_at` (`created_at`);
+
+--
+-- 表的索引 `mrs_outbound_order`
+--
+ALTER TABLE `mrs_outbound_order`
+  ADD PRIMARY KEY (`outbound_order_id`),
+  ADD UNIQUE KEY `uk_outbound_code` (`outbound_code`),
+  ADD KEY `idx_outbound_date` (`outbound_date`),
+  ADD KEY `idx_status` (`status`),
+  ADD KEY `idx_outbound_type` (`outbound_type`);
+
+--
+-- 表的索引 `mrs_outbound_order_item`
+--
+ALTER TABLE `mrs_outbound_order_item`
+  ADD PRIMARY KEY (`outbound_order_item_id`),
+  ADD KEY `idx_outbound_order_id` (`outbound_order_id`),
+  ADD KEY `idx_sku_id` (`sku_id`);
 
 --
 -- 表的索引 `mrs_package_items`
@@ -323,6 +631,16 @@ ALTER TABLE `mrs_package_ledger`
   ADD KEY `idx_destination` (`destination_id`),
   ADD KEY `idx_expiry_date` (`expiry_date`),
   ADD KEY `idx_product_status` (`status`);
+
+--
+-- 表的索引 `mrs_sku`
+--
+ALTER TABLE `mrs_sku`
+  ADD PRIMARY KEY (`sku_id`),
+  ADD UNIQUE KEY `uk_sku_code` (`sku_code`),
+  ADD KEY `idx_category_id` (`category_id`),
+  ADD KEY `idx_sku_name` (`sku_name`),
+  ADD KEY `idx_brand_name` (`brand_name`);
 
 --
 -- 表的索引 `mrs_usage_log`
@@ -371,6 +689,36 @@ ALTER TABLE `express_package_items`
   MODIFY `item_id` int UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '明细ID';
 
 --
+-- 使用表AUTO_INCREMENT `mrs_batch`
+--
+ALTER TABLE `mrs_batch`
+  MODIFY `batch_id` int UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '批次ID';
+
+--
+-- 使用表AUTO_INCREMENT `mrs_batch_confirmed_item`
+--
+ALTER TABLE `mrs_batch_confirmed_item`
+  MODIFY `confirmed_item_id` int UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '确认项ID';
+
+--
+-- 使用表AUTO_INCREMENT `mrs_batch_expected_item`
+--
+ALTER TABLE `mrs_batch_expected_item`
+  MODIFY `expected_item_id` int UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '预期项ID';
+
+--
+-- 使用表AUTO_INCREMENT `mrs_batch_raw_record`
+--
+ALTER TABLE `mrs_batch_raw_record`
+  MODIFY `raw_record_id` bigint UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '原始记录ID';
+
+--
+-- 使用表AUTO_INCREMENT `mrs_category`
+--
+ALTER TABLE `mrs_category`
+  MODIFY `category_id` int UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '分类ID';
+
+--
 -- 使用表AUTO_INCREMENT `mrs_destinations`
 --
 ALTER TABLE `mrs_destinations`
@@ -383,6 +731,36 @@ ALTER TABLE `mrs_destination_types`
   MODIFY `type_id` int UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '类型ID';
 
 --
+-- 使用表AUTO_INCREMENT `mrs_inventory`
+--
+ALTER TABLE `mrs_inventory`
+  MODIFY `inventory_id` bigint UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '库存ID';
+
+--
+-- 使用表AUTO_INCREMENT `mrs_inventory_adjustment`
+--
+ALTER TABLE `mrs_inventory_adjustment`
+  MODIFY `adjustment_id` int UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '调整记录ID';
+
+--
+-- 使用表AUTO_INCREMENT `mrs_inventory_transaction`
+--
+ALTER TABLE `mrs_inventory_transaction`
+  MODIFY `transaction_id` bigint UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '流水ID';
+
+--
+-- 使用表AUTO_INCREMENT `mrs_outbound_order`
+--
+ALTER TABLE `mrs_outbound_order`
+  MODIFY `outbound_order_id` int UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '出库单ID';
+
+--
+-- 使用表AUTO_INCREMENT `mrs_outbound_order_item`
+--
+ALTER TABLE `mrs_outbound_order_item`
+  MODIFY `outbound_order_item_id` int UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '出库单明细ID';
+
+--
 -- 使用表AUTO_INCREMENT `mrs_package_items`
 --
 ALTER TABLE `mrs_package_items`
@@ -393,6 +771,12 @@ ALTER TABLE `mrs_package_items`
 --
 ALTER TABLE `mrs_package_ledger`
   MODIFY `ledger_id` bigint UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '台账ID (主键)';
+
+--
+-- 使用表AUTO_INCREMENT `mrs_sku`
+--
+ALTER TABLE `mrs_sku`
+  MODIFY `sku_id` int UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'SKU ID';
 
 --
 -- 使用表AUTO_INCREMENT `mrs_usage_log`
@@ -439,16 +823,68 @@ ALTER TABLE `express_package_items`
   ADD CONSTRAINT `fk_item_package` FOREIGN KEY (`package_id`) REFERENCES `express_package` (`package_id`) ON DELETE CASCADE;
 
 --
+-- 限制表 `mrs_batch_confirmed_item`
+--
+ALTER TABLE `mrs_batch_confirmed_item`
+  ADD CONSTRAINT `fk_confirmed_batch` FOREIGN KEY (`batch_id`) REFERENCES `mrs_batch` (`batch_id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_confirmed_sku` FOREIGN KEY (`sku_id`) REFERENCES `mrs_sku` (`sku_id`) ON DELETE CASCADE;
+
+--
+-- 限制表 `mrs_batch_expected_item`
+--
+ALTER TABLE `mrs_batch_expected_item`
+  ADD CONSTRAINT `fk_expected_batch` FOREIGN KEY (`batch_id`) REFERENCES `mrs_batch` (`batch_id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_expected_sku` FOREIGN KEY (`sku_id`) REFERENCES `mrs_sku` (`sku_id`) ON DELETE CASCADE;
+
+--
+-- 限制表 `mrs_batch_raw_record`
+--
+ALTER TABLE `mrs_batch_raw_record`
+  ADD CONSTRAINT `fk_raw_batch` FOREIGN KEY (`batch_id`) REFERENCES `mrs_batch` (`batch_id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_raw_sku` FOREIGN KEY (`matched_sku_id`) REFERENCES `mrs_sku` (`sku_id`) ON DELETE SET NULL;
+
+--
 -- 限制表 `mrs_destinations`
 --
 ALTER TABLE `mrs_destinations`
   ADD CONSTRAINT `fk_destination_type` FOREIGN KEY (`type_code`) REFERENCES `mrs_destination_types` (`type_code`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 --
+-- 限制表 `mrs_inventory`
+--
+ALTER TABLE `mrs_inventory`
+  ADD CONSTRAINT `fk_inventory_sku` FOREIGN KEY (`sku_id`) REFERENCES `mrs_sku` (`sku_id`) ON DELETE CASCADE;
+
+--
+-- 限制表 `mrs_inventory_adjustment`
+--
+ALTER TABLE `mrs_inventory_adjustment`
+  ADD CONSTRAINT `fk_adjustment_sku` FOREIGN KEY (`sku_id`) REFERENCES `mrs_sku` (`sku_id`) ON DELETE CASCADE;
+
+--
+-- 限制表 `mrs_inventory_transaction`
+--
+ALTER TABLE `mrs_inventory_transaction`
+  ADD CONSTRAINT `fk_transaction_sku` FOREIGN KEY (`sku_id`) REFERENCES `mrs_sku` (`sku_id`) ON DELETE CASCADE;
+
+--
+-- 限制表 `mrs_outbound_order_item`
+--
+ALTER TABLE `mrs_outbound_order_item`
+  ADD CONSTRAINT `fk_outbound_item_order` FOREIGN KEY (`outbound_order_id`) REFERENCES `mrs_outbound_order` (`outbound_order_id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_outbound_item_sku` FOREIGN KEY (`sku_id`) REFERENCES `mrs_sku` (`sku_id`) ON DELETE RESTRICT;
+
+--
 -- 限制表 `mrs_package_items`
 --
 ALTER TABLE `mrs_package_items`
   ADD CONSTRAINT `fk_item_ledger` FOREIGN KEY (`ledger_id`) REFERENCES `mrs_package_ledger` (`ledger_id`) ON DELETE CASCADE;
+
+--
+-- 限制表 `mrs_sku`
+--
+ALTER TABLE `mrs_sku`
+  ADD CONSTRAINT `fk_sku_category` FOREIGN KEY (`category_id`) REFERENCES `mrs_category` (`category_id`) ON DELETE SET NULL ON UPDATE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
