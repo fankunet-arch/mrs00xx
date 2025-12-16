@@ -8,9 +8,30 @@ if (!defined('MRS_ENTRY')) {
     die('Access denied');
 }
 
+// 获取排序参数
+$sort_by = $_GET['sort'] ?? 'sku_name';
+$sort_dir = $_GET['dir'] ?? 'asc';
+
 // 获取库存汇总（使用真正的多产品统计）
-$inventory = mrs_get_true_inventory_summary($pdo);
+$inventory = mrs_get_true_inventory_summary($pdo, '', $sort_by, $sort_dir);
 $total_boxes = array_sum(array_column($inventory, 'total_boxes'));
+
+// 辅助函数：生成排序链接
+function get_sort_url($column, $current_sort, $current_dir) {
+    $new_dir = 'asc';
+    if ($column === $current_sort && $current_dir === 'asc') {
+        $new_dir = 'desc';
+    }
+    return "/mrs/ap/index.php?action=inventory_list&sort={$column}&dir={$new_dir}";
+}
+
+// 辅助函数：生成排序图标
+function get_sort_icon($column, $current_sort, $current_dir) {
+    if ($column !== $current_sort) {
+        return '<span style="color: #ccc;">⇅</span>';
+    }
+    return $current_dir === 'asc' ? '<span style="color: #007bff;">↑</span>' : '<span style="color: #007bff;">↓</span>';
+}
 ?>
 <!DOCTYPE html>
 <html lang="zh">
@@ -20,6 +41,17 @@ $total_boxes = array_sum(array_column($inventory, 'total_boxes'));
     <title>库存总览 - MRS 系统</title>
     <link rel="stylesheet" href="/mrs/ap/css/backend.css">
     <link rel="stylesheet" href="/mrs/ap/css/modal.css">
+    <style>
+        .data-table thead th a {
+            display: inline-block;
+            width: 100%;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .data-table thead th a:hover {
+            background-color: rgba(0, 123, 255, 0.05);
+        }
+    </style>
 </head>
 <body>
     <?php include MRS_VIEW_PATH . '/shared/sidebar.php'; ?>
@@ -58,10 +90,26 @@ $total_boxes = array_sum(array_column($inventory, 'total_boxes'));
                 <table class="data-table">
                     <thead>
                         <tr>
-                            <th>物料名称</th>
-                            <th class="text-center">在库数量</th>
-                            <th class="text-center">数量</th>
-                            <th class="text-center">最近到期</th>
+                            <th>
+                                <a href="<?= get_sort_url('sku_name', $sort_by, $sort_dir) ?>" style="color: inherit; text-decoration: none;">
+                                    物料名称 <?= get_sort_icon('sku_name', $sort_by, $sort_dir) ?>
+                                </a>
+                            </th>
+                            <th class="text-center">
+                                <a href="<?= get_sort_url('total_boxes', $sort_by, $sort_dir) ?>" style="color: inherit; text-decoration: none;">
+                                    在库数量 <?= get_sort_icon('total_boxes', $sort_by, $sort_dir) ?>
+                                </a>
+                            </th>
+                            <th class="text-center">
+                                <a href="<?= get_sort_url('total_quantity', $sort_by, $sort_dir) ?>" style="color: inherit; text-decoration: none;">
+                                    数量 <?= get_sort_icon('total_quantity', $sort_by, $sort_dir) ?>
+                                </a>
+                            </th>
+                            <th class="text-center">
+                                <a href="<?= get_sort_url('nearest_expiry_date', $sort_by, $sort_dir) ?>" style="color: inherit; text-decoration: none;">
+                                    最近到期 <?= get_sort_icon('nearest_expiry_date', $sort_by, $sort_dir) ?>
+                                </a>
+                            </th>
                             <th class="text-center">操作</th>
                         </tr>
                     </thead>
