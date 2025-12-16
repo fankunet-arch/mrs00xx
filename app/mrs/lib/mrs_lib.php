@@ -1353,8 +1353,19 @@ function mrs_delete_destination($pdo, $destination_id) {
  * @param string $product_name 产品名称（可选，用于筛选）
  * @return array
  */
-function mrs_get_true_inventory_summary($pdo, $product_name = '') {
+function mrs_get_true_inventory_summary($pdo, $product_name = '', $sort_by = 'sku_name', $sort_dir = 'asc') {
     try {
+        // 验证排序参数
+        $valid_sorts = ['sku_name', 'total_boxes', 'total_quantity', 'nearest_expiry_date'];
+        if (!in_array($sort_by, $valid_sorts)) {
+            $sort_by = 'sku_name';
+        }
+
+        $sort_dir = strtoupper($sort_dir);
+        if (!in_array($sort_dir, ['ASC', 'DESC'])) {
+            $sort_dir = 'ASC';
+        }
+
         $sql = "
             SELECT
                 i.product_name AS sku_name,
@@ -1384,7 +1395,18 @@ function mrs_get_true_inventory_summary($pdo, $product_name = '') {
             $sql .= " AND i.product_name = :product_name";
         }
 
-        $sql .= " GROUP BY i.product_name ORDER BY i.product_name ASC";
+        // 构建排序子句
+        $order_column = $sort_by;
+        if ($sort_by === 'sku_name') {
+            $order_column = 'i.product_name';
+        }
+
+        $sql .= " GROUP BY i.product_name ORDER BY {$order_column} {$sort_dir}";
+
+        // 对于到期日期排序，NULL值放在最后
+        if ($sort_by === 'nearest_expiry_date') {
+            $sql .= ", i.product_name ASC";
+        }
 
         $stmt = $pdo->prepare($sql);
 
