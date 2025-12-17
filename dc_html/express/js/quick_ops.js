@@ -731,11 +731,13 @@ function showLastCountSuggestion(contentNote) {
     const button = document.getElementById('btn-apply-last-count');
 
     if (!container || !button) {
+        console.log('[快捷标签] 元素不存在');
         return;
     }
 
     const text = (contentNote || '').trim();
     if (state.currentOperation !== 'count' || !text) {
+        console.log('[快捷标签] 不显示 - 操作类型:', state.currentOperation, '内容:', text);
         hideLastCountSuggestion();
         return;
     }
@@ -743,6 +745,7 @@ function showLastCountSuggestion(contentNote) {
     button.textContent = text;
     button.dataset.content = text;
     container.style.display = 'flex';
+    console.log('[快捷标签] 显示成功:', text, 'display:', container.style.display);
 }
 
 function hideLastCountSuggestion() {
@@ -766,9 +769,14 @@ function syncLastCountNote(records) {
         return;
     }
 
-    const latestCountRecord = records.find(rec => rec.operation === 'count' && rec.notes);
+    // 修复：确保获取时间最新的清点记录（而不是第一个）
+    // 历史记录已按时间倒序排列，find会找到最新的
+    const latestCountRecord = records.find(rec => rec.operation === 'count' && rec.notes && rec.notes.trim());
     if (latestCountRecord) {
         state.lastCountNote = latestCountRecord.notes.trim();
+        console.log('[快捷标签] 同步最新清点记录:', state.lastCountNote);
+    } else {
+        console.log('[快捷标签] 未找到清点记录');
     }
 }
 

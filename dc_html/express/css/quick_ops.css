@@ -799,4 +799,25 @@ section h2 {
         padding: 5px 12px;
         min-height: 32px;
     }
+
+    /* 修复：产品名称快捷标签在移动端的触摸优化 */
+    .note-suggestion {
+        margin-top: 12px;
+        margin-bottom: 8px;
+    }
+
+    .note-suggestion .suggestion-chip {
+        font-size: 14px;
+        padding: 8px 14px;
+        min-height: 40px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-tap-highlight-color: rgba(102, 126, 234, 0.3);
+    }
+
+    .suggestion-label {
+        font-size: 14px;
+        font-weight: 500;
+    }
 }
