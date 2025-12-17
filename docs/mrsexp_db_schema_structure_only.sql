@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- 主机： mhdlmskp2kpxguj.mysql.db
--- 生成日期： 2025-12-16 01:04:36
+-- 生成日期： 2025-12-17 16:38:58
 -- 服务器版本： 8.4.6-6
 -- PHP 版本： 8.1.33
 
@@ -73,6 +73,7 @@ CREATE TABLE `express_package` (
   `batch_id` int UNSIGNED NOT NULL COMMENT '批次ID',
   `tracking_number` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '快递单号',
   `package_status` enum('pending','verified','counted','adjusted') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'pending' COMMENT '包裹状态',
+  `skip_inbound` tinyint(1) NOT NULL DEFAULT '0' COMMENT '0=正常入库, 1=不入库（设备/损坏）',
   `content_note` text COLLATE utf8mb4_unicode_ci COMMENT '内容备注（清点时填写）',
   `expiry_date` date DEFAULT NULL COMMENT '保质期（非生产日期，选填）',
   `quantity` int UNSIGNED DEFAULT NULL COMMENT '数量（选填）',
@@ -229,12 +230,12 @@ CREATE TABLE `mrs_destinations` (
 --
 DROP VIEW IF EXISTS `mrs_destination_stats`;
 CREATE TABLE `mrs_destination_stats` (
-`days_used` bigint
-,`destination_id` int unsigned
+`destination_id` int unsigned
 ,`destination_name` varchar(100)
-,`last_used_time` datetime
-,`total_shipments` bigint
 ,`type_name` varchar(50)
+,`total_shipments` bigint
+,`days_used` bigint
+,`last_used_time` datetime
 );
 
 -- --------------------------------------------------------
@@ -494,7 +495,8 @@ ALTER TABLE `express_package`
   ADD KEY `idx_tracking_number` (`tracking_number`),
   ADD KEY `idx_package_status` (`package_status`),
   ADD KEY `idx_created_at` (`created_at`),
-  ADD KEY `idx_expiry_date` (`expiry_date`);
+  ADD KEY `idx_expiry_date` (`expiry_date`),
+  ADD KEY `idx_skip_inbound` (`skip_inbound`);
 
 --
 -- 表的索引 `express_package_items`
