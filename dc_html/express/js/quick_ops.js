@@ -506,7 +506,20 @@ async function submitOperation() {
             showMessage(data.message, 'success');
 
             if (state.currentOperation === 'count') {
-                state.lastCountNote = (payload.content_note || '').trim();
+                // 正确从多产品数据中提取名称更新本地缓存
+                if (payload.products && payload.products.length > 0) {
+                    const productNames = payload.products
+                        .map(p => p.product_name)
+                        .filter(name => name && name.trim())
+                        .map(name => name.trim());
+
+                    state.lastCountNote = productNames.join(', ');
+                    // 同时更新产品名称快捷标签
+                    state.lastProductName = productNames[0] || '';
+                } else {
+                    state.lastCountNote = (payload.content_note || '').trim();
+                    state.lastProductName = state.lastCountNote;
+                }
             }
 
             // 更新批次统计
