@@ -891,3 +891,361 @@ section h2 {
         font-weight: 500;
     }
 }
+
+/* ============= 产品名称快捷标签和搜索样式 ============= */
+
+.product-name-suggestion {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 6px;
+    flex-wrap: wrap;
+}
+
+.product-name-suggestion .suggestion-label {
+    font-size: 12px;
+    color: #667eea;
+    font-weight: 500;
+}
+
+.product-name-suggestion .suggestion-chip {
+    border: 1px dashed #667eea;
+    background: #f3f5ff;
+    color: #4750c6;
+    padding: 4px 10px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 12px;
+    max-width: 100%;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.product-name-suggestion .suggestion-chip:hover {
+    background: #e6e9ff;
+    border-color: #4750c6;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(102, 126, 234, 0.2);
+}
+
+/* 产品名称搜索结果样式 */
+.product-name-search-results {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    max-height: 200px;
+    overflow-y: auto;
+    margin-top: 5px;
+    background: white;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    position: absolute;
+    width: calc(100% - 24px);
+    z-index: 100;
+}
+
+.product-name-search-item {
+    padding: 10px 12px;
+    border-bottom: 1px solid #f0f0f0;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background-color 0.2s;
+}
+
+.product-name-search-item:hover {
+    background-color: #f8f9fa;
+}
+
+.product-name-search-item:last-child {
+    border-bottom: none;
+}
+
+.product-name-text {
+    font-weight: 500;
+    color: #333;
+    flex: 1;
+}
+
+.product-name-count {
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 10px;
+    background-color: #e9ecef;
+    color: #666;
+    margin-left: 8px;
+}
+
+/* ============= 有效期模态框样式 ============= */
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 20px;
+}
+
+.modal {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    width: 100%;
+    max-width: 480px;
+    max-height: 90vh;
+    overflow-y: auto;
+    animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+    from {
+        transform: translateY(-50px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.modal-header {
+    padding: 20px;
+    border-bottom: 1px solid #e9ecef;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 28px;
+    color: #999;
+    cursor: pointer;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.modal-close:hover {
+    background-color: #f0f0f0;
+    color: #333;
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+.modal-footer {
+    padding: 15px 20px;
+    border-top: 1px solid #e9ecef;
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+.modal-section {
+    margin-bottom: 20px;
+}
+
+.modal-section:last-child {
+    margin-bottom: 0;
+}
+
+.modal-section-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #667eea;
+    margin-bottom: 12px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.modal-form-group {
+    margin-bottom: 12px;
+}
+
+.modal-form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #555;
+}
+
+.modal-form-group input,
+.modal-form-group select {
+    width: 100%;
+    padding: 10px 12px;
+    font-size: 14px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    transition: border-color 0.3s;
+}
+
+.modal-form-group input:focus,
+.modal-form-group select:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.modal-divider {
+    margin: 20px 0;
+    border: none;
+    border-top: 1px dashed #ddd;
+    position: relative;
+}
+
+.modal-divider::after {
+    content: '或';
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: white;
+    padding: 0 10px;
+    color: #999;
+    font-size: 12px;
+}
+
+.modal-result {
+    background-color: #f8f9fa;
+    border: 2px solid #667eea;
+    border-radius: 6px;
+    padding: 12px;
+    text-align: center;
+}
+
+.modal-result-label {
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 5px;
+}
+
+.modal-result-value {
+    font-size: 18px;
+    font-weight: 600;
+    color: #667eea;
+}
+
+.modal-expiry-suggestions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.modal-expiry-suggestion-item {
+    border: 1px dashed #28a745;
+    background: #f0f9f4;
+    color: #1e7e34;
+    padding: 6px 12px;
+    border-radius: 16px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 13px;
+}
+
+.modal-expiry-suggestion-item:hover {
+    background: #d4edda;
+    border-color: #1e7e34;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(40, 167, 69, 0.2);
+}
+
+/* 移动端模态框优化 */
+@media (max-width: 768px) {
+    .modal {
+        max-width: 100%;
+        max-height: 100vh;
+        border-radius: 0;
+    }
+
+    .modal-header {
+        padding: 16px;
+    }
+
+    .modal-title {
+        font-size: 17px;
+    }
+
+    .modal-close {
+        width: 44px;
+        height: 44px;
+        font-size: 32px;
+    }
+
+    .modal-body {
+        padding: 16px;
+    }
+
+    .modal-footer {
+        padding: 12px 16px;
+    }
+
+    .modal-form-group input,
+    .modal-form-group select {
+        font-size: 16px;
+        min-height: 44px;
+        padding: 12px;
+    }
+
+    .modal-footer .btn {
+        flex: 1;
+        min-height: 48px;
+        font-size: 16px;
+    }
+
+    .modal-expiry-suggestion-item {
+        font-size: 14px;
+        padding: 8px 14px;
+        min-height: 40px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .product-name-suggestion .suggestion-chip {
+        font-size: 14px;
+        padding: 8px 14px;
+        min-height: 40px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .product-name-search-results {
+        max-height: 300px;
+    }
+
+    .product-name-search-item {
+        padding: 14px 12px;
+        min-height: 50px;
+    }
+
+    .product-name-text {
+        font-size: 15px;
+    }
+
+    .product-name-count {
+        font-size: 12px;
+    }
+}

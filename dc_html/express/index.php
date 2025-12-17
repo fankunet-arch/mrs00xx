@@ -32,7 +32,8 @@ $allowed_actions = [
     'get_packages_api',         // 获取包裹列表API
     'get_batch_detail_api',     // 获取批次详情API
     'get_recent_operations_api', // 获取最近操作记录API（按类型过滤+去重）
-    'get_product_expiry_api'    // 获取产品保质期建议API
+    'get_product_expiry_api',   // 获取产品保质期建议API
+    'search_product_name_api'   // 搜索产品名称API（全局）
 ];
 
 // 验证action是否允许

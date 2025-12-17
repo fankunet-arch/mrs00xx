@@ -805,6 +805,12 @@ function express_process_package($pdo, $batch_id, $tracking_number, $operation_t
             return $result;
         }
 
+        // 确定用于日志的备注内容
+        $log_note = $content_note ?? $adjustment_note;
+        if (isset($result['content_note'])) {
+            $log_note = $result['content_note'];
+        }
+
         // 3. 记录操作日志
         $stmt = $pdo->prepare("
             INSERT INTO express_operation_log (package_id, operation_type, operator, old_status, new_status, notes)
@@ -816,7 +822,7 @@ function express_process_package($pdo, $batch_id, $tracking_number, $operation_t
             'operator' => $operator,
             'old_status' => $old_status,
             'new_status' => $result['new_status'],
-            'notes' => $content_note ?? $adjustment_note
+            'notes' => $log_note
         ]);
 
         // 4. 更新批次统计
@@ -1121,7 +1127,8 @@ function express_process_count($pdo, $package_id, $old_status, $operator, $conte
     return [
         'success' => true,
         'message' => '清点成功',
-        'new_status' => 'counted'
+        'new_status' => 'counted',
+        'content_note' => $summary_note  // 返回生成的备注供日志使用
     ];
 }
 

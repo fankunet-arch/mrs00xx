@@ -15,7 +15,10 @@ const state = {
     operationHistory: [],
     searchResults: new Map(),
     lastCountNote: '',
-    productItemCounter: 0  // 产品项计数器
+    productItemCounter: 0,  // 产品项计数器
+    lastProductName: '',     // 上一个录入的产品名称
+    productNameSearchTimeouts: new Map(),  // 产品名称搜索延时Map（按itemId）
+    currentExpiryModalItemId: null  // 当前打开有效期模态框的产品项ID
 };
 
 // 初始化
@@ -503,7 +506,20 @@ async function submitOperation() {
             showMessage(data.message, 'success');
 
             if (state.currentOperation === 'count') {
-                state.lastCountNote = (payload.content_note || '').trim();
+                // 正确从多产品数据中提取名称更新本地缓存
+                if (payload.products && payload.products.length > 0) {
+                    const productNames = payload.products
+                        .map(p => p.product_name)
+                        .filter(name => name && name.trim())
+                        .map(name => name.trim());
+
+                    state.lastCountNote = productNames.join(', ');
+                    // 同时更新产品名称快捷标签
+                    state.lastProductName = productNames[0] || '';
+                } else {
+                    state.lastCountNote = (payload.content_note || '').trim();
+                    state.lastProductName = state.lastCountNote;
+                }
             }
 
             // 更新批次统计
@@ -697,6 +713,7 @@ async function refreshHistoryFromServer() {
             }));
 
             syncLastCountNote(state.operationHistory);
+            syncLastProductName(state.operationHistory);
             displayHistory();
         } else {
             showMessage(data.message || '获取历史失败', 'error');
@@ -829,11 +846,19 @@ function addProductItem() {
                 <button type="button" class="btn-remove-product" data-item-id="${itemId}" title="删除此产品">×</button>
             </div>
             <div class="product-item-body">
-                <div class="form-group">
+                <div class="form-group" style="position: relative;">
                     <label>产品名称/内容:</label>
                     <input type="text" class="form-control product-name"
                            placeholder="例如：番茄酱"
-                           data-item-id="${itemId}">
+                           data-item-id="${itemId}"
+                           autocomplete="off">
+                    <div class="product-name-search-results" data-item-id="${itemId}" style="display: none;"></div>
+                    <div class="product-name-suggestion" data-item-id="${itemId}" style="display: none;">
+                        <span class="suggestion-label">上次:</span>
+                        <button type="button" class="btn-apply-product-name suggestion-chip"
+                                data-item-id="${itemId}"
+                                title="点击填入上次的产品名称"></button>
+                    </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
@@ -845,13 +870,9 @@ function addProductItem() {
                     <div class="form-group">
                         <label>保质期:</label>
                         <input type="date" class="form-control product-expiry"
-                               data-item-id="${itemId}">
-                        <div class="expiry-suggestion" data-item-id="${itemId}" style="display: none;">
-                            <span class="suggestion-label">本批次:</span>
-                            <button type="button" class="btn-apply-expiry suggestion-chip"
-                                    data-item-id="${itemId}"
-                                    title="点击填入建议的保质期"></button>
-                        </div>
+                               data-item-id="${itemId}"
+                               readonly
+                               placeholder="点击打开">
                     </div>
                 </div>
             </div>
@@ -868,33 +889,53 @@ function addProductItem() {
         });
     }
 
-    // 绑定日期选择器点击事件
+    // 绑定保质期输入框点击事件 - 打开模态框
     const expiryInput = container.querySelector(`.product-expiry[data-item-id="${itemId}"]`);
     if (expiryInput) {
         expiryInput.addEventListener('click', function() {
-            this.showPicker && this.showPicker();
+            openExpiryModal(itemId);
         });
     }
 
-    // 绑定产品名称输入事件，查询保质期建议
+    // 绑定产品名称输入事件
     const nameInput = container.querySelector(`.product-name[data-item-id="${itemId}"]`);
     if (nameInput) {
-        nameInput.addEventListener('blur', function() {
-            checkProductExpirySuggestion(itemId, this.value.trim());
+        // 输入时搜索产品名称
+        nameInput.addEventListener('input', function() {
+            onProductNameInput(itemId, this.value.trim());
         });
-    }
 
-    // 绑定保质期建议按钮点击事件
-    const expiryBtn = container.querySelector(`.btn-apply-expiry[data-item-id="${itemId}"]`);
-    if (expiryBtn) {
-        expiryBtn.addEventListener('click', function() {
-            const expiryDate = this.dataset.expiryDate || '';
-            if (expiryDate && expiryInput) {
-                expiryInput.value = expiryDate;
-                expiryInput.focus();
+        // 失去焦点时隐藏搜索结果
+        nameInput.addEventListener('blur', function() {
+            // 延迟隐藏，以便点击搜索结果
+            setTimeout(() => {
+                hideProductNameSearchResults(itemId);
+            }, 200);
+        });
+
+        // 获得焦点时显示产品名称快捷标签
+        nameInput.addEventListener('focus', function() {
+            if (!this.value.trim()) {
+                showProductNameSuggestion(itemId);
             }
         });
     }
+
+    // 绑定产品名称快捷标签按钮点击事件
+    const productNameBtn = container.querySelector(`.btn-apply-product-name[data-item-id="${itemId}"]`);
+    if (productNameBtn) {
+        productNameBtn.addEventListener('click', function() {
+            const productName = this.dataset.productName || '';
+            if (productName && nameInput) {
+                nameInput.value = productName;
+                nameInput.focus();
+                hideProductNameSuggestion(itemId);
+            }
+        });
+    }
+
+    // 显示产品名称快捷标签（如果有）
+    showProductNameSuggestion(itemId);
 }
 
 // 删除一个产品项
@@ -1012,6 +1053,158 @@ function fillProductItems(items) {
     });
 }
 
+// ============= 产品名称快捷标签和搜索功能 =============
+
+// 显示产品名称快捷标签
+function showProductNameSuggestion(itemId) {
+    const container = document.getElementById('products-container');
+    if (!container) return;
+
+    const suggestionDiv = container.querySelector(`.product-name-suggestion[data-item-id="${itemId}"]`);
+    const suggestionBtn = container.querySelector(`.btn-apply-product-name[data-item-id="${itemId}"]`);
+
+    if (!suggestionDiv || !suggestionBtn) return;
+
+    const productName = state.lastProductName.trim();
+    if (!productName) {
+        suggestionDiv.style.display = 'none';
+        return;
+    }
+
+    suggestionBtn.textContent = productName;
+    suggestionBtn.dataset.productName = productName;
+    suggestionDiv.style.display = 'flex';
+}
+
+// 隐藏产品名称快捷标签
+function hideProductNameSuggestion(itemId) {
+    const container = document.getElementById('products-container');
+    if (!container) return;
+
+    const suggestionDiv = container.querySelector(`.product-name-suggestion[data-item-id="${itemId}"]`);
+    if (suggestionDiv) {
+        suggestionDiv.style.display = 'none';
+    }
+}
+
+// 产品名称输入事件
+function onProductNameInput(itemId, keyword) {
+    // 隐藏快捷标签
+    hideProductNameSuggestion(itemId);
+
+    // 清除之前的延时
+    const timeoutId = state.productNameSearchTimeouts.get(itemId);
+    if (timeoutId) {
+        clearTimeout(timeoutId);
+    }
+
+    if (!keyword) {
+        hideProductNameSearchResults(itemId);
+        showProductNameSuggestion(itemId);
+        return;
+    }
+
+    // 延时搜索（防抖）
+    const newTimeoutId = setTimeout(() => {
+        performProductNameSearch(itemId, keyword);
+    }, 300);
+
+    state.productNameSearchTimeouts.set(itemId, newTimeoutId);
+}
+
+// 执行产品名称搜索
+async function performProductNameSearch(itemId, keyword) {
+    try {
+        const response = await fetch(
+            `/express/index.php?action=search_product_name_api&keyword=${encodeURIComponent(keyword)}`
+        );
+        const data = await response.json();
+
+        if (data.success && Array.isArray(data.data)) {
+            displayProductNameSearchResults(itemId, data.data, keyword);
+        }
+    } catch (error) {
+        console.error('Product name search error:', error);
+    }
+}
+
+// 显示产品名称搜索结果
+function displayProductNameSearchResults(itemId, results, keyword) {
+    const container = document.getElementById('products-container');
+    if (!container) return;
+
+    const resultsDiv = container.querySelector(`.product-name-search-results[data-item-id="${itemId}"]`);
+    if (!resultsDiv) return;
+
+    if (results.length === 0) {
+        resultsDiv.style.display = 'none';
+        return;
+    }
+
+    resultsDiv.innerHTML = results.map(item => `
+        <div class="product-name-search-item" data-item-id="${itemId}" data-product-name="${escapeHtml(item.product_name)}">
+            <span class="product-name-text">${escapeHtml(item.product_name)}</span>
+            <span class="product-name-count">已用${item.usage_count}次</span>
+        </div>
+    `).join('');
+
+    // 绑定点击事件
+    resultsDiv.querySelectorAll('.product-name-search-item').forEach(item => {
+        item.addEventListener('click', function() {
+            selectProductName(itemId, this.dataset.productName);
+        });
+    });
+
+    resultsDiv.style.display = 'block';
+}
+
+// 隐藏产品名称搜索结果
+function hideProductNameSearchResults(itemId) {
+    const container = document.getElementById('products-container');
+    if (!container) return;
+
+    const resultsDiv = container.querySelector(`.product-name-search-results[data-item-id="${itemId}"]`);
+    if (resultsDiv) {
+        resultsDiv.style.display = 'none';
+    }
+}
+
+// 选择产品名称
+function selectProductName(itemId, productName) {
+    const container = document.getElementById('products-container');
+    if (!container) return;
+
+    const nameInput = container.querySelector(`.product-name[data-item-id="${itemId}"]`);
+    if (nameInput) {
+        nameInput.value = productName;
+        nameInput.focus();
+    }
+
+    hideProductNameSearchResults(itemId);
+}
+
+// 从历史记录中同步最后一个产品名称
+function syncLastProductName(records) {
+    state.lastProductName = '';
+
+    if (!Array.isArray(records)) {
+        return;
+    }
+
+    // 查找最新的清点记录，提取产品名称
+    const latestCountRecord = records.find(rec => rec.operation === 'count' && rec.notes && rec.notes.trim());
+    if (latestCountRecord) {
+        const notes = latestCountRecord.notes.trim();
+        // notes格式：单个产品 "番茄酱" 或多个产品 "番茄酱, 辣椒酱"
+        // 提取第一个产品名称（逗号前的部分）
+        const match = notes.match(/^([^,]+)/);
+        if (match) {
+            state.lastProductName = match[1].trim();
+            console.log('[产品名称快捷标签] 同步最新产品名称:', state.lastProductName);
+        }
+    }
+}
+
 // ============= 保质期建议功能 =============
 
 // 检查产品保质期建议
@@ -1067,5 +1260,223 @@ async function checkProductExpirySuggestion(itemId, productName) {
     } catch (error) {
         console.error('Failed to get expiry suggestion:', error);
         suggestionDiv.style.display = 'none';
+    }
+}
+
+// ============= 有效期模态框功能 =============
+
+// 打开有效期模态框
+async function openExpiryModal(itemId) {
+    state.currentExpiryModalItemId = itemId;
+
+    const overlay = document.getElementById('expiry-modal-overlay');
+    if (!overlay) return;
+
+    // 获取当前产品项的数据
+    const container = document.getElementById('products-container');
+    if (!container) return;
+
+    const nameInput = container.querySelector(`.product-name[data-item-id="${itemId}"]`);
+    const expiryInput = container.querySelector(`.product-expiry[data-item-id="${itemId}"]`);
+
+    const productName = nameInput ? nameInput.value.trim() : '';
+    const currentExpiry = expiryInput ? expiryInput.value : '';
+
+    // 重置模态框
+    resetExpiryModal();
+
+    // 如果有当前有效期，预填到直接输入框
+    const directInput = document.getElementById('modal-expiry-direct');
+    if (directInput && currentExpiry) {
+        directInput.value = currentExpiry;
+    }
+
+    // 绑定模态框事件
+    bindExpiryModalEvents();
+
+    // 加载有效期建议（基于产品名称）
+    if (productName && state.currentBatchId) {
+        await loadExpiryModalSuggestions(productName);
+    }
+
+    // 显示模态框
+    overlay.style.display = 'flex';
+
+    // 防止背景滚动
+    document.body.style.overflow = 'hidden';
+}
+
+// 关闭有效期模态框
+function closeExpiryModal() {
+    const overlay = document.getElementById('expiry-modal-overlay');
+    if (overlay) {
+        overlay.style.display = 'none';
+    }
+
+    // 恢复背景滚动
+    document.body.style.overflow = '';
+
+    state.currentExpiryModalItemId = null;
+}
+
+// 重置模态框
+function resetExpiryModal() {
+    const directInput = document.getElementById('modal-expiry-direct');
+    const productionInput = document.getElementById('modal-production-date');
+    const monthsSelect = document.getElementById('modal-expiry-months');
+    const calculatedDiv = document.getElementById('modal-calculated-expiry');
+    const suggestionsSection = document.getElementById('modal-expiry-suggestions-section');
+
+    if (directInput) directInput.value = '';
+    if (productionInput) productionInput.value = '';
+    if (monthsSelect) monthsSelect.value = '';
+    if (calculatedDiv) calculatedDiv.style.display = 'none';
+    if (suggestionsSection) suggestionsSection.style.display = 'none';
+}
+
+// 绑定模态框事件
+function bindExpiryModalEvents() {
+    // 关闭按钮
+    const closeBtn = document.getElementById('modal-close-btn');
+    const cancelBtn = document.getElementById('modal-cancel-btn');
+    const confirmBtn = document.getElementById('modal-confirm-btn');
+
+    if (closeBtn) {
+        closeBtn.onclick = closeExpiryModal;
+    }
+
+    if (cancelBtn) {
+        cancelBtn.onclick = closeExpiryModal;
+    }
+
+    if (confirmBtn) {
+        confirmBtn.onclick = confirmExpiryModal;
+    }
+
+    // 点击遮罩层关闭
+    const overlay = document.getElementById('expiry-modal-overlay');
+    if (overlay) {
+        overlay.onclick = function(e) {
+            if (e.target === overlay) {
+                closeExpiryModal();
+            }
+        };
+    }
+
+    // 生产日期和月数变化时自动计算
+    const productionInput = document.getElementById('modal-production-date');
+    const monthsSelect = document.getElementById('modal-expiry-months');
+
+    if (productionInput) {
+        productionInput.oninput = calculateExpiryFromProduction;
+    }
+
+    if (monthsSelect) {
+        monthsSelect.onchange = calculateExpiryFromProduction;
+    }
+}
+
+// 从生产日期计算有效期
+function calculateExpiryFromProduction() {
+    const productionInput = document.getElementById('modal-production-date');
+    const monthsSelect = document.getElementById('modal-expiry-months');
+    const calculatedDiv = document.getElementById('modal-calculated-expiry');
+    const calculatedValue = document.getElementById('modal-calculated-expiry-value');
+
+    if (!productionInput || !monthsSelect || !calculatedDiv || !calculatedValue) return;
+
+    const productionDate = productionInput.value;
+    const months = parseInt(monthsSelect.value);
+
+    if (!productionDate || !months) {
+        calculatedDiv.style.display = 'none';
+        return;
+    }
+
+    // 计算有效期
+    const date = new Date(productionDate);
+    date.setMonth(date.getMonth() + months);
+
+    const expiryDate = date.toISOString().split('T')[0];
+
+    calculatedValue.textContent = expiryDate;
+    calculatedDiv.style.display = 'block';
+
+    // 同时更新直接输入框
+    const directInput = document.getElementById('modal-expiry-direct');
+    if (directInput) {
+        directInput.value = expiryDate;
+    }
+}
+
+// 确认模态框
+function confirmExpiryModal() {
+    const directInput = document.getElementById('modal-expiry-direct');
+    const expiryDate = directInput ? directInput.value : '';
+
+    if (!expiryDate) {
+        showMessage('请选择或计算有效期', 'warning');
+        return;
+    }
+
+    // 将有效期填入对应的产品项
+    const itemId = state.currentExpiryModalItemId;
+    if (itemId) {
+        const container = document.getElementById('products-container');
+        if (container) {
+            const expiryInput = container.querySelector(`.product-expiry[data-item-id="${itemId}"]`);
+            if (expiryInput) {
+                expiryInput.value = expiryDate;
+            }
+        }
+    }
+
+    closeExpiryModal();
+}
+
+// 加载有效期建议
+async function loadExpiryModalSuggestions(productName) {
+    const suggestionsDiv = document.getElementById('modal-expiry-suggestions');
+    const suggestionsSection = document.getElementById('modal-expiry-suggestions-section');
+
+    if (!suggestionsDiv || !suggestionsSection) return;
+
+    try {
+        const params = new URLSearchParams({
+            batch_id: state.currentBatchId,
+            product_name: productName
+        });
+
+        const response = await fetch(`/express/index.php?action=get_product_expiry_api&${params.toString()}`);
+        const data = await response.json();
+
+        if (data.success && data.data && data.data.expiry_date) {
+            const expiryDate = data.data.expiry_date;
+            const usageCount = data.data.usage_count || 1;
+
+            suggestionsDiv.innerHTML = `
+                <div class="modal-expiry-suggestion-item" data-expiry-date="${expiryDate}">
+                    ${expiryDate} (已用${usageCount}次)
+                </div>
+            `;
+
+            // 绑定点击事件
+            suggestionsDiv.querySelectorAll('.modal-expiry-suggestion-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    const expiry = this.dataset.expiryDate;
+                    const directInput = document.getElementById('modal-expiry-direct');
+                    if (directInput) {
+                        directInput.value = expiry;
+                    }
+                });
+            });
+
+            suggestionsSection.style.display = 'block';
+        } else {
+            suggestionsSection.style.display = 'none';
+        }
+    } catch (error) {
+        console.error('Failed to load expiry suggestions:', error);
+        suggestionsSection.style.display = 'none';
     }
 }
