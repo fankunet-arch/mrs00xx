@@ -311,6 +311,8 @@ function selectOperation(operation) {
     // 如果是清点操作,初始化至少一个产品项
     if (operation === 'count') {
         initializeProductItems();
+        // [新增] 切换到清点模式时，专门获取一次最新的清点内容
+        fetchLastCountRecord();
     }
 
     // 显示输入区域
@@ -694,6 +696,7 @@ async function refreshHistoryFromServer() {
         return;
     }
 
+    // 1. 获取用于显示的历史列表 (混合类型, 去重)
     const params = new URLSearchParams({
         batch_id: state.currentBatchId,
         limit: 100
@@ -720,6 +723,49 @@ async function refreshHistoryFromServer() {
         }
     } catch (error) {
         showMessage('获取历史失败: ' + error.message, 'error');
+    }
+
+    // 2. [新增] 专门获取最后一条"清点"记录，用于快捷标签
+    // 这样做可以避免"调整"或"核实"操作导致清点记录在去重时被隐藏
+    if (state.currentOperation === 'count') {
+        await fetchLastCountRecord();
+    }
+}
+
+// [新增] 独立获取最后清点记录的函数
+async function fetchLastCountRecord() {
+    if (!state.currentBatchId) return;
+
+    const params = new URLSearchParams({
+        batch_id: state.currentBatchId,
+        operation_type: 'count', // 指定只查清点记录
+        limit: 1 // 只要最新的一条
+    });
+
+    try {
+        const response = await fetch(`/express/index.php?action=get_recent_operations_api&${params.toString()}`);
+        const data = await response.json();
+
+        if (data.success && Array.isArray(data.data) && data.data.length > 0) {
+            const lastRecord = data.data[0];
+            if (lastRecord.notes && lastRecord.notes.trim()) {
+                state.lastCountNote = lastRecord.notes.trim();
+
+                // 提取产品名称
+                const notes = lastRecord.notes.trim();
+                const match = notes.match(/^([^,]+)/);
+                if (match) {
+                    state.lastProductName = match[1].trim();
+                    console.log('[快捷标签] 已同步最新清点内容:', state.lastCountNote);
+                    console.log('[产品名称快捷标签] 已同步最新产品名称:', state.lastProductName);
+
+                    // 更新所有产品项的快捷标签显示
+                    updateAllProductNameSuggestions();
+                }
+            }
+        }
+    } catch (error) {
+        console.error('获取最后清点记录失败:', error);
     }
 }
 
@@ -1203,6 +1249,21 @@ function syncLastProductName(records) {
             console.log('[产品名称快捷标签] 同步最新产品名称:', state.lastProductName);
         }
     }
+}
+
+// [新增] 更新所有产品项的产品名称快捷标签显示
+function updateAllProductNameSuggestions() {
+    const container = document.getElementById('products-container');
+    if (!container) return;
+
+    // 获取所有产品项
+    const productItems = container.querySelectorAll('.product-item');
+    productItems.forEach(item => {
+        const itemId = item.dataset.itemId;
+        if (itemId) {
+            showProductNameSuggestion(itemId);
+        }
+    });
 }
 
 // ============= 保质期建议功能 =============
