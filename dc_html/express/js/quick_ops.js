@@ -1181,9 +1181,10 @@ function syncLastProductName(records) {
     // 查找最新的清点记录，提取产品名称
     const latestCountRecord = records.find(rec => rec.operation === 'count' && rec.notes && rec.notes.trim());
     if (latestCountRecord) {
-        // 尝试从notes中提取产品名称（假设格式为 "产品名称 x 数量"）
         const notes = latestCountRecord.notes.trim();
-        const match = notes.match(/^([^x×]+)/);
+        // notes格式：单个产品 "番茄酱" 或多个产品 "番茄酱, 辣椒酱"
+        // 提取第一个产品名称（逗号前的部分）
+        const match = notes.match(/^([^,]+)/);
         if (match) {
             state.lastProductName = match[1].trim();
             console.log('[产品名称快捷标签] 同步最新产品名称:', state.lastProductName);
