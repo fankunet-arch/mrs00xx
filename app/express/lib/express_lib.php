@@ -850,7 +850,7 @@ function express_process_package($pdo, $batch_id, $tracking_number, $operation_t
  * @param int $quantity
  * @return array
  */
-function express_update_content_note($pdo, $package_id, $operator, $content_note, $expiry_date = null, $quantity = null, $items = null) {
+function express_update_content_note($pdo, $package_id, $operator, $content_note, $expiry_date = null, $quantity = null, $items = null, $skip_inbound = 0) {
     try {
         $pdo->beginTransaction();
 
@@ -875,6 +875,7 @@ function express_update_content_note($pdo, $package_id, $operator, $content_note
                 SET content_note = :content_note,
                     expiry_date = :expiry_date,
                     quantity = :quantity,
+                    skip_inbound = :skip_inbound,
                     package_status = :new_status,
                     counted_at = NOW(),
                     counted_by = :counted_by,
@@ -888,17 +889,19 @@ function express_update_content_note($pdo, $package_id, $operator, $content_note
                 'content_note' => $content_note,
                 'expiry_date' => $expiry_date,
                 'quantity' => $quantity,
+                'skip_inbound' => $skip_inbound,
                 'new_status' => $new_status,
                 'counted_by' => $operator,
                 'verified_by' => $operator
             ]);
         } else {
-            // 已经是counted或adjusted状态，只更新内容备注、保质期和数量
+            // 已经是counted或adjusted状态，只更新内容备注、保质期、数量和跳过入库标记
             $update = $pdo->prepare("
                 UPDATE express_package
                 SET content_note = :content_note,
                     expiry_date = :expiry_date,
-                    quantity = :quantity
+                    quantity = :quantity,
+                    skip_inbound = :skip_inbound
                 WHERE package_id = :package_id
             ");
 
@@ -906,7 +909,8 @@ function express_update_content_note($pdo, $package_id, $operator, $content_note
                 'package_id' => $package_id,
                 'content_note' => $content_note,
                 'expiry_date' => $expiry_date,
-                'quantity' => $quantity
+                'quantity' => $quantity,
+                'skip_inbound' => $skip_inbound
             ]);
         }
 

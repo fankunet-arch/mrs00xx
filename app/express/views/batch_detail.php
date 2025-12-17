@@ -511,6 +511,18 @@ $content_summary = express_get_content_summary($pdo, $batch_id);
                                 <span style="color: #333; font-weight: 600;">${trackingNumber || '-'}</span>
                             </div>
                         </div>
+                        <div class="modal-form-group" style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; padding: 12px; margin-bottom: 16px;">
+                            <label style="display: flex; align-items: center; cursor: pointer; margin: 0;">
+                                <input type="checkbox" id="skip_inbound" name="skip_inbound" value="1"
+                                       style="width: 18px; height: 18px; margin-right: 8px; cursor: pointer;">
+                                <span style="font-weight: 600; color: #856404;">
+                                    此包裹不入库（设备/损坏等）
+                                </span>
+                            </label>
+                            <div style="font-size: 12px; color: #856404; margin-top: 6px; margin-left: 26px;">
+                                勾选后此包裹将不会出现在MRS入库清单中
+                            </div>
+                        </div>
                         <div class="modal-form-group">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                                 <label class="modal-form-label" style="margin: 0;">产品信息</label>
@@ -673,9 +685,14 @@ $content_summary = express_get_content_summary($pdo, $batch_id);
                 return;
             }
 
+            // 获取"不入库"标记
+            const skipInboundCheckbox = document.getElementById('skip_inbound');
+            const skipInbound = skipInboundCheckbox && skipInboundCheckbox.checked ? 1 : 0;
+
             const payload = {
                 package_id: packageId,
-                items: items
+                items: items,
+                skip_inbound: skipInbound
             };
 
             const resp = await fetch('/express/exp/index.php?action=update_content_note', {

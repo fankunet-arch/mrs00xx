@@ -14,13 +14,14 @@ $content_note = isset($input['content_note']) ? trim($input['content_note']) : n
 $expiry_date = $input['expiry_date'] ?? null;
 $quantity = $input['quantity'] ?? null;
 $items = $input['items'] ?? null;  // 新增：产品明细数组
+$skip_inbound = isset($input['skip_inbound']) ? (int)$input['skip_inbound'] : 0;  // 新增：跳过入库标记
 $operator = $_SESSION['user_display_name'] ?? $_SESSION['user_login'] ?? 'system';
 
 if (empty($package_id)) {
     express_json_response(false, null, '缺少包裹ID');
 }
 
-$result = express_update_content_note($pdo, $package_id, $operator, $content_note, $expiry_date, $quantity, $items);
+$result = express_update_content_note($pdo, $package_id, $operator, $content_note, $expiry_date, $quantity, $items, $skip_inbound);
 
 if ($result['success']) {
     express_json_response(true, $result['package'], $result['message']);
