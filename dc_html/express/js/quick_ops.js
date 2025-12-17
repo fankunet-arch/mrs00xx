@@ -285,7 +285,7 @@ async function refreshBatches() {
 }
 
 // 选择操作类型
-function selectOperation(operation) {
+async function selectOperation(operation) {
     state.currentOperation = operation;
 
     if (operation !== 'count') {
@@ -308,11 +308,12 @@ function selectOperation(operation) {
     if (productsGroup) productsGroup.style.display = operation === 'count' ? 'block' : 'none';
     if (adjustmentNoteGroup) adjustmentNoteGroup.style.display = operation === 'adjust' ? 'block' : 'none';
 
-    // 如果是清点操作,初始化至少一个产品项
+    // 如果是清点操作,先获取最新的清点内容，再初始化产品项
     if (operation === 'count') {
+        // [FIX] 先等待获取最后清点记录完成，确保 state.lastProductName 已设置
+        await fetchLastCountRecord();
+        // 然后初始化产品项，此时快捷标签能正确显示
         initializeProductItems();
-        // [新增] 切换到清点模式时，专门获取一次最新的清点内容
-        fetchLastCountRecord();
     }
 
     // 显示输入区域
