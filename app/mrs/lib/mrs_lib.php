@@ -178,7 +178,7 @@ function mrs_get_express_counted_packages($mrs_pdo, $batch_name) {
     try {
         $express_pdo = get_express_db_connection();
 
-        // 查询 Express 中已清点的包裹
+        // 查询 Express 中已清点的包裹（排除标记为不入库的）
         $stmt = $express_pdo->prepare("
             SELECT
                 b.batch_name,
@@ -193,6 +193,7 @@ function mrs_get_express_counted_packages($mrs_pdo, $batch_name) {
             INNER JOIN express_batch b ON p.batch_id = b.batch_id
             WHERE b.batch_name = :batch_name
               AND p.package_status IN ('counted', 'adjusted')
+              AND (p.skip_inbound = 0 OR p.skip_inbound IS NULL)
             ORDER BY p.tracking_number ASC
         ");
 
