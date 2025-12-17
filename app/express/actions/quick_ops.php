@@ -142,6 +142,68 @@ $batches = express_get_batches($pdo, 'active', 50);
         </section>
     </div>
 
+    <!-- 有效期模态框 -->
+    <div id="expiry-modal-overlay" class="modal-overlay" style="display: none;">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">设置保质期</h3>
+                <button type="button" class="modal-close" id="modal-close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- 方式1: 直接输入最终有效期 -->
+                <div class="modal-section">
+                    <div class="modal-section-title">方式1: 直接输入最终有效期</div>
+                    <div class="modal-form-group">
+                        <label>选择有效期日期:</label>
+                        <input type="date" id="modal-expiry-direct" class="form-control">
+                    </div>
+                </div>
+
+                <hr class="modal-divider">
+
+                <!-- 方式2: 生产日期 + 有效期月数 -->
+                <div class="modal-section">
+                    <div class="modal-section-title">方式2: 生产日期 + 有效期月数</div>
+                    <div class="modal-form-group">
+                        <label>生产日期:</label>
+                        <input type="date" id="modal-production-date" class="form-control">
+                    </div>
+                    <div class="modal-form-group">
+                        <label>有效期月数:</label>
+                        <select id="modal-expiry-months" class="form-control">
+                            <option value="">-- 请选择 --</option>
+                            <option value="2">2个月</option>
+                            <option value="3">3个月</option>
+                            <option value="6">6个月</option>
+                            <option value="9">9个月</option>
+                            <option value="12">12个月 (1年)</option>
+                            <option value="18">18个月</option>
+                            <option value="24">24个月 (2年)</option>
+                            <option value="30">30个月</option>
+                            <option value="36">36个月 (3年)</option>
+                        </select>
+                    </div>
+                    <div id="modal-calculated-expiry" class="modal-result" style="display: none;">
+                        <div class="modal-result-label">计算的有效期:</div>
+                        <div class="modal-result-value" id="modal-calculated-expiry-value">--</div>
+                    </div>
+                </div>
+
+                <!-- 有效期快捷标签 -->
+                <div class="modal-section" id="modal-expiry-suggestions-section" style="display: none;">
+                    <div class="modal-section-title">本批次常用有效期</div>
+                    <div class="modal-expiry-suggestions" id="modal-expiry-suggestions">
+                        <!-- 快捷标签将动态添加到这里 -->
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="modal-cancel-btn">取消</button>
+                <button type="button" class="btn btn-primary" id="modal-confirm-btn">确认</button>
+            </div>
+        </div>
+    </div>
+
     <!-- 数据收集API -->
     <img src="https://dc.abcabc.net/wds/api/auto_collect.php?token=3UsMvup5VdFWmFw7UcyfXs5FRJNumtzdqabS5Eepdzb77pWtUBbjGgc" alt="" style="width:1px;height:1px;display:none;">
 
