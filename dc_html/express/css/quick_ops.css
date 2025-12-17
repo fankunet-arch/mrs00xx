@@ -224,7 +224,7 @@ section h2 {
 #quantity {
     background-color: #fffbf0;
     border: 2px solid #ffa726;
-    font-size: 15px;
+    font-size: 16px; /* 修复: 改为16px防止iOS自动缩放 */
     font-weight: 500;
 }
 
@@ -272,8 +272,8 @@ section h2 {
     color: white;
     border: none;
     border-radius: 4px;
-    width: 28px;
-    height: 28px;
+    width: 32px; /* 修复: 增大到32px，移动端会进一步增大到44px */
+    height: 32px;
     font-size: 18px;
     line-height: 1;
     cursor: pointer;
@@ -313,8 +313,8 @@ section h2 {
     color: white;
     border: none;
     border-radius: 4px;
-    width: 28px;
-    height: 28px;
+    width: 32px; /* 修复: 增大到32px，移动端会进一步增大到44px */
+    height: 32px;
     font-size: 18px;
     line-height: 1;
     cursor: pointer;
@@ -606,11 +606,18 @@ section h2 {
         padding-right: 50px; /* 为清空按钮留出空间 */
     }
 
+    /* 修复: 移动端清空按钮必须44x44px */
     .btn-clear-expiry,
     .btn-clear-quantity {
-        width: 32px;
-        height: 32px;
-        font-size: 20px;
+        width: 44px;
+        height: 44px;
+        font-size: 22px;
+        right: 5px;
+    }
+
+    #expiry-date,
+    #quantity {
+        padding-right: 55px; /* 为更大的清空按钮留出空间 */
     }
 
     .input-group label {
@@ -681,9 +688,9 @@ section h2 {
     color: white;
     border: none;
     border-radius: 50%;
-    width: 24px;
-    height: 24px;
-    font-size: 16px;
+    width: 32px; /* 修复: 增大到32px，移动端会进一步增大到44px */
+    height: 32px;
+    font-size: 18px; /* 修复: 同步增大字体 */
     line-height: 1;
     cursor: pointer;
     transition: all 0.2s;
@@ -721,7 +728,7 @@ section h2 {
 }
 
 .product-item .product-name {
-    font-size: 14px;
+    font-size: 16px; /* 修复: 改为16px防止iOS自动缩放 */
 }
 
 .product-item .form-row {
@@ -732,7 +739,7 @@ section h2 {
 
 .product-item .product-quantity,
 .product-item .product-expiry {
-    font-size: 14px;
+    font-size: 16px; /* 修复: 改为16px防止iOS自动缩放 */
 }
 
 /* 移动端优化 */
@@ -751,6 +758,69 @@ section h2 {
     .btn-add-product {
         font-size: 14px;
         padding: 8px 14px;
+        min-height: 44px; /* 修复: 确保触摸目标足够大 */
+    }
+
+    /* 修复: 删除产品按钮移动端必须44x44px */
+    .btn-remove-product {
+        width: 44px;
+        height: 44px;
+        font-size: 22px;
+    }
+
+    /* 修复: 所有普通按钮移动端必须44px高度 */
+    .btn {
+        min-height: 44px;
+        padding: 12px 24px;
+        font-size: 16px;
+    }
+
+    /* 修复: 批次选择器移动端优化 */
+    .batch-selector select {
+        font-size: 17px;
+        min-height: 50px;
+        font-weight: 600;
+    }
+
+    .batch-selector button {
+        min-height: 50px;
+        font-size: 16px;
+    }
+
+    /* 修复: 搜索结果触摸优化 */
+    .search-result-item {
+        padding: 16px 12px;
+        min-height: 60px;
+        font-size: 15px;
+    }
+
+    .tracking-number {
+        font-size: 16px;
+    }
+
+    .tracking-status {
+        font-size: 13px;
+        padding: 4px 10px;
+    }
+
+    /* 修复: 历史记录可读性 */
+    .history-time {
+        font-size: 13px;
+    }
+
+    .history-item {
+        font-size: 14px;
+    }
+
+    /* 修复: 消息提示在移动端fixed定位，避免被键盘遮挡 */
+    .message-box {
+        position: fixed !important;
+        top: 20px !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        z-index: 9999 !important;
+        max-width: 90% !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
     }
 }
 

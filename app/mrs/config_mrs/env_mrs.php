@@ -140,3 +140,77 @@ function mrs_get_json_input() {
     }
     return json_decode($input, true);
 }
+
+// ============================================
+// 函数别名 - 为了与backend API兼容
+// ============================================
+
+if (!function_exists('get_db_connection')) {
+    /**
+     * 数据库连接别名函数
+     * 用于兼容不带mrs_前缀的旧代码
+     * @return PDO
+     */
+    function get_db_connection() {
+        return get_mrs_db_connection();
+    }
+}
+
+if (!function_exists('json_response')) {
+    /**
+     * JSON响应别名函数
+     * 用于兼容不带mrs_前缀的旧代码
+     * @param bool $success
+     * @param mixed $data
+     * @param string $message
+     */
+    function json_response($success, $data = null, $message = '') {
+        return mrs_json_response($success, $data, $message);
+    }
+}
+
+if (!function_exists('get_json_input')) {
+    /**
+     * 获取JSON输入别名函数
+     * 用于兼容不带mrs_前缀的旧代码
+     * @return array|null
+     */
+    function get_json_input() {
+        return mrs_get_json_input();
+    }
+}
+
+if (!function_exists('start_secure_session')) {
+    /**
+     * 启动安全会话别名函数
+     * 用于兼容不带mrs_前缀的旧代码
+     */
+    function start_secure_session() {
+        return mrs_start_secure_session();
+    }
+}
+
+if (!function_exists('authenticate_user')) {
+    /**
+     * 用户认证别名函数
+     * 用于兼容不带mrs_前缀的旧代码
+     * @param string $username
+     * @param string $password
+     * @return array|false
+     */
+    function authenticate_user($username, $password) {
+        $pdo = get_mrs_db_connection();
+        return mrs_authenticate_user($pdo, $username, $password);
+    }
+}
+
+if (!function_exists('create_user_session')) {
+    /**
+     * 创建用户会话别名函数
+     * 用于兼容不带mrs_前缀的旧代码
+     * @param array $user
+     */
+    function create_user_session($user) {
+        return mrs_create_user_session($user);
+    }
+}
