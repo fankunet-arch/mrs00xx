@@ -87,6 +87,7 @@ $batches = express_get_batches($pdo, 'active', 50);
                 <button id="btn-verify" class="btn btn-operation" data-operation="verify">核实</button>
                 <button id="btn-count" class="btn btn-operation" data-operation="count">清点</button>
                 <button id="btn-adjust" class="btn btn-operation" data-operation="adjust">调整</button>
+                <button id="btn-cross-batch-query" class="btn btn-operation" data-operation="cross_batch_query">跨批查询</button>
             </div>
         </section>
 

@@ -385,8 +385,10 @@ section h2 {
     cursor: pointer;
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
     transition: background-color 0.2s;
+    flex-wrap: wrap;
+    gap: 8px;
 }
 
 .search-result-item:hover {
@@ -408,6 +410,12 @@ section h2 {
 .tracking-number {
     font-weight: bold;
     color: #333;
+}
+
+.tracking-batch {
+    font-size: 12px;
+    color: #666;
+    margin-top: 4px;
 }
 
 .tracking-status {
@@ -473,6 +481,12 @@ section h2 {
     background-color: #fff3cd;
     color: #856404;
     border: 1px solid #ffeaa7;
+}
+
+.message-box.info {
+    background-color: transparent;
+    padding: 0;
+    border: none;
 }
 
 /* Operation History */
@@ -789,18 +803,41 @@ section h2 {
 
     /* 修复: 搜索结果触摸优化 */
     .search-result-item {
-        padding: 16px 12px;
+        padding: 14px 12px;
         min-height: 60px;
         font-size: 15px;
+        align-items: stretch;
+    }
+
+    /* 跨批查询：搜索结果中的单号区域 */
+    .search-result-item > div:first-child {
+        flex: 1;
+        min-width: 0; /* 确保文本截断生效 */
     }
 
     .tracking-number {
-        font-size: 16px;
+        font-size: 15px;
+        word-break: break-all;
+        line-height: 1.3;
     }
 
     .tracking-status {
-        font-size: 13px;
+        font-size: 12px;
         padding: 4px 10px;
+        white-space: nowrap;
+        align-self: flex-start;
+    }
+
+    /* 跨批查询：批次信息在移动端优化 */
+    .tracking-batch {
+        font-size: 11px;
+        color: #667eea;
+        margin-top: 5px;
+        font-weight: 600;
+        padding: 2px 6px;
+        background: #f3f5ff;
+        border-radius: 4px;
+        display: inline-block;
     }
 
     /* 修复: 历史记录可读性 */
@@ -821,6 +858,27 @@ section h2 {
         z-index: 9999 !important;
         max-width: 90% !important;
         box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+    }
+
+    /* 跨批查询：详情卡片在移动端的优化 */
+    .message-box.info {
+        max-width: 92% !important;
+        max-height: 80vh !important;
+        overflow-y: auto !important;
+    }
+
+    /* 跨批查询：操作按钮在移动端优化为2x2网格 */
+    .operation-buttons {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+    }
+
+    .btn-operation {
+        margin: 0;
+        min-height: 54px;
+        font-size: 15px;
+        font-weight: 600;
     }
 }
 
@@ -1247,5 +1305,47 @@ section h2 {
 
     .product-name-count {
         font-size: 12px;
+    }
+}
+
+/* 超小屏幕优化 (iPhone SE等) */
+@media (max-width: 375px) {
+    .container {
+        padding: 12px;
+    }
+
+    section {
+        padding: 14px;
+        margin-bottom: 14px;
+    }
+
+    section h2 {
+        font-size: 16px;
+        margin-bottom: 12px;
+    }
+
+    /* 跨批查询：确保4个按钮在小屏幕上仍清晰可点 */
+    .operation-buttons {
+        gap: 10px;
+    }
+
+    .btn-operation {
+        min-height: 50px;
+        font-size: 14px;
+        padding: 10px 8px;
+    }
+
+    .tracking-number {
+        font-size: 14px;
+    }
+
+    .tracking-batch {
+        font-size: 10px;
+        padding: 2px 5px;
+    }
+
+    .tracking-status {
+        font-size: 11px;
+        padding: 3px 8px;
     }
 }

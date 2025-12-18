@@ -1259,3 +1259,48 @@ function express_bulk_import($pdo, $batch_id, $tracking_numbers) {
         ];
     }
 }
+
+/**
+ * 跨批次模糊搜索快递单号
+ * @param PDO $pdo
+ * @param string $keyword
+ * @param int $limit
+ * @return array
+ */
+function express_search_tracking_cross_batch($pdo, $keyword, $limit = 20) {
+    try {
+        $stmt = $pdo->prepare("
+            SELECT
+                pkg.*,
+                batch.batch_name,
+                batch.status as batch_status
+            FROM express_package pkg
+            INNER JOIN express_batch batch ON pkg.batch_id = batch.batch_id
+            WHERE pkg.tracking_number LIKE :keyword
+            ORDER BY pkg.created_at DESC, pkg.tracking_number ASC
+            LIMIT :limit
+        ");
+
+        $stmt->bindValue(':keyword', '%' . $keyword . '%', PDO::PARAM_STR);
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->execute();
+
+        $packages = $stmt->fetchAll();
+
+        // 为每个包裹获取产品明细
+        foreach ($packages as &$package) {
+            $stmt = $pdo->prepare("
+                SELECT * FROM express_package_items
+                WHERE package_id = :package_id
+                ORDER BY sort_order ASC
+            ");
+            $stmt->execute(['package_id' => $package['package_id']]);
+            $package['items'] = $stmt->fetchAll();
+        }
+
+        return $packages;
+    } catch (PDOException $e) {
+        express_log('Failed to search tracking cross batch: ' . $e->getMessage(), 'ERROR');
+        return [];
+    }
+}

@@ -296,7 +296,8 @@ async function selectOperation(operation) {
     const operationNames = {
         'verify': '核实',
         'count': '清点',
-        'adjust': '调整'
+        'adjust': '调整',
+        'cross_batch_query': '跨批查询'
     };
 
     const operationName = document.getElementById('operation-name');
@@ -320,12 +321,27 @@ async function selectOperation(operation) {
     const inputSection = document.getElementById('input-section');
     if (inputSection) inputSection.style.display = 'block';
 
-    // 聚焦到输入框
+    // 跨批查询模式下隐藏提交按钮
+    const btnSubmit = document.getElementById('btn-submit');
+    if (btnSubmit) {
+        btnSubmit.style.display = operation === 'cross_batch_query' ? 'none' : 'inline-block';
+    }
+
+    // 跨批查询模式下更新输入框占位符
     const trackingInput = document.getElementById('tracking-input');
-    if (trackingInput) trackingInput.focus();
+    if (trackingInput) {
+        if (operation === 'cross_batch_query') {
+            trackingInput.placeholder = '输入快递单号，将在所有批次中搜索';
+        } else {
+            trackingInput.placeholder = '输入快递单号（模糊搜索）';
+        }
+        trackingInput.focus();
+    }
 
     // [FIX] 切换操作类型时，立即刷新并筛选历史记录
-    displayHistory();
+    if (operation !== 'cross_batch_query') {
+        displayHistory();
+    }
 }
 
 // 快递单号输入事件（模糊搜索）
@@ -350,14 +366,22 @@ function onTrackingInput(e) {
 
 // 执行搜索
 async function performSearch(keyword) {
-    if (!state.currentBatchId) {
+    // 跨批查询模式下不需要批次ID
+    if (state.currentOperation !== 'cross_batch_query' && !state.currentBatchId) {
         return;
     }
 
     try {
-        const response = await fetch(
-            `/express/index.php?action=search_tracking_api&batch_id=${state.currentBatchId}&keyword=${encodeURIComponent(keyword)}`
-        );
+        let apiUrl;
+        if (state.currentOperation === 'cross_batch_query') {
+            // 跨批次搜索
+            apiUrl = `/express/index.php?action=search_tracking_cross_batch_api&keyword=${encodeURIComponent(keyword)}`;
+        } else {
+            // 单批次搜索
+            apiUrl = `/express/index.php?action=search_tracking_api&batch_id=${state.currentBatchId}&keyword=${encodeURIComponent(keyword)}`;
+        }
+
+        const response = await fetch(apiUrl);
         const data = await response.json();
 
         if (data.success) {
@@ -386,19 +410,38 @@ function displaySearchResults(results, keyword) {
     const resultsDiv = document.getElementById('search-results');
 
     if (results.length === 0) {
-        resultsDiv.innerHTML = `
-            <div class="search-result-item new-item" data-tracking="${keyword}">
-                <div class="tracking-number">${keyword}</div>
-                <div class="tracking-status">新单号（点击创建）</div>
-            </div>
-        `;
+        // 跨批查询模式下不显示"新单号"选项
+        if (state.currentOperation === 'cross_batch_query') {
+            resultsDiv.innerHTML = `
+                <div class="search-result-item">
+                    <div class="tracking-number">未找到结果</div>
+                </div>
+            `;
+        } else {
+            resultsDiv.innerHTML = `
+                <div class="search-result-item new-item" data-tracking="${keyword}">
+                    <div class="tracking-number">${keyword}</div>
+                    <div class="tracking-status">新单号（点击创建）</div>
+                </div>
+            `;
+        }
     } else {
-        resultsDiv.innerHTML = results.map(pkg => `
-            <div class="search-result-item" data-tracking="${pkg.tracking_number}">
-                <div class="tracking-number">${pkg.tracking_number}</div>
-                <div class="tracking-status status-${pkg.package_status}">${getStatusText(pkg.package_status)}</div>
-            </div>
-        `).join('');
+        resultsDiv.innerHTML = results.map(pkg => {
+            // 跨批查询模式下显示批次信息
+            const batchInfo = state.currentOperation === 'cross_batch_query' && pkg.batch_name
+                ? `<div class="tracking-batch">批次: ${escapeHtml(pkg.batch_name)}</div>`
+                : '';
+
+            return `
+                <div class="search-result-item" data-tracking="${pkg.tracking_number}">
+                    <div style="flex: 1;">
+                        <div class="tracking-number">${pkg.tracking_number}</div>
+                        ${batchInfo}
+                    </div>
+                    <div class="tracking-status status-${pkg.package_status}">${getStatusText(pkg.package_status)}</div>
+                </div>
+            `;
+        }).join('');
     }
 
     // 绑定点击事件
@@ -420,6 +463,12 @@ function hideSearchResults() {
 function selectTrackingNumber(trackingNumber) {
     document.getElementById('tracking-input').value = trackingNumber;
     hideSearchResults();
+
+    // 跨批查询模式下，以只读方式显示产品信息
+    if (state.currentOperation === 'cross_batch_query') {
+        displayCrossBatchQueryResult(trackingNumber);
+        return;
+    }
 
     // 根据已存在的包裹信息预填备注
     updateNotesPrefill(trackingNumber);
@@ -1540,5 +1589,76 @@ async function loadExpiryModalSuggestions(productName) {
     } catch (error) {
         console.error('Failed to load expiry suggestions:', error);
         suggestionsSection.style.display = 'none';
+    }
+}
+
+// ============= 跨批查询功能 =============
+
+// 显示跨批查询结果（只读模式）
+function displayCrossBatchQueryResult(trackingNumber) {
+    const pkg = state.searchResults.get(trackingNumber);
+
+    if (!pkg) {
+        showMessage('未找到该单号的信息', 'error');
+        return;
+    }
+
+    // 构建产品信息HTML - 简化为列表形式
+    let productsHtml = '';
+    if (pkg.items && Array.isArray(pkg.items) && pkg.items.length > 0) {
+        productsHtml = '<div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #ddd;"><div style="font-size: 14px; font-weight: 600; color: #333; margin-bottom: 8px;">📦 产品信息</div>';
+        pkg.items.forEach((item, index) => {
+            const quantity = item.quantity ? `${item.quantity}个` : '';
+            const expiry = item.expiry_date ? `${item.expiry_date}` : '';
+            const details = [quantity, expiry].filter(x => x).join(' | ');
+            productsHtml += `
+                <div style="margin-bottom: 8px; padding: 8px 10px; background: #f8f9fa; border-radius: 4px;">
+                    <div style="font-size: 14px; color: #333; font-weight: 500;">${index + 1}. ${escapeHtml(item.product_name || '')}</div>
+                    ${details ? `<div style="font-size: 12px; color: #666; margin-top: 3px;">${details}</div>` : ''}
+                </div>
+            `;
+        });
+        productsHtml += '</div>';
+    } else if (pkg.content_note) {
+        productsHtml = `
+            <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #ddd;">
+                <div style="font-size: 14px; font-weight: 600; color: #333; margin-bottom: 6px;">📦 内容备注</div>
+                <div style="padding: 8px 10px; background: #f8f9fa; border-radius: 4px; color: #333; font-size: 13px;">${escapeHtml(pkg.content_note)}</div>
+            </div>
+        `;
+    }
+
+    // 构建批次和状态信息 - 简化为小标签
+    const batchBadge = pkg.batch_name
+        ? `<span style="display: inline-block; padding: 3px 10px; background: #e3f2fd; color: #1976d2; border-radius: 12px; font-size: 12px; margin-right: 6px;">批次: ${escapeHtml(pkg.batch_name)}</span>`
+        : '';
+    const statusBadge = `<span style="display: inline-block; padding: 3px 10px; background: #f3e5f5; color: #7b1fa2; border-radius: 12px; font-size: 12px;">${getStatusText(pkg.package_status)}</span>`;
+
+    // 显示信息 - 重新设计为简洁卡片
+    const messageHtml = `
+        <div style="padding: 14px; background: #fff; border: 1px solid #4caf50; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <div style="font-size: 15px; font-weight: 600; color: #2e7d32; margin-bottom: 10px; word-break: break-all; line-height: 1.4;">
+                ${escapeHtml(trackingNumber)}
+            </div>
+            <div style="margin-bottom: 10px;">
+                ${batchBadge}${statusBadge}
+            </div>
+            ${productsHtml}
+            <div style="margin-top: 12px; padding: 8px; background: #fff3cd; border-radius: 4px; color: #856404; font-size: 12px; text-align: center;">
+                ⚠️ 跨批查询模式：仅查看，不可修改
+            </div>
+        </div>
+    `;
+
+    const messageBox = document.getElementById('message-box');
+    if (messageBox) {
+        messageBox.innerHTML = messageHtml;
+        messageBox.className = 'message-box info';
+        messageBox.style.display = 'block';
+
+        // 10秒后自动隐藏
+        setTimeout(() => {
+            messageBox.style.display = 'none';
+        }, 10000);
     }
 }

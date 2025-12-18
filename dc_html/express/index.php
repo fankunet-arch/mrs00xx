@@ -28,6 +28,7 @@ $allowed_actions = [
     'quick_ops',                // 前台操作页面
     'get_batches_api',          // 获取批次列表API
     'search_tracking_api',      // 搜索快递单号API
+    'search_tracking_cross_batch_api',  // 跨批次搜索快递单号API
     'save_record_api',          // 保存操作记录API
     'get_packages_api',         // 获取包裹列表API
     'get_batch_detail_api',     // 获取批次详情API
