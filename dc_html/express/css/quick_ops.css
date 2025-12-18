@@ -857,12 +857,14 @@ section h2 {
         transform: translateX(-50%) !important;
         z-index: 9999 !important;
         max-width: 90% !important;
+        width: 90% !important;
         box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
     }
 
     /* 跨批查询：详情卡片在移动端的优化 */
     .message-box.info {
         max-width: 97% !important;
+        width: 97% !important;
         max-height: 80vh !important;
         overflow-y: auto !important;
     }
