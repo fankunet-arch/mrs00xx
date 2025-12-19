@@ -48,6 +48,7 @@ $allowed_actions = [
     'destination_save',     // 保存去向
     'box_search_api',       // 箱子搜索API
     'product_search_api',   // 产品搜索API
+    'product_name_autocomplete', // [新增] 产品名称自动完成
 ];
 
 // 验证action是否允许
@@ -83,7 +84,8 @@ $api_actions = [
     'get_package_items',
     'destination_save',
     'box_search_api',
-    'product_search_api'
+    'product_search_api',
+    'product_name_autocomplete' // [新增]
 ];
 
 // 路由到对应的action或API文件 (在app目录中)
