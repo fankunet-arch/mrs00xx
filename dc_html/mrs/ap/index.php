@@ -46,6 +46,8 @@ $allowed_actions = [
     'batch_print',          // 批次箱贴打印
     'destination_manage',   // 去向管理
     'destination_save',     // 保存去向
+    'box_search_api',       // 箱子搜索API
+    'product_search_api',   // 产品搜索API
 ];
 
 // 验证action是否允许
@@ -79,7 +81,9 @@ $api_actions = [
     'status_change',
     'update_package',
     'get_package_items',
-    'destination_save'
+    'destination_save',
+    'box_search_api',
+    'product_search_api'
 ];
 
 // 路由到对应的action或API文件 (在app目录中)
