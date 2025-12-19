@@ -218,6 +218,49 @@ $packages = mrs_get_true_inventory_detail($pdo, $product_name, $order_by);
             background-color: #218838;
             border-color: #1e7e34;
         }
+
+        /* 产品名称自动完成样式 */
+        .autocomplete-wrapper {
+            position: relative;
+        }
+
+        .autocomplete-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #dee2e6;
+            border-top: none;
+            border-radius: 0 0 4px 4px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            display: none;
+        }
+
+        .autocomplete-dropdown.show {
+            display: block;
+        }
+
+        .autocomplete-item {
+            padding: 8px 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .autocomplete-item:hover,
+        .autocomplete-item.selected {
+            background: #f0f4ff;
+        }
+
+        .autocomplete-empty {
+            padding: 8px 12px;
+            color: #999;
+            text-align: center;
+            font-size: 13px;
+        }
     </style>
 </head>
 <body>
@@ -411,6 +454,8 @@ $packages = mrs_get_true_inventory_detail($pdo, $product_name, $order_by);
         // 等待DOM渲染完成后，立即渲染产品列表
         setTimeout(() => {
             renderProductItems(items);
+            // 初始化产品名称自动完成功能
+            initializeProductNameAutocomplete();
         }, 50);
     }
 
@@ -430,8 +475,12 @@ $packages = mrs_get_true_inventory_detail($pdo, $product_name, $order_by);
                 </div>
                 <div class="modal-form-group" style="margin-bottom: 8px;">
                     <label style="font-size: 13px; color: #555;">产品名称/内容</label>
-                    <input type="text" class="modal-form-control product-name"
-                           value="${item.product_name || ''}" placeholder="例如：番茄酱">
+                    <div class="autocomplete-wrapper">
+                        <input type="text" class="modal-form-control product-name"
+                               value="${item.product_name || ''}" placeholder="例如：番茄酱"
+                               autocomplete="off">
+                        <div class="autocomplete-dropdown"></div>
+                    </div>
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                     <div class="modal-form-group" style="margin-bottom: 0;">
@@ -468,8 +517,12 @@ $packages = mrs_get_true_inventory_detail($pdo, $product_name, $order_by);
                 </div>
                 <div class="modal-form-group" style="margin-bottom: 8px;">
                     <label style="font-size: 13px; color: #555;">产品名称/内容</label>
-                    <input type="text" class="modal-form-control product-name"
-                           placeholder="例如：番茄酱">
+                    <div class="autocomplete-wrapper">
+                        <input type="text" class="modal-form-control product-name"
+                               placeholder="例如：番茄酱"
+                               autocomplete="off">
+                        <div class="autocomplete-dropdown"></div>
+                    </div>
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                     <div class="modal-form-group" style="margin-bottom: 0;">
@@ -486,6 +539,8 @@ $packages = mrs_get_true_inventory_detail($pdo, $product_name, $order_by);
 
         container.insertAdjacentHTML('beforeend', itemHtml);
         renumberProductItems();
+        // 为新添加的输入框绑定自动完成事件
+        initializeProductNameAutocomplete();
     }
 
     // 删除产品项
@@ -908,6 +963,179 @@ $packages = mrs_get_true_inventory_detail($pdo, $product_name, $order_by);
         div.textContent = text;
         return div.innerHTML;
     }
+
+    // ==========================================
+    // 产品名称自动完成功能
+    // ==========================================
+    let autocompleteTimeout = null;
+    let currentFocusedInput = null;
+    let currentDropdown = null;
+    let selectedIndex = -1;
+
+    // 初始化产品名称自动完成
+    function initializeProductNameAutocomplete() {
+        // 为所有产品名称输入框添加事件监听
+        document.querySelectorAll('.product-name').forEach(input => {
+            // 移除旧的事件监听器(如果有)
+            const newInput = input.cloneNode(true);
+            input.parentNode.replaceChild(newInput, input);
+
+            // 添加输入事件
+            newInput.addEventListener('input', handleAutocompleteInput);
+            newInput.addEventListener('focus', handleAutocompleteFocus);
+            newInput.addEventListener('blur', handleAutocompleteBlur);
+            newInput.addEventListener('keydown', handleAutocompleteKeydown);
+        });
+    }
+
+    function handleAutocompleteInput(e) {
+        const input = e.target;
+        const wrapper = input.closest('.autocomplete-wrapper');
+        if (!wrapper) return;
+
+        const dropdown = wrapper.querySelector('.autocomplete-dropdown');
+        const keyword = input.value.trim();
+
+        // 清除之前的延时
+        if (autocompleteTimeout) {
+            clearTimeout(autocompleteTimeout);
+        }
+
+        // 如果输入为空，隐藏下拉框
+        if (!keyword) {
+            dropdown.classList.remove('show');
+            dropdown.innerHTML = '';
+            return;
+        }
+
+        // 延时搜索（防抖）
+        autocompleteTimeout = setTimeout(() => {
+            performAutocomplete(input, dropdown, keyword);
+        }, 300);
+    }
+
+    function handleAutocompleteFocus(e) {
+        currentFocusedInput = e.target;
+        const wrapper = e.target.closest('.autocomplete-wrapper');
+        if (wrapper) {
+            currentDropdown = wrapper.querySelector('.autocomplete-dropdown');
+        }
+    }
+
+    function handleAutocompleteBlur(e) {
+        // 延迟隐藏，以便点击下拉项时能够响应
+        setTimeout(() => {
+            if (currentDropdown) {
+                currentDropdown.classList.remove('show');
+                currentDropdown.innerHTML = '';
+            }
+            currentFocusedInput = null;
+            currentDropdown = null;
+            selectedIndex = -1;
+        }, 200);
+    }
+
+    function handleAutocompleteKeydown(e) {
+        if (!currentDropdown || !currentDropdown.classList.contains('show')) return;
+
+        const items = currentDropdown.querySelectorAll('.autocomplete-item');
+        if (items.length === 0) return;
+
+        switch(e.key) {
+            case 'ArrowDown':
+                e.preventDefault();
+                selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
+                updateSelectedItem(items);
+                break;
+            case 'ArrowUp':
+                e.preventDefault();
+                selectedIndex = Math.max(selectedIndex - 1, -1);
+                updateSelectedItem(items);
+                break;
+            case 'Enter':
+                e.preventDefault();
+                if (selectedIndex >= 0 && selectedIndex < items.length) {
+                    items[selectedIndex].click();
+                }
+                break;
+            case 'Escape':
+                e.preventDefault();
+                currentDropdown.classList.remove('show');
+                currentDropdown.innerHTML = '';
+                selectedIndex = -1;
+                break;
+        }
+    }
+
+    function updateSelectedItem(items) {
+        items.forEach((item, index) => {
+            if (index === selectedIndex) {
+                item.classList.add('selected');
+                item.scrollIntoView({ block: 'nearest' });
+            } else {
+                item.classList.remove('selected');
+            }
+        });
+    }
+
+    async function performAutocomplete(input, dropdown, keyword) {
+        try {
+            const response = await fetch(`/mrs/ap/index.php?action=product_name_autocomplete&keyword=${encodeURIComponent(keyword)}`);
+            const data = await response.json();
+
+            if (data.success && data.data && data.data.length > 0) {
+                displayAutocompleteResults(dropdown, data.data, input);
+            } else {
+                displayAutocompleteEmpty(dropdown);
+            }
+        } catch (error) {
+            console.error('Autocomplete error:', error);
+            displayAutocompleteEmpty(dropdown);
+        }
+    }
+
+    function displayAutocompleteResults(dropdown, results, input) {
+        selectedIndex = -1;
+        let html = '';
+
+        results.forEach((productName, index) => {
+            html += `
+                <div class="autocomplete-item" data-index="${index}" data-value="${escapeHtml(productName)}">
+                    ${escapeHtml(productName)}
+                </div>
+            `;
+        });
+
+        dropdown.innerHTML = html;
+        dropdown.classList.add('show');
+
+        // 绑定点击事件
+        dropdown.querySelectorAll('.autocomplete-item').forEach(item => {
+            item.addEventListener('click', function() {
+                const value = this.dataset.value;
+                input.value = value;
+                dropdown.classList.remove('show');
+                dropdown.innerHTML = '';
+                input.focus();
+            });
+        });
+    }
+
+    function displayAutocompleteEmpty(dropdown) {
+        dropdown.innerHTML = '<div class="autocomplete-empty">未找到匹配的产品</div>';
+        dropdown.classList.add('show');
+    }
+
+    // 点击页面其他地方关闭自动完成下拉框
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.autocomplete-wrapper')) {
+            document.querySelectorAll('.autocomplete-dropdown').forEach(dropdown => {
+                dropdown.classList.remove('show');
+                dropdown.innerHTML = '';
+            });
+            selectedIndex = -1;
+        }
+    });
     </script>
 
     <!-- 产品搜索模态框 -->
