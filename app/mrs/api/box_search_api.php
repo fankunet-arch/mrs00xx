@@ -2,7 +2,7 @@
 /**
  * MRS 物料收发管理系统 - API: 箱子搜索
  * 文件路径: app/mrs/api/box_search_api.php
- * 说明: 支持箱号和快递单号的快速搜索
+ * 说明: 支持箱号、快递单号和物品名称的快速搜索
  */
 
 if (!defined('MRS_ENTRY')) {
@@ -21,7 +21,7 @@ if (empty($keyword)) {
 }
 
 try {
-    // 搜索箱号或快递单号
+    // 搜索箱号、快递单号或物品名称
     $search_pattern = '%' . $keyword . '%';
 
     $sql = "SELECT
@@ -40,6 +40,7 @@ try {
             AND (
                 box_number LIKE :keyword1
                 OR tracking_number LIKE :keyword2
+                OR content_note LIKE :keyword3
             )
             ORDER BY inbound_time DESC
             LIMIT 10";
@@ -47,7 +48,8 @@ try {
     $stmt = $pdo->prepare($sql);
     $stmt->execute([
         'keyword1' => $search_pattern,
-        'keyword2' => $search_pattern
+        'keyword2' => $search_pattern,
+        'keyword3' => $search_pattern
     ]);
     $results = $stmt->fetchAll();
 

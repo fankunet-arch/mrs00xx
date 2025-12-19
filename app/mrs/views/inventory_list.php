@@ -379,12 +379,12 @@ function get_sort_icon($column, $current_sort, $current_dir) {
                     <input type="text"
                            id="box-search-input"
                            class="search-input"
-                           placeholder="输入箱号或快递单号..."
+                           placeholder="输入箱号、快递单号或物品名称..."
                            autocomplete="off">
                     <span class="search-input-icon">🔍</span>
                 </div>
                 <div class="search-hint">
-                    支持箱号和快递单号的模糊搜索
+                    支持箱号、快递单号和物品名称的模糊搜索
                 </div>
                 <div id="box-search-results" class="search-results-container"></div>
             </div>
