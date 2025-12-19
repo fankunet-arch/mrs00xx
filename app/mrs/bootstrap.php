@@ -10,6 +10,16 @@ if (!defined('MRS_ENTRY')) {
     die('Access denied');
 }
 
+// 定义PROJECT_ROOT常量(如果未定义)
+if (!defined('PROJECT_ROOT')) {
+    define('PROJECT_ROOT', dirname(dirname(__DIR__)));
+}
+
+// 定义MRS_ACTION_PATH常量(如果未定义)
+if (!defined('MRS_ACTION_PATH')) {
+    define('MRS_ACTION_PATH', __DIR__ . '/actions');
+}
+
 // 1. 加载配置文件
 require_once __DIR__ . '/config_mrs/env_mrs.php';
 
