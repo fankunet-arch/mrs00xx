@@ -27,6 +27,198 @@ $packages = mrs_get_true_inventory_detail($pdo, $product_name, $order_by);
     <title>库存明细 - MRS 系统</title>
     <link rel="stylesheet" href="/mrs/ap/css/backend.css">
     <link rel="stylesheet" href="/mrs/ap/css/modal.css">
+    <style>
+        /* 产品搜索模态框样式 */
+        .product-search-modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 9999;
+            animation: fadeIn 0.2s;
+        }
+
+        .product-search-modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow: hidden;
+            animation: slideDown 0.3s;
+        }
+
+        .product-search-modal-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .product-search-modal-header h3 {
+            margin: 0;
+            font-size: 18px;
+            color: #333;
+        }
+
+        .product-search-modal-close {
+            background: none;
+            border: none;
+            font-size: 28px;
+            color: #6c757d;
+            cursor: pointer;
+            padding: 0;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+
+        .product-search-modal-close:hover {
+            background: #f1f3f5;
+        }
+
+        .product-search-modal-body {
+            padding: 24px;
+        }
+
+        .product-search-input-wrapper {
+            position: relative;
+            margin-bottom: 16px;
+        }
+
+        .product-search-input {
+            width: 100%;
+            padding: 14px 48px 14px 16px;
+            font-size: 16px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+
+        .product-search-input:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 0.2rem rgba(0,123,255,.15);
+        }
+
+        .product-search-input-icon {
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 20px;
+            color: #adb5bd;
+        }
+
+        .product-search-results-container {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .product-search-result-item {
+            padding: 14px 16px;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .product-search-result-item:hover {
+            background: #f8f9fa;
+            border-color: #28a745;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .product-result-name {
+            font-weight: 600;
+            font-size: 15px;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        .product-result-stats {
+            font-size: 13px;
+            color: #6c757d;
+        }
+
+        .product-result-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 500;
+            margin-left: 8px;
+        }
+
+        .badge-boxes {
+            background: #e7f3ff;
+            color: #0066cc;
+        }
+
+        .badge-qty {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .product-search-empty {
+            padding: 40px 20px;
+            text-align: center;
+            color: #adb5bd;
+        }
+
+        .product-search-empty-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+        }
+
+        .product-search-hint {
+            font-size: 13px;
+            color: #adb5bd;
+            margin-top: 8px;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -60%);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, -50%);
+            }
+        }
+
+        .btn-success {
+            background-color: #28a745;
+            border-color: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background-color: #218838;
+            border-color: #1e7e34;
+        }
+    </style>
 </head>
 <body>
     <?php include MRS_VIEW_PATH . '/shared/sidebar.php'; ?>
@@ -35,6 +227,9 @@ $packages = mrs_get_true_inventory_detail($pdo, $product_name, $order_by);
         <div class="page-header">
             <h1>库存明细: <?= htmlspecialchars($product_name) ?></h1>
             <div class="header-actions">
+                <button onclick="openProductSearchModal()" class="btn btn-success" style="margin-right: 10px;">
+                    🔍 搜索产品
+                </button>
                 <a href="/mrs/ap/index.php?action=inventory_list" class="btn btn-secondary">返回</a>
             </div>
         </div>
@@ -596,6 +791,147 @@ $packages = mrs_get_true_inventory_detail($pdo, $product_name, $order_by);
             await showAlert('网络错误: ' + error.message, '错误', 'error');
         }
     }
+
+    // ==========================================
+    // 产品搜索功能
+    // ==========================================
+    const productSearchInput = document.getElementById('product-search-input');
+    const productSearchResults = document.getElementById('product-search-results');
+    const productSearchModalOverlay = document.getElementById('product-search-modal-overlay');
+    let productSearchTimeout = null;
+
+    // 打开产品搜索模态框
+    function openProductSearchModal() {
+        productSearchModalOverlay.style.display = 'block';
+        setTimeout(() => {
+            productSearchInput.focus();
+        }, 100);
+    }
+
+    // 关闭产品搜索模态框
+    function closeProductSearchModal(event) {
+        if (event && event.target !== productSearchModalOverlay) return;
+        productSearchModalOverlay.style.display = 'none';
+        productSearchInput.value = '';
+        productSearchResults.innerHTML = '';
+    }
+
+    // ESC键关闭模态框
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && productSearchModalOverlay.style.display === 'block') {
+            closeProductSearchModal();
+        }
+    });
+
+    if (productSearchInput) {
+        // 输入事件 - 实时搜索
+        productSearchInput.addEventListener('input', function(e) {
+            const keyword = e.target.value.trim();
+
+            // 清除之前的延时
+            if (productSearchTimeout) {
+                clearTimeout(productSearchTimeout);
+            }
+
+            // 如果输入为空，清空结果
+            if (!keyword) {
+                productSearchResults.innerHTML = '';
+                return;
+            }
+
+            // 延时搜索（防抖）
+            productSearchTimeout = setTimeout(() => {
+                performProductSearch(keyword);
+            }, 300);
+        });
+    }
+
+    async function performProductSearch(keyword) {
+        try {
+            const response = await fetch(`/mrs/ap/index.php?action=product_search_api&keyword=${encodeURIComponent(keyword)}`);
+            const data = await response.json();
+
+            if (data.success && data.data && data.data.length > 0) {
+                displayProductSearchResults(data.data);
+            } else {
+                displayProductSearchEmptyResults();
+            }
+        } catch (error) {
+            console.error('Product search error:', error);
+            displayProductSearchEmptyResults();
+        }
+    }
+
+    function displayProductSearchResults(results) {
+        let html = '';
+
+        results.forEach(item => {
+            const boxCount = item.box_count || 0;
+            const totalQty = item.total_quantity || 0;
+
+            html += `
+                <div class="product-search-result-item" data-product-name="${escapeHtml(item.product_name || '')}">
+                    <div class="product-result-name">${escapeHtml(item.product_name || '未命名产品')}</div>
+                    <div class="product-result-stats">
+                        <span class="product-result-badge badge-boxes">${boxCount} 箱</span>
+                        <span class="product-result-badge badge-qty">约 ${totalQty} 件</span>
+                    </div>
+                </div>
+            `;
+        });
+
+        productSearchResults.innerHTML = html;
+
+        // 绑定点击事件
+        productSearchResults.querySelectorAll('.product-search-result-item').forEach(item => {
+            item.addEventListener('click', function() {
+                const productName = this.dataset.productName;
+                if (productName) {
+                    // 跳转到库存明细页面
+                    window.location.href = `/mrs/ap/index.php?action=inventory_detail&sku=${encodeURIComponent(productName)}`;
+                }
+            });
+        });
+    }
+
+    function displayProductSearchEmptyResults() {
+        productSearchResults.innerHTML = `
+            <div class="product-search-empty">
+                <div class="product-search-empty-icon">📦</div>
+                <div>未找到匹配的产品</div>
+            </div>
+        `;
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
     </script>
+
+    <!-- 产品搜索模态框 -->
+    <div id="product-search-modal-overlay" class="product-search-modal-overlay" onclick="closeProductSearchModal(event)">
+        <div class="product-search-modal" onclick="event.stopPropagation()">
+            <div class="product-search-modal-header">
+                <h3>🔍 搜索产品</h3>
+                <button class="product-search-modal-close" onclick="closeProductSearchModal()">&times;</button>
+            </div>
+            <div class="product-search-modal-body">
+                <div class="product-search-input-wrapper">
+                    <input type="text"
+                           id="product-search-input"
+                           class="product-search-input"
+                           placeholder="输入产品名称..."
+                           autocomplete="off">
+                    <span class="product-search-input-icon">🔍</span>
+                </div>
+                <div class="product-search-hint">
+                    搜索整个库存中的产品（已自动去重）
+                </div>
+                <div id="product-search-results" class="product-search-results-container"></div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

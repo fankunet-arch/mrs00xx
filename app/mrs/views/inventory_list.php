@@ -51,6 +51,199 @@ function get_sort_icon($column, $current_sort, $current_dir) {
         .data-table thead th a:hover {
             background-color: rgba(0, 123, 255, 0.05);
         }
+
+        /* 箱子搜索模态框样式 */
+        .search-modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 9999;
+            animation: fadeIn 0.2s;
+        }
+
+        .search-modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow: hidden;
+            animation: slideDown 0.3s;
+        }
+
+        .search-modal-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .search-modal-header h3 {
+            margin: 0;
+            font-size: 18px;
+            color: #333;
+        }
+
+        .search-modal-close {
+            background: none;
+            border: none;
+            font-size: 28px;
+            color: #6c757d;
+            cursor: pointer;
+            padding: 0;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+
+        .search-modal-close:hover {
+            background: #f1f3f5;
+        }
+
+        .search-modal-body {
+            padding: 24px;
+        }
+
+        .search-input-wrapper {
+            position: relative;
+            margin-bottom: 16px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 14px 48px 14px 16px;
+            font-size: 16px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 0.2rem rgba(0,123,255,.15);
+        }
+
+        .search-input-icon {
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 20px;
+            color: #adb5bd;
+        }
+
+        .search-results-container {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .search-result-item {
+            padding: 14px 16px;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .search-result-item:hover {
+            background: #f8f9fa;
+            border-color: #007bff;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .search-result-main {
+            display: flex;
+            align-items: center;
+            margin-bottom: 6px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .search-result-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .badge-box {
+            background: #e7f3ff;
+            color: #0066cc;
+        }
+
+        .badge-tracking {
+            background: #f0f0f0;
+            color: #495057;
+        }
+
+        .search-result-details {
+            font-size: 13px;
+            color: #6c757d;
+            line-height: 1.6;
+        }
+
+        .search-empty {
+            padding: 40px 20px;
+            text-align: center;
+            color: #adb5bd;
+        }
+
+        .search-empty-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+        }
+
+        .search-hint {
+            font-size: 13px;
+            color: #adb5bd;
+            margin-top: 8px;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -60%);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, -50%);
+            }
+        }
+
+        .btn-info {
+            background-color: #17a2b8;
+            border-color: #17a2b8;
+            color: white;
+        }
+
+        .btn-info:hover {
+            background-color: #138496;
+            border-color: #117a8b;
+        }
     </style>
 </head>
 <body>
@@ -60,6 +253,9 @@ function get_sort_icon($column, $current_sort, $current_dir) {
         <div class="page-header">
             <h1>库存总览</h1>
             <div class="header-actions">
+                <button onclick="openSearchModal()" class="btn btn-info" style="margin-right: 10px;">
+                    🔍 搜索箱子
+                </button>
                 <a href="/mrs/ap/index.php?action=batch_print" class="btn btn-secondary">箱贴打印</a>
                 <a href="/mrs/ap/index.php?action=inbound" class="btn btn-primary">入库录入</a>
                 <a href="/mrs/ap/index.php?action=outbound" class="btn btn-success">出库核销</a>
@@ -170,6 +366,31 @@ function get_sort_icon($column, $current_sort, $current_dir) {
             <?php endif; ?>
         </div>
     </div>
+
+    <!-- 箱子搜索模态框 -->
+    <div id="search-modal-overlay" class="search-modal-overlay" onclick="closeSearchModal(event)">
+        <div class="search-modal" onclick="event.stopPropagation()">
+            <div class="search-modal-header">
+                <h3>🔍 快速定位箱子</h3>
+                <button class="search-modal-close" onclick="closeSearchModal()">&times;</button>
+            </div>
+            <div class="search-modal-body">
+                <div class="search-input-wrapper">
+                    <input type="text"
+                           id="box-search-input"
+                           class="search-input"
+                           placeholder="输入箱号或快递单号..."
+                           autocomplete="off">
+                    <span class="search-input-icon">🔍</span>
+                </div>
+                <div class="search-hint">
+                    支持箱号和快递单号的模糊搜索
+                </div>
+                <div id="box-search-results" class="search-results-container"></div>
+            </div>
+        </div>
+    </div>
+
     <script src="/mrs/ap/js/modal.js"></script>
     <script>
     function cleanQty(rawQty) {
@@ -333,6 +554,128 @@ function get_sort_icon($column, $current_sort, $current_dir) {
             }
         }
     });
+
+    // ====== 箱子搜索模态框功能 ======
+    const boxSearchInput = document.getElementById('box-search-input');
+    const boxSearchResults = document.getElementById('box-search-results');
+    const searchModalOverlay = document.getElementById('search-modal-overlay');
+    let searchTimeout = null;
+
+    // 打开搜索模态框
+    function openSearchModal() {
+        searchModalOverlay.style.display = 'block';
+        setTimeout(() => {
+            boxSearchInput.focus();
+        }, 100);
+    }
+
+    // 关闭搜索模态框
+    function closeSearchModal(event) {
+        if (event && event.target !== searchModalOverlay) return;
+        searchModalOverlay.style.display = 'none';
+        boxSearchInput.value = '';
+        boxSearchResults.innerHTML = '';
+    }
+
+    // ESC键关闭模态框
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && searchModalOverlay.style.display === 'block') {
+            closeSearchModal();
+        }
+    });
+
+    if (boxSearchInput) {
+        // 输入事件 - 实时搜索
+        boxSearchInput.addEventListener('input', function(e) {
+            const keyword = e.target.value.trim();
+
+            // 清除之前的延时
+            if (searchTimeout) {
+                clearTimeout(searchTimeout);
+            }
+
+            // 如果输入为空，清空结果
+            if (!keyword) {
+                boxSearchResults.innerHTML = '';
+                return;
+            }
+
+            // 延时搜索（防抖）
+            searchTimeout = setTimeout(() => {
+                performBoxSearch(keyword);
+            }, 300);
+        });
+    }
+
+    async function performBoxSearch(keyword) {
+        try {
+            const response = await fetch(`/mrs/ap/index.php?action=box_search_api&keyword=${encodeURIComponent(keyword)}`);
+            const data = await response.json();
+
+            if (data.success && data.data && data.data.length > 0) {
+                displaySearchResults(data.data);
+            } else {
+                displayEmptyResults();
+            }
+        } catch (error) {
+            console.error('Box search error:', error);
+            displayEmptyResults();
+        }
+    }
+
+    function displaySearchResults(results) {
+        let html = '';
+
+        results.forEach(item => {
+            // 格式化日期
+            const inboundDate = item.inbound_time ? new Date(item.inbound_time).toLocaleDateString('zh-CN') : '-';
+            const expiryDate = item.expiry_date ? new Date(item.expiry_date).toLocaleDateString('zh-CN') : '-';
+
+            html += `
+                <div class="search-result-item" data-ledger-id="${item.ledger_id}" data-content-note="${escapeHtml(item.content_note || '')}">
+                    <div class="search-result-main">
+                        <span class="search-result-badge badge-box">箱号: ${escapeHtml(item.box_number || '-')}</span>
+                        <span class="search-result-badge badge-tracking">单号: ${escapeHtml(item.tracking_number || '-')}</span>
+                    </div>
+                    <div class="search-result-details">
+                        <strong>${escapeHtml(item.content_note || '无品名')}</strong><br>
+                        批次: ${escapeHtml(item.batch_name || '-')} |
+                        数量: ${item.quantity || 0} |
+                        入库: ${inboundDate}
+                        ${item.warehouse_location ? ' | 位置: ' + escapeHtml(item.warehouse_location) : ''}
+                    </div>
+                </div>
+            `;
+        });
+
+        boxSearchResults.innerHTML = html;
+
+        // 绑定点击事件
+        boxSearchResults.querySelectorAll('.search-result-item').forEach(item => {
+            item.addEventListener('click', function() {
+                const contentNote = this.dataset.contentNote;
+                if (contentNote) {
+                    // 跳转到库存明细页面
+                    window.location.href = `/mrs/ap/index.php?action=inventory_detail&sku=${encodeURIComponent(contentNote)}`;
+                }
+            });
+        });
+    }
+
+    function displayEmptyResults() {
+        boxSearchResults.innerHTML = `
+            <div class="search-empty">
+                <div class="search-empty-icon">📦</div>
+                <div>未找到匹配的箱子</div>
+            </div>
+        `;
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
 
     </script>
 </body>
