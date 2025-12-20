@@ -11,10 +11,16 @@ if (!defined('MRS_ENTRY')) {
 // 默认查询当前月份
 $month = $_GET['month'] ?? date('Y-m');
 
-// 获取月度统计
+// 计算月份的开始和结束日期
+$start_date = $month . '-01';
+$end_date = date('Y-m-t', strtotime($start_date));
+
+// 获取月度统计（旧版本，用于汇总数字）
 $summary = mrs_get_monthly_summary($pdo, $month);
-$inbound_data = mrs_get_monthly_inbound($pdo, $month);
-$outbound_data = mrs_get_monthly_outbound($pdo, $month);
+
+// 使用统一视图获取入库和出库数据（整合两套系统）
+$inbound_data = mrs_get_unified_inbound_report($pdo, $start_date, $end_date);
+$outbound_data = mrs_get_unified_outbound_report($pdo, $start_date, $end_date);
 ?>
 <!DOCTYPE html>
 <html lang="zh">
@@ -54,7 +60,7 @@ $outbound_data = mrs_get_monthly_outbound($pdo, $month);
             </div>
 
             <!-- 入库明细 -->
-            <h2 style="margin-top: 30px; margin-bottom: 15px;">入库明细</h2>
+            <h2 style="margin-top: 30px; margin-bottom: 15px;">入库明细（整合SKU系统+包裹台账）</h2>
 
             <?php if (empty($inbound_data)): ?>
                 <div class="empty-state">
@@ -66,15 +72,23 @@ $outbound_data = mrs_get_monthly_outbound($pdo, $month);
                         <tr>
                             <th>物料名称</th>
                             <th class="text-center">入库数量</th>
-                            <th class="text-center">批次数</th>
+                            <th class="text-center">来源</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php foreach ($inbound_data as $item): ?>
                             <tr>
-                                <td><?= htmlspecialchars($item['sku_name']) ?></td>
-                                <td class="text-center"><strong><?= $item['package_count'] ?></strong> 箱</td>
-                                <td class="text-center"><?= $item['batch_count'] ?> 批次</td>
+                                <td><?= htmlspecialchars($item['product_name']) ?></td>
+                                <td class="text-center"><strong><?= $item['display_qty'] ?></strong></td>
+                                <td class="text-center">
+                                    <?php
+                                    $sources = explode(',', $item['sources'] ?? '');
+                                    $source_labels = [];
+                                    if (in_array('sku_system', $sources)) $source_labels[] = 'SKU';
+                                    if (in_array('package_system', $sources)) $source_labels[] = '台账';
+                                    echo htmlspecialchars(implode('+', $source_labels));
+                                    ?>
+                                </td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
@@ -82,7 +96,7 @@ $outbound_data = mrs_get_monthly_outbound($pdo, $month);
             <?php endif; ?>
 
             <!-- 出库明细 -->
-            <h2 style="margin-top: 40px; margin-bottom: 15px;">出库明细</h2>
+            <h2 style="margin-top: 40px; margin-bottom: 15px;">出库明细（整合SKU系统+包裹台账）</h2>
 
             <?php if (empty($outbound_data)): ?>
                 <div class="empty-state">
@@ -94,13 +108,23 @@ $outbound_data = mrs_get_monthly_outbound($pdo, $month);
                         <tr>
                             <th>物料名称</th>
                             <th class="text-center">出库数量</th>
+                            <th class="text-center">来源</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php foreach ($outbound_data as $item): ?>
                             <tr>
-                                <td><?= htmlspecialchars($item['sku_name']) ?></td>
-                                <td class="text-center"><strong><?= $item['package_count'] ?></strong> 箱</td>
+                                <td><?= htmlspecialchars($item['product_name']) ?></td>
+                                <td class="text-center"><strong><?= $item['display_qty'] ?></strong></td>
+                                <td class="text-center">
+                                    <?php
+                                    $sources = explode(',', $item['sources'] ?? '');
+                                    $source_labels = [];
+                                    if (in_array('sku_system', $sources)) $source_labels[] = 'SKU';
+                                    if (in_array('package_system', $sources)) $source_labels[] = '台账';
+                                    echo htmlspecialchars(implode('+', $source_labels));
+                                    ?>
+                                </td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
