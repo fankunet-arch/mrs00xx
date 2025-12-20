@@ -18,13 +18,16 @@ try {
     // 获取数据库连接
     $pdo = get_db_connection();
 
-    // 获取筛选参数
-    $search = $_GET['search'] ?? '';
-    $categoryId = $_GET['category_id'] ?? '';
-    $isPrecise = $_GET['is_precise_item'] ?? '';
-    $page = max(1, intval($_GET['page'] ?? 1));
-    $pageSize = max(1, min(100, intval($_GET['page_size'] ?? 50)));
-    $offset = ($page - 1) * $pageSize;
+    // 获取并验证筛选参数
+    $search = mrs_sanitize_input($_GET['search'] ?? '', MRS_MAX_SEARCH_LENGTH);
+    $categoryId = mrs_sanitize_int($_GET['category_id'] ?? '', 0, PHP_INT_MAX, 0);
+    $isPrecise = mrs_sanitize_input($_GET['is_precise_item'] ?? '', 10);
+
+    // 使用通用分页函数（SKU列表使用50条/页）
+    $pagination = mrs_get_pagination_params(50, MRS_MAX_PAGE_SIZE, 'page_size');
+    $page = $pagination['page'];
+    $pageSize = $pagination['limit'];
+    $offset = $pagination['offset'];
 
     // 构建SQL查询
     $sql = "SELECT
@@ -35,16 +38,18 @@ try {
             WHERE 1=1";
     $params = [];
 
-    if ($search) {
-        $sql .= " AND (s.sku_name LIKE :search1 OR s.brand_name LIKE :search2 OR s.sku_code LIKE :search3)";
+    if (!empty($search)) {
+        // [FIX] 使用单个参数，MySQL支持在多个地方使用同一个命名参数
+        $sql .= " AND (s.sku_name LIKE :search OR s.brand_name LIKE :search OR s.sku_code LIKE :search)";
+        $params['search'] = '%' . $search . '%';
     }
 
-    if ($categoryId !== '') {
+    if ($categoryId > 0) {
         $sql .= " AND s.category_id = :category_id";
         $params['category_id'] = $categoryId;
     }
 
-    if ($isPrecise !== '') {
+    if (!empty($isPrecise)) {
         $sql .= " AND s.is_precise_item = :is_precise";
         $params['is_precise'] = $isPrecise;
     }
@@ -58,13 +63,7 @@ try {
     // 准备和执行查询
     $stmt = $pdo->prepare($sql);
 
-    if ($search) {
-        $searchTerm = '%' . $search . '%';
-        $stmt->bindValue(':search1', $searchTerm);
-        $stmt->bindValue(':search2', $searchTerm);
-        $stmt->bindValue(':search3', $searchTerm);
-    }
-
+    // 绑定所有参数
     foreach ($params as $key => $value) {
         $stmt->bindValue(':' . $key, $value);
     }

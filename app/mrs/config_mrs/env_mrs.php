@@ -31,12 +31,32 @@ define('MRS_SESSION_NAME', ini_get('session.name') ?: 'PHPSESSID');
 define('MRS_SESSION_TIMEOUT', 1800); // 30分钟
 define('MRS_SESSION_SAMESITE', 'Strict');
 
+// 分页配置
+define('MRS_DEFAULT_PAGE_SIZE', 20);       // 默认每页记录数
+define('MRS_MAX_PAGE_SIZE', 100);          // 最大每页记录数
+define('MRS_MAX_PAGE_NUMBER', 10000);      // 最大页码
+
+// 输入验证配置
+define('MRS_MAX_INPUT_LENGTH', 200);       // 通用输入最大长度
+define('MRS_MAX_SEARCH_LENGTH', 100);      // 搜索关键词最大长度
+define('MRS_MAX_REMARK_LENGTH', 500);      // 备注最大长度
+
+// 日志级别常量（遵循PSR-3标准）
+define('MRS_LOG_DEBUG', 'DEBUG');          // 详细的调试信息
+define('MRS_LOG_INFO', 'INFO');            // 一般信息消息
+define('MRS_LOG_NOTICE', 'NOTICE');        // 正常但重要的事件
+define('MRS_LOG_WARNING', 'WARNING');      // 警告消息
+define('MRS_LOG_ERROR', 'ERROR');          // 错误消息
+define('MRS_LOG_CRITICAL', 'CRITICAL');    // 严重错误
+define('MRS_LOG_ALERT', 'ALERT');          // 必须立即采取行动
+define('MRS_LOG_EMERGENCY', 'EMERGENCY');  // 系统不可用
+
 /**
  * 获取数据库连接
  * @return PDO
  * @throws PDOException
  */
-function get_mrs_db_connection() {
+function get_mrs_db_connection(): PDO {
     static $pdo = null;
 
     if ($pdo !== null) {
@@ -69,8 +89,9 @@ function get_mrs_db_connection() {
 
 /**
  * 启动安全会话
+ * @return void
  */
-function mrs_start_secure_session() {
+function mrs_start_secure_session(): void {
     if (session_status() === PHP_SESSION_NONE) {
         // 参考 Express 的默认设置，仅调整必要参数
         $is_https = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on';
@@ -101,14 +122,26 @@ function mrs_start_secure_session() {
 }
 
 /**
- * 日志记录函数
- * @param string $message
- * @param string $level
- * @param array $context
+ * 日志记录函数（遵循PSR-3标准）
+ * @param string $message 日志消息
+ * @param string $level 日志级别（默认INFO）
+ * @param array $context 上下文数据
+ * @return void
  */
-function mrs_log($message, $level = 'INFO', $context = []) {
+function mrs_log($message, $level = 'INFO', $context = []): void {
+    // 验证日志级别
+    $valid_levels = [
+        'DEBUG', 'INFO', 'NOTICE', 'WARNING', 'ERROR', 'CRITICAL', 'ALERT', 'EMERGENCY'
+    ];
+
+    // 如果级别无效，使用INFO并记录警告
+    if (!in_array($level, $valid_levels, true)) {
+        $level = 'INFO';
+        $message = "[Invalid log level] " . $message;
+    }
+
     $timestamp = date('Y-m-d H:i:s');
-    $context_str = !empty($context) ? json_encode($context) : '';
+    $context_str = !empty($context) ? json_encode($context, JSON_UNESCAPED_UNICODE) : '';
     $log_message = sprintf("[%s] [%s] %s %s\n", $timestamp, $level, $message, $context_str);
     error_log($log_message);
 }
@@ -118,8 +151,9 @@ function mrs_log($message, $level = 'INFO', $context = []) {
  * @param bool $success
  * @param mixed $data
  * @param string $message
+ * @return void
  */
-function mrs_json_response($success, $data = null, $message = '') {
+function mrs_json_response($success, $data = null, $message = ''): void {
     header('Content-Type: application/json; charset=utf-8');
     echo json_encode([
         'success' => $success,

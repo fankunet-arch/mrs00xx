@@ -19,7 +19,7 @@ try {
     $pdo = get_db_connection();
 
     // [FIX] 获取并验证筛选参数
-    $search = mrs_sanitize_input($_GET['search'] ?? '', 100);
+    $search = mrs_sanitize_input($_GET['search'] ?? '', MRS_MAX_SEARCH_LENGTH);
     $status = mrs_validate_enum(
         $_GET['status'] ?? '',
         ['draft', 'receiving', 'pending_merge', 'confirmed', 'closed', ''],
@@ -27,9 +27,12 @@ try {
     );
     $dateStart = mrs_validate_date($_GET['date_start'] ?? '');
     $dateEnd = mrs_validate_date($_GET['date_end'] ?? '');
-    $page = mrs_sanitize_int($_GET['page'] ?? 1, 1, 10000, 1);
-    $pageSize = mrs_sanitize_int($_GET['page_size'] ?? 20, 1, 100, 20);
-    $offset = ($page - 1) * $pageSize;
+
+    // 使用通用分页函数（使用默认常量配置）
+    $pagination = mrs_get_pagination_params(null, null, 'page_size');
+    $page = $pagination['page'];
+    $pageSize = $pagination['limit'];
+    $offset = $pagination['offset'];
 
     // 构建SQL查询
     $sql = "SELECT * FROM mrs_batch WHERE 1=1";

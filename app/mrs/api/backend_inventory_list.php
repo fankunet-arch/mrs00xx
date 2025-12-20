@@ -19,11 +19,14 @@ mrs_require_login();
 
 try {
     // [FIX] 获取并验证筛选参数
-    $search = mrs_sanitize_input($_GET['search'] ?? '', 100);
+    $search = mrs_sanitize_input($_GET['search'] ?? '', MRS_MAX_SEARCH_LENGTH);
     $categoryId = mrs_sanitize_int($_GET['category_id'] ?? '', 0, PHP_INT_MAX, 0);
-    $page = mrs_sanitize_int($_GET['page'] ?? 1, 1, 10000, 1);
-    $limit = mrs_sanitize_int($_GET['limit'] ?? 20, 1, 100, 20);
-    $offset = ($page - 1) * $limit;
+
+    // 使用通用分页函数（使用默认常量配置）
+    $pagination = mrs_get_pagination_params(null, null, 'limit');
+    $page = $pagination['page'];
+    $limit = $pagination['limit'];
+    $offset = $pagination['offset'];
 
     // 获取数据库连接
     $pdo = get_db_connection();

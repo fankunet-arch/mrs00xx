@@ -3,6 +3,12 @@
  * MRS Package Management System - Core Library
  * 文件路径: app/mrs/lib/mrs_lib.php
  * 说明: 核心业务逻辑函数
+ *
+ * 函数命名规范:
+ * - 所有MRS业务函数使用 mrs_ 前缀（如 mrs_authenticate_user, mrs_get_pagination_params）
+ * - 为了向后兼容，部分核心函数提供不带前缀的别名（定义在 env_mrs.php 中）
+ * - 别名函数列表: get_db_connection, json_response, get_json_input, start_secure_session 等
+ * - 新增函数建议统一使用 mrs_ 前缀以避免命名空间污染
  */
 
 // ============================================
@@ -55,8 +61,9 @@ function mrs_authenticate_user($pdo, $username, $password) {
 /**
  * 创建用户会话
  * @param array $user
+ * @return void
  */
-function mrs_create_user_session($user) {
+function mrs_create_user_session($user): void {
     mrs_start_secure_session();
 
     $_SESSION['user_id'] = $user['user_id'];
@@ -72,7 +79,7 @@ function mrs_create_user_session($user) {
  * 检查用户是否登录
  * @return bool
  */
-function mrs_is_user_logged_in() {
+function mrs_is_user_logged_in(): bool {
     mrs_start_secure_session();
 
     if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
@@ -91,8 +98,9 @@ function mrs_is_user_logged_in() {
 
 /**
  * 销毁会话
+ * @return void
  */
-function mrs_destroy_user_session() {
+function mrs_destroy_user_session(): void {
     mrs_start_secure_session();
 
     $_SESSION = [];
@@ -115,8 +123,9 @@ function mrs_destroy_user_session() {
 
 /**
  * 登录保护
+ * @return void
  */
-function mrs_require_login() {
+function mrs_require_login(): void {
     if (!mrs_is_user_logged_in()) {
         header('Location: /mrs/ap/index.php?action=login');
         exit;
@@ -2041,10 +2050,11 @@ function generate_batch_code($date) {
 /**
  * 验证和净化文本输入（增强版）
  * @param string $input 用户输入
- * @param int $max_length 最大长度限制
+ * @param int $max_length 最大长度限制（默认使用配置常量）
  * @return string 净化后的文本
  */
-function mrs_sanitize_input($input, $max_length = 200) {
+function mrs_sanitize_input($input, $max_length = null): string {
+    $max_length = $max_length ?? MRS_MAX_INPUT_LENGTH;
     if (!is_string($input)) {
         return '';
     }
@@ -2082,7 +2092,7 @@ function mrs_validate_enum($value, array $allowed_values, $default = null) {
  * @param int $default 默认值
  * @return int 验证后的整数
  */
-function mrs_sanitize_int($input, $min = 0, $max = PHP_INT_MAX, $default = 0) {
+function mrs_sanitize_int($input, $min = 0, $max = PHP_INT_MAX, $default = 0): int {
     $value = filter_var($input, FILTER_VALIDATE_INT);
 
     if ($value === false) {
@@ -2105,5 +2115,34 @@ function mrs_validate_date($date, $format = 'Y-m-d') {
 
     $d = DateTime::createFromFormat($format, $date);
     return ($d && $d->format($format) === $date) ? $date : null;
+}
+
+/**
+ * 获取并验证分页参数
+ * @param int $default_limit 默认每页记录数（默认使用配置常量）
+ * @param int $max_limit 最大每页记录数（默认使用配置常量）
+ * @param string $limit_param 限制参数名（支持'limit'或'page_size'）
+ * @return array ['page', 'limit', 'offset'] 验证后的分页参数
+ */
+function mrs_get_pagination_params($default_limit = null, $max_limit = null, $limit_param = 'limit'): array {
+    // 使用配置常量作为默认值
+    $default_limit = $default_limit ?? MRS_DEFAULT_PAGE_SIZE;
+    $max_limit = $max_limit ?? MRS_MAX_PAGE_SIZE;
+
+    // 验证页码
+    $page = mrs_sanitize_int($_GET['page'] ?? 1, 1, MRS_MAX_PAGE_NUMBER, 1);
+
+    // 验证每页记录数（支持'limit'或'page_size'参数名）
+    $limit_value = $_GET[$limit_param] ?? $_GET['limit'] ?? $_GET['page_size'] ?? $default_limit;
+    $limit = mrs_sanitize_int($limit_value, 1, $max_limit, $default_limit);
+
+    // 计算偏移量
+    $offset = ($page - 1) * $limit;
+
+    return [
+        'page' => $page,
+        'limit' => $limit,
+        'offset' => $offset
+    ];
 }
 

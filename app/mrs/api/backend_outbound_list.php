@@ -17,15 +17,17 @@ mrs_require_login();
 try {
     $pdo = get_db_connection();
 
-    // Pagination and Filtering
-    $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-    $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 20;
-    $offset = ($page - 1) * $limit;
+    // 获取并验证分页参数（使用默认常量配置）
+    $pagination = mrs_get_pagination_params(null, null, 'limit');
+    $page = $pagination['page'];
+    $limit = $pagination['limit'];
+    $offset = $pagination['offset'];
 
-    $status = $_GET['status'] ?? null;
-    $type = $_GET['type'] ?? null;
-    $startDate = $_GET['start_date'] ?? null;
-    $endDate = $_GET['end_date'] ?? null;
+    // 获取并验证筛选参数
+    $status = mrs_validate_enum($_GET['status'] ?? '', ['draft', 'confirmed', 'cancelled', ''], '');
+    $type = mrs_sanitize_input($_GET['type'] ?? '', 50);
+    $startDate = mrs_validate_date($_GET['start_date'] ?? '');
+    $endDate = mrs_validate_date($_GET['end_date'] ?? '');
 
     $sql = "SELECT
                 o.outbound_order_id,
