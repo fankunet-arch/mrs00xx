@@ -1433,16 +1433,32 @@ function mrs_get_true_inventory_summary($pdo, $product_name = '', $sort_by = 'sk
  */
 function mrs_get_true_inventory_detail($pdo, $product_name, $order_by = 'fifo') {
     try {
-        // 根据排序参数构建ORDER BY子句
-        $order_clause = match($order_by) {
-            'batch' => 'l.batch_name ASC, l.inbound_time ASC',
-            'expiry_date_asc' => 'i.expiry_date ASC, l.inbound_time ASC',
-            'expiry_date_desc' => 'i.expiry_date DESC, l.inbound_time ASC',
-            'inbound_time_desc' => 'l.inbound_time DESC',
-            'days_in_stock_asc' => 'l.inbound_time DESC',
-            'days_in_stock_desc' => 'l.inbound_time ASC',
-            default => 'l.inbound_time ASC' // fifo 或 inbound_time_asc
-        };
+        // [FIX] 根据排序参数构建ORDER BY子句 (使用 switch 以兼容 PHP 7.x)
+        switch($order_by) {
+            case 'batch':
+                $order_clause = 'l.batch_name ASC, l.inbound_time ASC';
+                break;
+            case 'expiry_date_asc':
+                $order_clause = 'i.expiry_date ASC, l.inbound_time ASC';
+                break;
+            case 'expiry_date_desc':
+                $order_clause = 'i.expiry_date DESC, l.inbound_time ASC';
+                break;
+            case 'inbound_time_desc':
+                $order_clause = 'l.inbound_time DESC';
+                break;
+            case 'days_in_stock_asc':
+                $order_clause = 'l.inbound_time DESC';
+                break;
+            case 'days_in_stock_desc':
+                $order_clause = 'l.inbound_time ASC';
+                break;
+            case 'fifo':
+            case 'inbound_time_asc':
+            default:
+                $order_clause = 'l.inbound_time ASC'; // fifo 或 inbound_time_asc
+                break;
+        }
 
         // 首先获取包含该产品的所有包裹
         $sql = "
@@ -1918,6 +1934,108 @@ function mrs_get_unified_inbound_report($pdo, $start_date, $end_date) {
     } catch (PDOException $e) {
         mrs_log('Failed to get unified inbound report: ' . $e->getMessage(), 'ERROR');
         return [];
+    }
+}
+
+// ============================================
+// 工具函数 (Critical Fixes)
+// ============================================
+
+/**
+ * 根据SKU ID获取SKU详情
+ * @param int $sku_id SKU ID
+ * @return array|null SKU详情或null
+ */
+function get_sku_by_id($sku_id) {
+    try {
+        $pdo = get_mrs_db_connection();
+        $stmt = $pdo->prepare("
+            SELECT sku_id, sku_name, brand_name, category_id,
+                   standard_unit, case_unit_name, case_to_standard_qty,
+                   status, remark
+            FROM mrs_sku
+            WHERE sku_id = :sku_id
+            LIMIT 1
+        ");
+        $stmt->execute(['sku_id' => $sku_id]);
+        return $stmt->fetch();
+    } catch (PDOException $e) {
+        mrs_log('Failed to get SKU by ID: ' . $e->getMessage(), 'ERROR');
+        return null;
+    }
+}
+
+/**
+ * 归一化数量到标准单位
+ * @param float $case_qty 箱数
+ * @param float $single_qty 散装数
+ * @param float $case_spec 箱规格(每箱含多少个标准单位)
+ * @return int 标准单位总数(取整)
+ */
+function normalize_quantity_to_storage($case_qty, $single_qty, $case_spec) {
+    $raw_total = ($case_qty * $case_spec) + $single_qty;
+    return (int)round($raw_total, 0);  // 强制取整，防止浮点精度问题
+}
+
+/**
+ * 生成出库单号
+ * @param string $date 日期 (Y-m-d)
+ * @return string 出库单号 (格式: OUT20251220XXXX)
+ */
+function generate_outbound_code($date) {
+    try {
+        $pdo = get_mrs_db_connection();
+        $datePrefix = date('Ymd', strtotime($date));
+
+        // 查询当天最大序号
+        $stmt = $pdo->prepare("
+            SELECT MAX(CAST(SUBSTRING(outbound_code, -4) AS UNSIGNED)) as max_seq
+            FROM mrs_outbound_order
+            WHERE outbound_code LIKE :prefix
+        ");
+        $stmt->execute(['prefix' => "OUT{$datePrefix}%"]);
+        $result = $stmt->fetch();
+
+        $nextSeq = ($result['max_seq'] ?? 0) + 1;
+        $code = sprintf("OUT%s%04d", $datePrefix, $nextSeq);
+
+        mrs_log("Generated outbound code: {$code}", 'INFO');
+        return $code;
+    } catch (PDOException $e) {
+        mrs_log('Failed to generate outbound code: ' . $e->getMessage(), 'ERROR');
+        // 降级方案：使用随机数
+        return 'OUT' . date('Ymd', strtotime($date)) . rand(1000, 9999);
+    }
+}
+
+/**
+ * 生成批次编号
+ * @param string $date 日期 (Y-m-d)
+ * @return string 批次编号 (格式: BATCH20251220XXXX)
+ */
+function generate_batch_code($date) {
+    try {
+        $pdo = get_mrs_db_connection();
+        $datePrefix = date('Ymd', strtotime($date));
+
+        // 查询当天最大序号
+        $stmt = $pdo->prepare("
+            SELECT MAX(CAST(SUBSTRING(batch_code, -4) AS UNSIGNED)) as max_seq
+            FROM mrs_batch
+            WHERE batch_code LIKE :prefix
+        ");
+        $stmt->execute(['prefix' => "BATCH{$datePrefix}%"]);
+        $result = $stmt->fetch();
+
+        $nextSeq = ($result['max_seq'] ?? 0) + 1;
+        $code = sprintf("BATCH%s%04d", $datePrefix, $nextSeq);
+
+        mrs_log("Generated batch code: {$code}", 'INFO');
+        return $code;
+    } catch (PDOException $e) {
+        mrs_log('Failed to generate batch code: ' . $e->getMessage(), 'ERROR');
+        // 降级方案：使用随机数
+        return 'BATCH' . date('Ymd', strtotime($date)) . rand(1000, 9999);
     }
 }
 

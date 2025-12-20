@@ -16,7 +16,7 @@ require_once MRS_LIB_PATH . '/mrs_lib.php';
 require_once MRS_LIB_PATH . '/inventory_lib.php';
 
 // 需要登录
-require_login();
+mrs_require_login();
 
 try {
     // 获取POST数据

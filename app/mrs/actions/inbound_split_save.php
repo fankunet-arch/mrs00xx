@@ -10,7 +10,7 @@ if (!defined('MRS_ENTRY')) {
 }
 
 // 需要登录
-mrs_require_login();
+mrs_mrs_require_login();
 
 // 只接受 POST 请求
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
