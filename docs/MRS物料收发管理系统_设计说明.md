@@ -771,6 +771,193 @@ function mrs_get_next_box_number($pdo, $batch_name) {
 }
 ```
 
+#### 4.2.3 拆分入库功能 ⭐新增 (v1.0 - 2025-12-20)
+
+**背景**: 为支持将Express包裹拆分成单件入库到SKU系统，实现按件出库和统一报表管理，新增拆分入库功能。
+
+**业务场景**:
+- 收到包裹后需要拆分成单件入库（如1箱奶粉拆成20件）
+- 支持后续按件出库（1件或几件）
+- 整箱入库和拆分入库在统一报表中合并显示
+
+**数据流向**:
+```
+整箱入库: Express → mrs_package_ledger（包裹台账）→ 整箱出库
+拆分入库: Express → mrs_batch（SKU系统）→ 箱+件出库
+```
+
+##### 4.2.3.1 拆分入库界面 (views/inbound_split.php)
+
+**路径**: `/mrs/index.php?action=inbound_split`
+**菜单**: MRS后台 → 拆分入库
+
+**页面元素**:
+1. Express批次选择（只显示有产品明细的包裹）
+2. 可拆分包裹列表（自动读取express_package_items）
+3. 拆分预览（实时显示将入库的物料清单）
+4. 批量拆分确认
+
+**关键代码**:
+```php
+// 获取可拆分的包裹（有产品明细且未拆分）
+$available_packages = mrs_get_splittable_packages($pdo, $batch_name);
+
+// 前端实时预览拆分结果
+document.querySelectorAll('.package-checkbox').forEach(cb => {
+    cb.addEventListener('change', updatePreview);
+});
+```
+
+##### 4.2.3.2 拆分入库API (actions/inbound_split_save.php)
+
+**请求参数**:
+```json
+{
+    "batch_name": "2025-TEST-001",
+    "packages": [
+        {
+            "batch_name": "2025-TEST-001",
+            "tracking_number": "EXP001",
+            "package_id": 123,
+            "items": [
+                {"product_name": "婴儿奶粉900g", "quantity": 20},
+                {"product_name": "婴儿尿布L码", "quantity": 30}
+            ]
+        }
+    ]
+}
+```
+
+**核心函数** (mrs_lib.php:1719-1838):
+```php
+function mrs_split_inbound_packages($pdo, $packages, $operator = '') {
+    try {
+        $pdo->beginTransaction();
+
+        // 1. 获取或创建MRS批次
+        $batch_id = mrs_get_or_create_batch($pdo, $batch_name, $operator);
+
+        // 2. 遍历包裹，将产品明细转换为收货记录
+        foreach ($packages as $pkg) {
+            // 读取Express产品明细
+            $items = get_package_items($pkg['package_id']);
+
+            // 转换为mrs_batch_raw_record
+            foreach ($items as $item) {
+                insert_raw_record([
+                    'batch_id' => $batch_id,
+                    'input_sku_name' => $item['product_name'],
+                    'input_single_qty' => $item['quantity'],
+                    'input_case_qty' => 0,
+                    'physical_box_count' => 1,
+                    'status' => 'pending'
+                ]);
+            }
+
+            // 3. 在remark中记录已拆分的快递单号
+            update_batch_remark($batch_id, $pkg['tracking_number']);
+        }
+
+        $pdo->commit();
+        return ['success' => true, 'batch_id' => $batch_id, ...];
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        return ['success' => false, 'message' => $e->getMessage()];
+    }
+}
+```
+
+##### 4.2.3.3 统一报表视图
+
+为整合SKU系统和包裹台账系统的数据，创建了两个数据库视图：
+
+**vw_unified_outbound_report**（统一出库报表）:
+```sql
+CREATE VIEW vw_unified_outbound_report AS
+-- SKU系统出库（支持箱+件）
+SELECT
+    DATE(o.outbound_date) AS outbound_date,
+    i.sku_name AS product_name,
+    SUM(i.outbound_case_qty) AS case_qty,
+    SUM(i.outbound_single_qty) AS single_qty,
+    'sku_system' AS source_type
+FROM mrs_outbound_order o
+INNER JOIN mrs_outbound_order_item i ON ...
+GROUP BY ...
+
+UNION ALL
+
+-- 包裹台账系统出库（整箱）
+SELECT
+    DATE(outbound_time) AS outbound_date,
+    content_note AS product_name,
+    COUNT(*) AS case_qty,
+    0 AS single_qty,
+    'package_system' AS source_type
+FROM mrs_package_ledger
+WHERE status = 'shipped'
+GROUP BY ...;
+```
+
+**报表查询函数** (mrs_lib.php:1847-1880):
+```php
+function mrs_get_unified_outbound_report($pdo, $start_date, $end_date) {
+    // 查询统一报表视图，生成"箱+件"混合格式
+    $stmt = $pdo->prepare("
+        SELECT
+            product_name,
+            SUM(case_qty) AS total_case_qty,
+            SUM(single_qty) AS total_single_qty,
+            CASE
+                WHEN SUM(case_qty) > 0 AND SUM(single_qty) > 0
+                    THEN CONCAT(SUM(case_qty), '箱+', SUM(single_qty), '件')
+                WHEN SUM(case_qty) > 0
+                    THEN CONCAT(SUM(case_qty), '箱')
+                WHEN SUM(single_qty) > 0
+                    THEN CONCAT(SUM(single_qty), '件')
+                ELSE '0'
+            END AS display_qty
+        FROM vw_unified_outbound_report
+        WHERE outbound_date BETWEEN ? AND ?
+        GROUP BY product_name
+    ");
+    ...
+}
+```
+
+##### 4.2.3.4 操作流程示例
+
+**拆分入库操作**:
+1. Express系统清点包裹，录入产品明细（express_package_items）
+2. MRS打开"拆分入库"菜单
+3. 选择批次，勾选包裹
+4. 预览拆分明细
+5. 确认拆分入库
+6. 系统创建SKU批次，转换为收货记录
+7. 后台管理匹配SKU，确认入库到mrs_inventory
+
+**统一报表显示**:
+```
+2025年12月出库报表
+物料名称         出库数量      来源
+婴儿奶粉900g    1箱+5件      SKU
+纸巾整箱        2箱          台账
+零食大礼包      12件         SKU
+```
+
+##### 4.2.3.5 关键特性
+
+- ✅ **零数据库结构修改**：仅新增2个视图
+- ✅ **完全独立流程**：整箱入库和拆分入库互不干扰
+- ✅ **自动化处理**：批次自动创建、明细自动读取
+- ✅ **批量操作**：支持一次拆分多个包裹
+- ✅ **统一报表**：整合两套系统的出库数据
+- ✅ **灵活格式**：支持"2箱+3件"混合显示
+
+**更多详情请参考**: `docs/SPLIT_INVENTORY_FEATURE.md`
+
+---
+
 ### 4.3 库存查询模块
 
 #### 4.3.1 库存总览 (views/inventory_list.php)

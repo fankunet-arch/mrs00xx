@@ -23,7 +23,11 @@ $current_action = $_GET['action'] ?? 'inventory_list';
         </a>
         <a href="/mrs/ap/index.php?action=inbound"
            class="nav-link <?= $current_action === 'inbound' ? 'active' : '' ?>">
-            入库录入
+            整箱入库
+        </a>
+        <a href="/mrs/ap/index.php?action=inbound_split"
+           class="nav-link <?= $current_action === 'inbound_split' ? 'active' : '' ?>">
+            拆分入库
         </a>
         <a href="/mrs/ap/index.php?action=outbound"
            class="nav-link <?= $current_action === 'outbound' ? 'active' : '' ?>">

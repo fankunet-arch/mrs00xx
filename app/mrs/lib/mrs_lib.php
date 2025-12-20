@@ -1577,3 +1577,347 @@ function mrs_update_package_items($pdo, $ledger_id, $items) {
     }
 }
 
+// ============================================
+// 包裹拆分入库功能函数
+// ============================================
+
+/**
+ * 获取有产品明细的包裹（适合拆分入库）
+ * @param PDO $pdo
+ * @param string $batch_name Express批次名称
+ * @return array
+ */
+function mrs_get_splittable_packages($pdo, $batch_name) {
+    try {
+        $express_pdo = get_express_db_connection();
+
+        // 查询有产品明细的包裹（排除已入库的）
+        $stmt = $express_pdo->prepare("
+            SELECT
+                b.batch_name,
+                p.package_id,
+                p.tracking_number,
+                p.content_note,
+                p.package_status,
+                p.counted_at,
+                p.expiry_date,
+                p.quantity,
+                (SELECT COUNT(*) FROM express_package_items WHERE package_id = p.package_id) AS item_count
+            FROM express_package p
+            INNER JOIN express_batch b ON p.batch_id = b.batch_id
+            WHERE b.batch_name = :batch_name
+              AND p.package_status IN ('counted', 'adjusted')
+              AND (p.skip_inbound = 0 OR p.skip_inbound IS NULL)
+            HAVING item_count > 0
+            ORDER BY p.tracking_number ASC
+        ");
+
+        $stmt->execute(['batch_name' => $batch_name]);
+        $express_packages = $stmt->fetchAll();
+
+        // 过滤掉已入库的包裹
+        $available_packages = [];
+
+        foreach ($express_packages as $pkg) {
+            // 检查是否已创建SKU收货记录（通过remark字段追溯）
+            $check_stmt = $pdo->prepare("
+                SELECT 1 FROM mrs_batch_raw_record r
+                INNER JOIN mrs_batch b ON r.batch_id = b.batch_id
+                WHERE b.batch_name = :batch_name
+                  AND b.remark LIKE :tracking_ref
+                LIMIT 1
+            ");
+
+            $check_stmt->execute([
+                'batch_name' => $batch_name,
+                'tracking_ref' => '%' . $pkg['tracking_number'] . '%'
+            ]);
+
+            // 如果不存在，则可拆分入库
+            if (!$check_stmt->fetch()) {
+                // 加载产品明细
+                $items_stmt = $express_pdo->prepare("
+                    SELECT product_name, quantity, expiry_date, sort_order
+                    FROM express_package_items
+                    WHERE package_id = :package_id
+                    ORDER BY sort_order ASC
+                ");
+                $items_stmt->execute(['package_id' => $pkg['package_id']]);
+                $pkg['items'] = $items_stmt->fetchAll();
+
+                $available_packages[] = $pkg;
+            }
+        }
+
+        return $available_packages;
+    } catch (PDOException $e) {
+        mrs_log('Failed to get splittable packages: ' . $e->getMessage(), 'ERROR');
+        return [];
+    }
+}
+
+/**
+ * 获取或创建MRS批次（用于拆分入库）
+ * @param PDO $pdo
+ * @param string $batch_name 批次名称
+ * @param string $operator 操作员
+ * @return int|false 批次ID，失败返回false
+ */
+function mrs_get_or_create_batch($pdo, $batch_name, $operator = '') {
+    try {
+        // 检查批次是否存在
+        $stmt = $pdo->prepare("
+            SELECT batch_id FROM mrs_batch
+            WHERE batch_name = :batch_name
+            LIMIT 1
+        ");
+        $stmt->execute(['batch_name' => $batch_name]);
+        $batch = $stmt->fetch();
+
+        if ($batch) {
+            return $batch['batch_id'];
+        }
+
+        // 不存在则创建
+        $batch_code = 'EXPSPLIT-' . date('YmdHis');
+
+        $create_stmt = $pdo->prepare("
+            INSERT INTO mrs_batch (
+                batch_code, batch_name, batch_date, batch_status,
+                remark, created_by, created_at, updated_at
+            ) VALUES (
+                :batch_code, :batch_name, :batch_date, 'receiving',
+                :remark, :created_by, NOW(6), NOW(6)
+            )
+        ");
+
+        $create_stmt->execute([
+            'batch_code' => $batch_code,
+            'batch_name' => $batch_name,
+            'batch_date' => date('Y-m-d'),
+            'remark' => "来源：Express批次拆分入库",
+            'created_by' => $operator
+        ]);
+
+        $batch_id = $pdo->lastInsertId();
+        mrs_log("Created MRS batch for split inbound: batch_id=$batch_id, batch_name=$batch_name", 'INFO');
+
+        return $batch_id;
+    } catch (PDOException $e) {
+        mrs_log('Failed to get or create batch: ' . $e->getMessage(), 'ERROR');
+        return false;
+    }
+}
+
+/**
+ * 拆分入库 - 将Express包裹转换为SKU收货记录
+ * @param PDO $pdo
+ * @param array $packages 包裹数组
+ * @param string $operator 操作员
+ * @return array ['success' => bool, 'batch_id' => int, 'records_created' => int, 'errors' => array]
+ */
+function mrs_split_inbound_packages($pdo, $packages, $operator = '') {
+    $records_created = 0;
+    $errors = [];
+    $batch_id = null;
+
+    try {
+        $pdo->beginTransaction();
+
+        if (empty($packages) || !is_array($packages)) {
+            throw new Exception('包裹数据为空');
+        }
+
+        // 获取批次名称（所有包裹应该来自同一批次）
+        $batch_name = $packages[0]['batch_name'] ?? '';
+        if (empty($batch_name)) {
+            throw new Exception('批次名称为空');
+        }
+
+        // 获取或创建MRS批次
+        $batch_id = mrs_get_or_create_batch($pdo, $batch_name, $operator);
+        if (!$batch_id) {
+            throw new Exception('创建批次失败');
+        }
+
+        $express_pdo = get_express_db_connection();
+
+        // 处理每个包裹
+        foreach ($packages as $pkg) {
+            try {
+                $tracking_number = $pkg['tracking_number'] ?? '';
+                $package_id = $pkg['package_id'] ?? 0;
+
+                if (empty($tracking_number) || $package_id <= 0) {
+                    $errors[] = "包裹数据无效";
+                    continue;
+                }
+
+                // 读取产品明细
+                $items_stmt = $express_pdo->prepare("
+                    SELECT product_name, quantity, expiry_date
+                    FROM express_package_items
+                    WHERE package_id = :package_id
+                    ORDER BY sort_order ASC
+                ");
+                $items_stmt->execute(['package_id' => $package_id]);
+                $items = $items_stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                if (empty($items)) {
+                    $errors[] = "包裹 {$tracking_number} 没有产品明细";
+                    continue;
+                }
+
+                // 转换为收货记录
+                $record_stmt = $pdo->prepare("
+                    INSERT INTO mrs_batch_raw_record (
+                        batch_id, input_sku_name, input_case_qty, input_single_qty,
+                        physical_box_count, status, created_at, updated_at
+                    ) VALUES (
+                        :batch_id, :input_sku_name, 0, :input_single_qty,
+                        1, 'pending', NOW(6), NOW(6)
+                    )
+                ");
+
+                foreach ($items as $item) {
+                    $product_name = trim($item['product_name'] ?? '');
+                    $quantity = floatval($item['quantity'] ?? 0);
+
+                    if (empty($product_name) || $quantity <= 0) {
+                        continue;
+                    }
+
+                    $record_stmt->execute([
+                        'batch_id' => $batch_id,
+                        'input_sku_name' => $product_name,
+                        'input_single_qty' => $quantity
+                    ]);
+
+                    $records_created++;
+                }
+
+                // 更新批次的remark，记录已处理的快递单号
+                $update_remark = $pdo->prepare("
+                    UPDATE mrs_batch
+                    SET remark = CONCAT(COALESCE(remark, ''), ' [已拆分: ', :tracking_number, ']')
+                    WHERE batch_id = :batch_id
+                ");
+                $update_remark->execute([
+                    'tracking_number' => $tracking_number,
+                    'batch_id' => $batch_id
+                ]);
+
+                mrs_log("Split inbound package: tracking=$tracking_number, items=" . count($items), 'INFO');
+
+            } catch (PDOException $e) {
+                $errors[] = "包裹 {$tracking_number} 处理失败: " . $e->getMessage();
+            }
+        }
+
+        $pdo->commit();
+
+        mrs_log("Split inbound completed: batch_id=$batch_id, records=$records_created, errors=" . count($errors), 'INFO');
+
+        return [
+            'success' => true,
+            'batch_id' => $batch_id,
+            'records_created' => $records_created,
+            'errors' => $errors
+        ];
+
+    } catch (Exception $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        mrs_log('Failed to split inbound packages: ' . $e->getMessage(), 'ERROR');
+        return [
+            'success' => false,
+            'message' => '拆分入库失败: ' . $e->getMessage()
+        ];
+    }
+}
+
+/**
+ * 获取统一出库报表数据（整合SKU和包裹台账系统）
+ * @param PDO $pdo
+ * @param string $start_date 开始日期
+ * @param string $end_date 结束日期
+ * @return array
+ */
+function mrs_get_unified_outbound_report($pdo, $start_date, $end_date) {
+    try {
+        $stmt = $pdo->prepare("
+            SELECT
+                product_name,
+                SUM(case_qty) AS total_case_qty,
+                SUM(single_qty) AS total_single_qty,
+                CASE
+                    WHEN SUM(case_qty) > 0 AND SUM(single_qty) > 0
+                        THEN CONCAT(SUM(case_qty), '箱+', SUM(single_qty), '件')
+                    WHEN SUM(case_qty) > 0
+                        THEN CONCAT(SUM(case_qty), '箱')
+                    WHEN SUM(single_qty) > 0
+                        THEN CONCAT(SUM(single_qty), '件')
+                    ELSE '0'
+                END AS display_qty,
+                GROUP_CONCAT(DISTINCT source_type) AS sources
+            FROM vw_unified_outbound_report
+            WHERE outbound_date BETWEEN :start_date AND :end_date
+            GROUP BY product_name
+            ORDER BY product_name ASC
+        ");
+
+        $stmt->execute([
+            'start_date' => $start_date,
+            'end_date' => $end_date
+        ]);
+
+        return $stmt->fetchAll();
+    } catch (PDOException $e) {
+        mrs_log('Failed to get unified outbound report: ' . $e->getMessage(), 'ERROR');
+        return [];
+    }
+}
+
+/**
+ * 获取统一入库报表数据（整合SKU和包裹台账系统）
+ * @param PDO $pdo
+ * @param string $start_date 开始日期
+ * @param string $end_date 结束日期
+ * @return array
+ */
+function mrs_get_unified_inbound_report($pdo, $start_date, $end_date) {
+    try {
+        $stmt = $pdo->prepare("
+            SELECT
+                product_name,
+                SUM(case_qty) AS total_case_qty,
+                SUM(single_qty) AS total_single_qty,
+                CASE
+                    WHEN SUM(case_qty) > 0 AND SUM(single_qty) > 0
+                        THEN CONCAT(SUM(case_qty), '箱+', SUM(single_qty), '件')
+                    WHEN SUM(case_qty) > 0
+                        THEN CONCAT(SUM(case_qty), '箱')
+                    WHEN SUM(single_qty) > 0
+                        THEN CONCAT(SUM(single_qty), '件')
+                    ELSE '0'
+                END AS display_qty,
+                GROUP_CONCAT(DISTINCT source_type) AS sources
+            FROM vw_unified_inbound_report
+            WHERE inbound_date BETWEEN :start_date AND :end_date
+            GROUP BY product_name
+            ORDER BY product_name ASC
+        ");
+
+        $stmt->execute([
+            'start_date' => $start_date,
+            'end_date' => $end_date
+        ]);
+
+        return $stmt->fetchAll();
+    } catch (PDOException $e) {
+        mrs_log('Failed to get unified inbound report: ' . $e->getMessage(), 'ERROR');
+        return [];
+    }
+}
+
