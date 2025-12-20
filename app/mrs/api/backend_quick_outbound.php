@@ -15,7 +15,7 @@ require_once __DIR__ . '/../config_mrs/env_mrs.php';
 require_once MRS_LIB_PATH . '/mrs_lib.php';
 
 // 需要登录
-require_login();
+mrs_require_login();
 
 try {
     // 获取POST数据

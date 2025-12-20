@@ -12,7 +12,7 @@ if (!defined('MRS_ENTRY')) {
 define('MRS_BACKEND', true);
 
 // 要求登录
-require_login();
+mrs_require_login();
 
 // 获取当前用户信息
 $current_user = $_SESSION['user_display_name'] ?? '管理员';

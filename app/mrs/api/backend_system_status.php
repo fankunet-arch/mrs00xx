@@ -12,7 +12,7 @@ require_once __DIR__ . '/../config_mrs/env_mrs.php';
 require_once MRS_LIB_PATH . '/mrs_lib.php';
 
 // Require Admin Login
-require_login();
+mrs_require_login();
 
 header('Content-Type: application/json; charset=utf-8');
 

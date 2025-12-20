@@ -11,6 +11,9 @@ if (!defined('MRS_ENTRY')) {
 /**
  * Record an inventory transaction and update current stock
  *
+ * ⚠️  IMPORTANT: This function uses row-level locks (FOR UPDATE).
+ * It will automatically manage transactions if not already in one.
+ *
  * @param PDO $pdo Database connection
  * @param int $sku_id SKU ID
  * @param string $transaction_type 'inbound', 'outbound', or 'adjustment'
@@ -25,7 +28,14 @@ if (!defined('MRS_ENTRY')) {
 function record_inventory_transaction($pdo, $sku_id, $transaction_type, $transaction_subtype, $quantity_change, $unit, $operator_name, $references = [], $remark = null)
 {
     try {
-        // Get or create inventory record
+        // [FIX] Check if already in transaction, if not, start one
+        $inTransaction = $pdo->inTransaction();
+
+        if (!$inTransaction) {
+            $pdo->beginTransaction();
+        }
+
+        // Get or create inventory record (with row lock)
         $inv_sql = "SELECT inventory_id, current_qty FROM mrs_inventory WHERE sku_id = :sku_id FOR UPDATE";
         $inv_stmt = $pdo->prepare($inv_sql);
         $inv_stmt->execute([':sku_id' => $sku_id]);
@@ -86,9 +96,19 @@ function record_inventory_transaction($pdo, $sku_id, $transaction_type, $transac
         ]);
 
         mrs_log("Inventory transaction recorded: SKU={$sku_id}, Type={$transaction_type}, Change={$quantity_change}, After={$new_qty}", 'INFO');
+
+        // [FIX] Commit transaction if we started it
+        if (!$inTransaction) {
+            $pdo->commit();
+        }
+
         return true;
 
     } catch (Exception $e) {
+        // [FIX] Rollback if we started the transaction
+        if (!$inTransaction && $pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
         mrs_log("Failed to record inventory transaction: " . $e->getMessage(), 'ERROR');
         return false;
     }

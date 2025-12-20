@@ -33,6 +33,9 @@ if (empty($packages) || !is_array($packages)) {
 // 获取操作员
 $operator = $_SESSION['user_login'] ?? 'system';
 
+// 获取数据库连接
+$pdo = get_mrs_db_connection();
+
 // 执行入库
 $result = mrs_inbound_packages($pdo, $packages, $spec_info, $operator);
 

@@ -3,6 +3,12 @@
  * MRS Package Management System - Core Library
  * 文件路径: app/mrs/lib/mrs_lib.php
  * 说明: 核心业务逻辑函数
+ *
+ * 函数命名规范:
+ * - 所有MRS业务函数使用 mrs_ 前缀（如 mrs_authenticate_user, mrs_get_pagination_params）
+ * - 为了向后兼容，部分核心函数提供不带前缀的别名（定义在 env_mrs.php 中）
+ * - 别名函数列表: get_db_connection, json_response, get_json_input, start_secure_session 等
+ * - 新增函数建议统一使用 mrs_ 前缀以避免命名空间污染
  */
 
 // ============================================
@@ -55,8 +61,9 @@ function mrs_authenticate_user($pdo, $username, $password) {
 /**
  * 创建用户会话
  * @param array $user
+ * @return void
  */
-function mrs_create_user_session($user) {
+function mrs_create_user_session($user): void {
     mrs_start_secure_session();
 
     $_SESSION['user_id'] = $user['user_id'];
@@ -72,7 +79,7 @@ function mrs_create_user_session($user) {
  * 检查用户是否登录
  * @return bool
  */
-function mrs_is_user_logged_in() {
+function mrs_is_user_logged_in(): bool {
     mrs_start_secure_session();
 
     if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
@@ -91,8 +98,9 @@ function mrs_is_user_logged_in() {
 
 /**
  * 销毁会话
+ * @return void
  */
-function mrs_destroy_user_session() {
+function mrs_destroy_user_session(): void {
     mrs_start_secure_session();
 
     $_SESSION = [];
@@ -115,8 +123,9 @@ function mrs_destroy_user_session() {
 
 /**
  * 登录保护
+ * @return void
  */
-function mrs_require_login() {
+function mrs_require_login(): void {
     if (!mrs_is_user_logged_in()) {
         header('Location: /mrs/ap/index.php?action=login');
         exit;
@@ -1356,16 +1365,20 @@ function mrs_delete_destination($pdo, $destination_id) {
  */
 function mrs_get_true_inventory_summary($pdo, $product_name = '', $sort_by = 'sku_name', $sort_dir = 'asc') {
     try {
-        // 验证排序参数
-        $valid_sorts = ['sku_name', 'total_boxes', 'total_quantity', 'nearest_expiry_date'];
-        if (!in_array($sort_by, $valid_sorts)) {
-            $sort_by = 'sku_name';
-        }
+        // [FIX] 使用映射表，更安全地处理排序参数，避免SQL注入风险
+        $sort_column_map = [
+            'sku_name' => 'i.product_name',
+            'total_boxes' => 'total_boxes',
+            'total_quantity' => 'total_quantity',
+            'nearest_expiry_date' => 'nearest_expiry_date'
+        ];
 
-        $sort_dir = strtoupper($sort_dir);
-        if (!in_array($sort_dir, ['ASC', 'DESC'])) {
-            $sort_dir = 'ASC';
-        }
+        // 验证并获取安全的排序列名
+        $order_column = $sort_column_map[$sort_by] ?? 'i.product_name';
+
+        // 验证排序方向（只允许ASC或DESC）
+        $sort_direction_map = ['asc' => 'ASC', 'desc' => 'DESC'];
+        $order_direction = $sort_direction_map[strtolower($sort_dir)] ?? 'ASC';
 
         $sql = "
             SELECT
@@ -1396,13 +1409,8 @@ function mrs_get_true_inventory_summary($pdo, $product_name = '', $sort_by = 'sk
             $sql .= " AND i.product_name = :product_name";
         }
 
-        // 构建排序子句
-        $order_column = $sort_by;
-        if ($sort_by === 'sku_name') {
-            $order_column = 'i.product_name';
-        }
-
-        $sql .= " GROUP BY i.product_name ORDER BY {$order_column} {$sort_dir}";
+        // [FIX] 使用已验证的安全变量，不直接拼接用户输入
+        $sql .= " GROUP BY i.product_name ORDER BY {$order_column} {$order_direction}";
 
         // 对于到期日期排序，NULL值放在最后
         if ($sort_by === 'nearest_expiry_date') {
@@ -1433,16 +1441,32 @@ function mrs_get_true_inventory_summary($pdo, $product_name = '', $sort_by = 'sk
  */
 function mrs_get_true_inventory_detail($pdo, $product_name, $order_by = 'fifo') {
     try {
-        // 根据排序参数构建ORDER BY子句
-        $order_clause = match($order_by) {
-            'batch' => 'l.batch_name ASC, l.inbound_time ASC',
-            'expiry_date_asc' => 'i.expiry_date ASC, l.inbound_time ASC',
-            'expiry_date_desc' => 'i.expiry_date DESC, l.inbound_time ASC',
-            'inbound_time_desc' => 'l.inbound_time DESC',
-            'days_in_stock_asc' => 'l.inbound_time DESC',
-            'days_in_stock_desc' => 'l.inbound_time ASC',
-            default => 'l.inbound_time ASC' // fifo 或 inbound_time_asc
-        };
+        // [FIX] 根据排序参数构建ORDER BY子句 (使用 switch 以兼容 PHP 7.x)
+        switch($order_by) {
+            case 'batch':
+                $order_clause = 'l.batch_name ASC, l.inbound_time ASC';
+                break;
+            case 'expiry_date_asc':
+                $order_clause = 'i.expiry_date ASC, l.inbound_time ASC';
+                break;
+            case 'expiry_date_desc':
+                $order_clause = 'i.expiry_date DESC, l.inbound_time ASC';
+                break;
+            case 'inbound_time_desc':
+                $order_clause = 'l.inbound_time DESC';
+                break;
+            case 'days_in_stock_asc':
+                $order_clause = 'l.inbound_time DESC';
+                break;
+            case 'days_in_stock_desc':
+                $order_clause = 'l.inbound_time ASC';
+                break;
+            case 'fifo':
+            case 'inbound_time_asc':
+            default:
+                $order_clause = 'l.inbound_time ASC'; // fifo 或 inbound_time_asc
+                break;
+        }
 
         // 首先获取包含该产品的所有包裹
         $sql = "
@@ -1919,5 +1943,206 @@ function mrs_get_unified_inbound_report($pdo, $start_date, $end_date) {
         mrs_log('Failed to get unified inbound report: ' . $e->getMessage(), 'ERROR');
         return [];
     }
+}
+
+// ============================================
+// 工具函数 (Critical Fixes)
+// ============================================
+
+/**
+ * 根据SKU ID获取SKU详情
+ * @param int $sku_id SKU ID
+ * @return array|null SKU详情或null
+ */
+function get_sku_by_id($sku_id) {
+    try {
+        $pdo = get_mrs_db_connection();
+        $stmt = $pdo->prepare("
+            SELECT sku_id, sku_name, brand_name, category_id,
+                   standard_unit, case_unit_name, case_to_standard_qty,
+                   status, remark
+            FROM mrs_sku
+            WHERE sku_id = :sku_id
+            LIMIT 1
+        ");
+        $stmt->execute(['sku_id' => $sku_id]);
+        return $stmt->fetch();
+    } catch (PDOException $e) {
+        mrs_log('Failed to get SKU by ID: ' . $e->getMessage(), 'ERROR');
+        return null;
+    }
+}
+
+/**
+ * 归一化数量到标准单位
+ * @param float $case_qty 箱数
+ * @param float $single_qty 散装数
+ * @param float $case_spec 箱规格(每箱含多少个标准单位)
+ * @return int 标准单位总数(取整)
+ */
+function normalize_quantity_to_storage($case_qty, $single_qty, $case_spec) {
+    $raw_total = ($case_qty * $case_spec) + $single_qty;
+    return (int)round($raw_total, 0);  // 强制取整，防止浮点精度问题
+}
+
+/**
+ * 生成出库单号
+ * @param string $date 日期 (Y-m-d)
+ * @return string 出库单号 (格式: OUT20251220XXXX)
+ */
+function generate_outbound_code($date) {
+    try {
+        $pdo = get_mrs_db_connection();
+        $datePrefix = date('Ymd', strtotime($date));
+
+        // 查询当天最大序号
+        $stmt = $pdo->prepare("
+            SELECT MAX(CAST(SUBSTRING(outbound_code, -4) AS UNSIGNED)) as max_seq
+            FROM mrs_outbound_order
+            WHERE outbound_code LIKE :prefix
+        ");
+        $stmt->execute(['prefix' => "OUT{$datePrefix}%"]);
+        $result = $stmt->fetch();
+
+        $nextSeq = ($result['max_seq'] ?? 0) + 1;
+        $code = sprintf("OUT%s%04d", $datePrefix, $nextSeq);
+
+        mrs_log("Generated outbound code: {$code}", 'INFO');
+        return $code;
+    } catch (PDOException $e) {
+        mrs_log('Failed to generate outbound code: ' . $e->getMessage(), 'ERROR');
+        // 降级方案：使用随机数
+        return 'OUT' . date('Ymd', strtotime($date)) . rand(1000, 9999);
+    }
+}
+
+/**
+ * 生成批次编号
+ * @param string $date 日期 (Y-m-d)
+ * @return string 批次编号 (格式: BATCH20251220XXXX)
+ */
+function generate_batch_code($date) {
+    try {
+        $pdo = get_mrs_db_connection();
+        $datePrefix = date('Ymd', strtotime($date));
+
+        // 查询当天最大序号
+        $stmt = $pdo->prepare("
+            SELECT MAX(CAST(SUBSTRING(batch_code, -4) AS UNSIGNED)) as max_seq
+            FROM mrs_batch
+            WHERE batch_code LIKE :prefix
+        ");
+        $stmt->execute(['prefix' => "BATCH{$datePrefix}%"]);
+        $result = $stmt->fetch();
+
+        $nextSeq = ($result['max_seq'] ?? 0) + 1;
+        $code = sprintf("BATCH%s%04d", $datePrefix, $nextSeq);
+
+        mrs_log("Generated batch code: {$code}", 'INFO');
+        return $code;
+    } catch (PDOException $e) {
+        mrs_log('Failed to generate batch code: ' . $e->getMessage(), 'ERROR');
+        // 降级方案：使用随机数
+        return 'BATCH' . date('Ymd', strtotime($date)) . rand(1000, 9999);
+    }
+}
+
+/**
+ * 验证和净化文本输入（增强版）
+ * @param string $input 用户输入
+ * @param int $max_length 最大长度限制（默认使用配置常量）
+ * @return string 净化后的文本
+ */
+function mrs_sanitize_input($input, $max_length = null): string {
+    $max_length = $max_length ?? MRS_MAX_INPUT_LENGTH;
+    if (!is_string($input)) {
+        return '';
+    }
+
+    // 移除首尾空格
+    $input = trim($input);
+
+    // 限制长度
+    if ($max_length > 0 && mb_strlen($input, 'UTF-8') > $max_length) {
+        $input = mb_substr($input, 0, $max_length, 'UTF-8');
+    }
+
+    // 移除控制字符（保留换行和制表符）
+    $input = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', $input);
+
+    return $input;
+}
+
+/**
+ * 验证枚举值
+ * @param mixed $value 待验证的值
+ * @param array $allowed_values 允许的值列表
+ * @param mixed $default 默认值
+ * @return mixed 验证后的值
+ */
+function mrs_validate_enum($value, array $allowed_values, $default = null) {
+    return in_array($value, $allowed_values, true) ? $value : $default;
+}
+
+/**
+ * 验证和净化整数输入
+ * @param mixed $input 用户输入
+ * @param int $min 最小值
+ * @param int $max 最大值
+ * @param int $default 默认值
+ * @return int 验证后的整数
+ */
+function mrs_sanitize_int($input, $min = 0, $max = PHP_INT_MAX, $default = 0): int {
+    $value = filter_var($input, FILTER_VALIDATE_INT);
+
+    if ($value === false) {
+        return $default;
+    }
+
+    return max($min, min($max, $value));
+}
+
+/**
+ * 验证日期格式
+ * @param string $date 日期字符串
+ * @param string $format 期望的日期格式
+ * @return string|null 验证后的日期或null
+ */
+function mrs_validate_date($date, $format = 'Y-m-d') {
+    if (empty($date)) {
+        return null;
+    }
+
+    $d = DateTime::createFromFormat($format, $date);
+    return ($d && $d->format($format) === $date) ? $date : null;
+}
+
+/**
+ * 获取并验证分页参数
+ * @param int $default_limit 默认每页记录数（默认使用配置常量）
+ * @param int $max_limit 最大每页记录数（默认使用配置常量）
+ * @param string $limit_param 限制参数名（支持'limit'或'page_size'）
+ * @return array ['page', 'limit', 'offset'] 验证后的分页参数
+ */
+function mrs_get_pagination_params($default_limit = null, $max_limit = null, $limit_param = 'limit'): array {
+    // 使用配置常量作为默认值
+    $default_limit = $default_limit ?? MRS_DEFAULT_PAGE_SIZE;
+    $max_limit = $max_limit ?? MRS_MAX_PAGE_SIZE;
+
+    // 验证页码
+    $page = mrs_sanitize_int($_GET['page'] ?? 1, 1, MRS_MAX_PAGE_NUMBER, 1);
+
+    // 验证每页记录数（支持'limit'或'page_size'参数名）
+    $limit_value = $_GET[$limit_param] ?? $_GET['limit'] ?? $_GET['page_size'] ?? $default_limit;
+    $limit = mrs_sanitize_int($limit_value, 1, $max_limit, $default_limit);
+
+    // 计算偏移量
+    $offset = ($page - 1) * $limit;
+
+    return [
+        'page' => $page,
+        'limit' => $limit,
+        'offset' => $offset
+    ];
 }
 

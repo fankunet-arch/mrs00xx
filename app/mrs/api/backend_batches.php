@@ -18,26 +18,30 @@ try {
     // 获取数据库连接
     $pdo = get_db_connection();
 
-    // 获取筛选参数
-    $search = $_GET['search'] ?? '';
-    $status = $_GET['status'] ?? '';
-    $dateStart = $_GET['date_start'] ?? '';
-    $dateEnd = $_GET['date_end'] ?? '';
-    $page = max(1, intval($_GET['page'] ?? 1));
-    $pageSize = max(1, min(100, intval($_GET['page_size'] ?? 20)));
-    $offset = ($page - 1) * $pageSize;
+    // [FIX] 获取并验证筛选参数
+    $search = mrs_sanitize_input($_GET['search'] ?? '', MRS_MAX_SEARCH_LENGTH);
+    $status = mrs_validate_enum(
+        $_GET['status'] ?? '',
+        ['draft', 'receiving', 'pending_merge', 'confirmed', 'closed', ''],
+        ''
+    );
+    $dateStart = mrs_validate_date($_GET['date_start'] ?? '');
+    $dateEnd = mrs_validate_date($_GET['date_end'] ?? '');
+
+    // 使用通用分页函数（使用默认常量配置）
+    $pagination = mrs_get_pagination_params(null, null, 'page_size');
+    $page = $pagination['page'];
+    $pageSize = $pagination['limit'];
+    $offset = $pagination['offset'];
 
     // 构建SQL查询
     $sql = "SELECT * FROM mrs_batch WHERE 1=1";
     $params = [];
 
     if ($search) {
-        // [FIX] Use unique parameter names to avoid PDO reuse issues on some drivers
-        $sql .= " AND (batch_code LIKE :search1 OR location_name LIKE :search2 OR remark LIKE :search3)";
-        $searchTerm = '%' . $search . '%';
-        $params['search1'] = $searchTerm;
-        $params['search2'] = $searchTerm;
-        $params['search3'] = $searchTerm;
+        // [FIX] 使用单个参数，MySQL支持在多个地方使用同一个命名参数
+        $sql .= " AND (batch_code LIKE :search OR location_name LIKE :search OR remark LIKE :search)";
+        $params['search'] = '%' . $search . '%';
     }
 
     if ($status) {
@@ -75,7 +79,7 @@ try {
     // 获取总数
     $countSql = "SELECT COUNT(*) FROM mrs_batch WHERE 1=1";
     if ($search) {
-        $countSql .= " AND (batch_code LIKE :search1 OR location_name LIKE :search2 OR remark LIKE :search3)";
+        $countSql .= " AND (batch_code LIKE :search OR location_name LIKE :search OR remark LIKE :search)";
     }
     if ($status) {
         $countSql .= " AND batch_status = :status";

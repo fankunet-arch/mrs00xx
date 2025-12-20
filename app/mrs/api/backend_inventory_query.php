@@ -33,7 +33,7 @@ require_once __DIR__ . '/../config_mrs/env_mrs.php';
 require_once MRS_LIB_PATH . '/mrs_lib.php';
 
 // Require Login
-require_login();
+mrs_require_login();
 
 try {
     $skuId = $_GET['sku_id'] ?? null;
