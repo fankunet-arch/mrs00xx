@@ -1356,16 +1356,20 @@ function mrs_delete_destination($pdo, $destination_id) {
  */
 function mrs_get_true_inventory_summary($pdo, $product_name = '', $sort_by = 'sku_name', $sort_dir = 'asc') {
     try {
-        // 验证排序参数
-        $valid_sorts = ['sku_name', 'total_boxes', 'total_quantity', 'nearest_expiry_date'];
-        if (!in_array($sort_by, $valid_sorts)) {
-            $sort_by = 'sku_name';
-        }
+        // [FIX] 使用映射表，更安全地处理排序参数，避免SQL注入风险
+        $sort_column_map = [
+            'sku_name' => 'i.product_name',
+            'total_boxes' => 'total_boxes',
+            'total_quantity' => 'total_quantity',
+            'nearest_expiry_date' => 'nearest_expiry_date'
+        ];
 
-        $sort_dir = strtoupper($sort_dir);
-        if (!in_array($sort_dir, ['ASC', 'DESC'])) {
-            $sort_dir = 'ASC';
-        }
+        // 验证并获取安全的排序列名
+        $order_column = $sort_column_map[$sort_by] ?? 'i.product_name';
+
+        // 验证排序方向（只允许ASC或DESC）
+        $sort_direction_map = ['asc' => 'ASC', 'desc' => 'DESC'];
+        $order_direction = $sort_direction_map[strtolower($sort_dir)] ?? 'ASC';
 
         $sql = "
             SELECT
@@ -1396,13 +1400,8 @@ function mrs_get_true_inventory_summary($pdo, $product_name = '', $sort_by = 'sk
             $sql .= " AND i.product_name = :product_name";
         }
 
-        // 构建排序子句
-        $order_column = $sort_by;
-        if ($sort_by === 'sku_name') {
-            $order_column = 'i.product_name';
-        }
-
-        $sql .= " GROUP BY i.product_name ORDER BY {$order_column} {$sort_dir}";
+        // [FIX] 使用已验证的安全变量，不直接拼接用户输入
+        $sql .= " GROUP BY i.product_name ORDER BY {$order_column} {$order_direction}";
 
         // 对于到期日期排序，NULL值放在最后
         if ($sort_by === 'nearest_expiry_date') {
@@ -2037,5 +2036,74 @@ function generate_batch_code($date) {
         // 降级方案：使用随机数
         return 'BATCH' . date('Ymd', strtotime($date)) . rand(1000, 9999);
     }
+}
+
+/**
+ * 验证和净化文本输入（增强版）
+ * @param string $input 用户输入
+ * @param int $max_length 最大长度限制
+ * @return string 净化后的文本
+ */
+function mrs_sanitize_input($input, $max_length = 200) {
+    if (!is_string($input)) {
+        return '';
+    }
+
+    // 移除首尾空格
+    $input = trim($input);
+
+    // 限制长度
+    if ($max_length > 0 && mb_strlen($input, 'UTF-8') > $max_length) {
+        $input = mb_substr($input, 0, $max_length, 'UTF-8');
+    }
+
+    // 移除控制字符（保留换行和制表符）
+    $input = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', $input);
+
+    return $input;
+}
+
+/**
+ * 验证枚举值
+ * @param mixed $value 待验证的值
+ * @param array $allowed_values 允许的值列表
+ * @param mixed $default 默认值
+ * @return mixed 验证后的值
+ */
+function mrs_validate_enum($value, array $allowed_values, $default = null) {
+    return in_array($value, $allowed_values, true) ? $value : $default;
+}
+
+/**
+ * 验证和净化整数输入
+ * @param mixed $input 用户输入
+ * @param int $min 最小值
+ * @param int $max 最大值
+ * @param int $default 默认值
+ * @return int 验证后的整数
+ */
+function mrs_sanitize_int($input, $min = 0, $max = PHP_INT_MAX, $default = 0) {
+    $value = filter_var($input, FILTER_VALIDATE_INT);
+
+    if ($value === false) {
+        return $default;
+    }
+
+    return max($min, min($max, $value));
+}
+
+/**
+ * 验证日期格式
+ * @param string $date 日期字符串
+ * @param string $format 期望的日期格式
+ * @return string|null 验证后的日期或null
+ */
+function mrs_validate_date($date, $format = 'Y-m-d') {
+    if (empty($date)) {
+        return null;
+    }
+
+    $d = DateTime::createFromFormat($format, $date);
+    return ($d && $d->format($format) === $date) ? $date : null;
 }
 

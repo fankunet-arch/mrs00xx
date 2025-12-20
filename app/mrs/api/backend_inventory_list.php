@@ -18,11 +18,11 @@ require_once MRS_LIB_PATH . '/mrs_lib.php';
 mrs_require_login();
 
 try {
-    // 获取筛选参数
-    $search = $_GET['search'] ?? '';
-    $categoryId = $_GET['category_id'] ?? '';
-    $page = max(1, intval($_GET['page'] ?? 1)); // 当前页码，默认第1页
-    $limit = max(1, min(100, intval($_GET['limit'] ?? 20))); // 每页记录数，默认20，最大100
+    // [FIX] 获取并验证筛选参数
+    $search = mrs_sanitize_input($_GET['search'] ?? '', 100);
+    $categoryId = mrs_sanitize_int($_GET['category_id'] ?? '', 0, PHP_INT_MAX, 0);
+    $page = mrs_sanitize_int($_GET['page'] ?? 1, 1, 10000, 1);
+    $limit = mrs_sanitize_int($_GET['limit'] ?? 20, 1, 100, 20);
     $offset = ($page - 1) * $limit;
 
     // 获取数据库连接
