@@ -31,7 +31,9 @@ $allowed_actions = [
     'inventory_list',       // 库存列表
     'inventory_detail',     // 库存明细
     'inbound',              // 入库页面
+    'inbound_split',        // 拆分入库页面
     'inbound_save',         // 保存入库
+    'inbound_split_save',   // 拆分入库保存
     'outbound',             // 出库页面
     'outbound_save',        // 保存出库
     'partial_outbound',     // 拆零出货
@@ -74,6 +76,7 @@ if (!in_array($action, $allowed_actions)) {
 $api_actions = [
     'do_login',
     'inbound_save',
+    'inbound_split_save',
     'outbound_save',
     'partial_outbound',
     'usage_statistics',

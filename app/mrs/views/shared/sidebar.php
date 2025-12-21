@@ -65,18 +65,19 @@ $menu_items = [
     display: flex;
     align-items: center;
     padding: 10px 15px;
-    color: #666;
+    color: #e5edff;
     font-size: 13px;
-    font-weight: 600;
+    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     cursor: pointer;
     user-select: none;
     transition: all 0.2s;
+    border-radius: 6px;
 }
 .nav-group-title:hover {
-    background: rgba(33, 150, 243, 0.05);
-    color: #2196f3;
+    background: rgba(255, 255, 255, 0.08);
+    color: #ffffff;
 }
 .nav-group-title .icon {
     margin-right: 8px;
@@ -125,13 +126,13 @@ $menu_items = [
                 }
             }
             ?>
-            <div class="nav-group <?= !$has_active ? '' : '' ?>">
+            <div class="nav-group <?= $has_active ? '' : 'collapsed' ?>" data-active="<?= $has_active ? '1' : '0' ?>">
                 <div class="nav-group-title" onclick="toggleNavGroup(this)">
                     <span class="icon"><?= $group['icon'] ?></span>
                     <span><?= htmlspecialchars($group['title']) ?></span>
                     <span class="toggle">▼</span>
                 </div>
-                <div class="nav-group-items" style="max-height: 500px;">
+                <div class="nav-group-items" style="max-height: <?= $has_active ? '500px' : '0' ?>;">
                     <?php foreach ($group['items'] as $item): ?>
                         <a href="/mrs/ap/index.php?action=<?= $item['action'] ?>"
                            class="nav-link <?= $current_action === $item['action'] ? 'active' : '' ?>">
@@ -159,17 +160,31 @@ $menu_items = [
 <script>
 function toggleNavGroup(element) {
     const navGroup = element.parentElement;
-    navGroup.classList.toggle('collapsed');
+    const items = navGroup.querySelector('.nav-group-items');
+    const shouldExpand = navGroup.classList.contains('collapsed');
+
+    if (shouldExpand) {
+        items.style.maxHeight = items.scrollHeight + 'px';
+        navGroup.classList.remove('collapsed');
+    } else {
+        items.style.maxHeight = '0';
+        navGroup.classList.add('collapsed');
+    }
 }
 
 // 页面加载时展开包含活动项的分组
 document.addEventListener('DOMContentLoaded', function() {
-    const activeLink = document.querySelector('.nav-link.active');
-    if (activeLink) {
-        const navGroup = activeLink.closest('.nav-group');
-        if (navGroup) {
+    document.querySelectorAll('.nav-group').forEach(function(navGroup) {
+        const items = navGroup.querySelector('.nav-group-items');
+        const shouldExpand = navGroup.dataset.active === '1';
+
+        if (shouldExpand) {
             navGroup.classList.remove('collapsed');
+            items.style.maxHeight = items.scrollHeight + 'px';
+        } else {
+            navGroup.classList.add('collapsed');
+            items.style.maxHeight = '0';
         }
-    }
+    });
 });
 </script>
