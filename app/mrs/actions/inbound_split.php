@@ -10,7 +10,7 @@ if (!defined('MRS_ENTRY')) {
 }
 
 // 需要登录
-mrs_mrs_require_login();
+mrs_require_login();
 
 $page_title = "拆分入库";
 $action = 'inbound_split';
