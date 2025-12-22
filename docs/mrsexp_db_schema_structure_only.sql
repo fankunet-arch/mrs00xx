@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- 主机： mhdlmskp2kpxguj.mysql.db
--- 生成日期： 2025-12-22 01:56:33
+-- 生成日期： 2025-12-23 00:26:57
 -- 服务器版本： 8.4.6-6
 -- PHP 版本： 8.1.33
 
@@ -202,6 +202,69 @@ CREATE TABLE `mrs_category` (
 -- --------------------------------------------------------
 
 --
+-- 表的结构 `mrs_count_record`
+--
+
+DROP TABLE IF EXISTS `mrs_count_record`;
+CREATE TABLE `mrs_count_record` (
+  `record_id` bigint UNSIGNED NOT NULL COMMENT '记录ID',
+  `session_id` int UNSIGNED NOT NULL COMMENT '清点任务ID',
+  `box_number` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '箱号',
+  `ledger_id` int UNSIGNED DEFAULT NULL COMMENT '关联台账ID（系统中存在时）',
+  `system_content` text COLLATE utf8mb4_unicode_ci COMMENT '系统内容备注',
+  `system_total_qty` decimal(10,2) DEFAULT NULL COMMENT '系统记录总数量',
+  `check_mode` enum('box_only','with_qty') COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '清点模式：box_only=只确认箱子, with_qty=核对数量',
+  `has_multiple_items` tinyint(1) DEFAULT '0' COMMENT '是否有多件物品（0=单一物品,1=多件物品）',
+  `match_status` enum('found','not_found','matched','diff') COLLATE utf8mb4_unicode_ci DEFAULT 'found' COMMENT '匹配状态：found=找到箱子,not_found=系统无此箱,matched=数量一致,diff=数量有差异',
+  `is_new_box` tinyint(1) DEFAULT '0' COMMENT '是否为现场新录入的箱子',
+  `remark` text COLLATE utf8mb4_unicode_ci COMMENT '备注',
+  `counted_by` varchar(60) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '清点人',
+  `counted_at` datetime(6) DEFAULT CURRENT_TIMESTAMP(6) COMMENT '清点时间'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='MRS-清点记录表';
+
+-- --------------------------------------------------------
+
+--
+-- 表的结构 `mrs_count_record_item`
+--
+
+DROP TABLE IF EXISTS `mrs_count_record_item`;
+CREATE TABLE `mrs_count_record_item` (
+  `item_id` bigint UNSIGNED NOT NULL COMMENT '明细ID',
+  `record_id` bigint UNSIGNED NOT NULL COMMENT '清点记录ID',
+  `sku_id` int UNSIGNED DEFAULT NULL COMMENT 'SKU ID',
+  `sku_name` varchar(200) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'SKU名称',
+  `system_qty` decimal(10,2) DEFAULT NULL COMMENT '系统数量',
+  `actual_qty` decimal(10,2) NOT NULL COMMENT '实际数量',
+  `diff_qty` decimal(10,2) DEFAULT '0.00' COMMENT '差异数量（actual - system）',
+  `unit` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT '件' COMMENT '单位',
+  `remark` text COLLATE utf8mb4_unicode_ci COMMENT '备注',
+  `created_at` datetime(6) DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='MRS-清点记录明细表';
+
+-- --------------------------------------------------------
+
+--
+-- 表的结构 `mrs_count_session`
+--
+
+DROP TABLE IF EXISTS `mrs_count_session`;
+CREATE TABLE `mrs_count_session` (
+  `session_id` int UNSIGNED NOT NULL COMMENT '清点任务ID',
+  `session_name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '清点名称',
+  `status` enum('counting','completed','cancelled') COLLATE utf8mb4_unicode_ci DEFAULT 'counting' COMMENT '状态',
+  `total_counted` int DEFAULT '0' COMMENT '已清点箱数',
+  `start_time` datetime(6) DEFAULT CURRENT_TIMESTAMP(6) COMMENT '开始时间',
+  `end_time` datetime(6) DEFAULT NULL COMMENT '结束时间',
+  `remark` text COLLATE utf8mb4_unicode_ci COMMENT '备注',
+  `created_by` varchar(60) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '创建人',
+  `created_at` datetime(6) DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
+  `updated_at` datetime(6) DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='MRS-清点任务表';
+
+-- --------------------------------------------------------
+
+--
 -- 表的结构 `mrs_destinations`
 --
 
@@ -230,12 +293,12 @@ CREATE TABLE `mrs_destinations` (
 --
 DROP VIEW IF EXISTS `mrs_destination_stats`;
 CREATE TABLE `mrs_destination_stats` (
-`destination_id` int unsigned
+`days_used` bigint
+,`destination_id` int unsigned
 ,`destination_name` varchar(100)
-,`type_name` varchar(50)
-,`total_shipments` bigint
-,`days_used` bigint
 ,`last_used_time` datetime
+,`total_shipments` bigint
+,`type_name` varchar(50)
 );
 
 -- --------------------------------------------------------
@@ -551,6 +614,31 @@ ALTER TABLE `mrs_category`
   ADD KEY `idx_category_code` (`category_code`);
 
 --
+-- 表的索引 `mrs_count_record`
+--
+ALTER TABLE `mrs_count_record`
+  ADD PRIMARY KEY (`record_id`),
+  ADD KEY `idx_session` (`session_id`),
+  ADD KEY `idx_box` (`box_number`),
+  ADD KEY `idx_ledger` (`ledger_id`);
+
+--
+-- 表的索引 `mrs_count_record_item`
+--
+ALTER TABLE `mrs_count_record_item`
+  ADD PRIMARY KEY (`item_id`),
+  ADD KEY `idx_record` (`record_id`),
+  ADD KEY `idx_sku` (`sku_id`);
+
+--
+-- 表的索引 `mrs_count_session`
+--
+ALTER TABLE `mrs_count_session`
+  ADD PRIMARY KEY (`session_id`),
+  ADD KEY `idx_status` (`status`),
+  ADD KEY `idx_created_at` (`created_at`);
+
+--
 -- 表的索引 `mrs_destinations`
 --
 ALTER TABLE `mrs_destinations`
@@ -721,6 +809,24 @@ ALTER TABLE `mrs_category`
   MODIFY `category_id` int UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '分类ID';
 
 --
+-- 使用表AUTO_INCREMENT `mrs_count_record`
+--
+ALTER TABLE `mrs_count_record`
+  MODIFY `record_id` bigint UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '记录ID';
+
+--
+-- 使用表AUTO_INCREMENT `mrs_count_record_item`
+--
+ALTER TABLE `mrs_count_record_item`
+  MODIFY `item_id` bigint UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '明细ID';
+
+--
+-- 使用表AUTO_INCREMENT `mrs_count_session`
+--
+ALTER TABLE `mrs_count_session`
+  MODIFY `session_id` int UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '清点任务ID';
+
+--
 -- 使用表AUTO_INCREMENT `mrs_destinations`
 --
 ALTER TABLE `mrs_destinations`
@@ -844,6 +950,18 @@ ALTER TABLE `mrs_batch_expected_item`
 ALTER TABLE `mrs_batch_raw_record`
   ADD CONSTRAINT `fk_raw_batch` FOREIGN KEY (`batch_id`) REFERENCES `mrs_batch` (`batch_id`) ON DELETE CASCADE,
   ADD CONSTRAINT `fk_raw_sku` FOREIGN KEY (`matched_sku_id`) REFERENCES `mrs_sku` (`sku_id`) ON DELETE SET NULL;
+
+--
+-- 限制表 `mrs_count_record`
+--
+ALTER TABLE `mrs_count_record`
+  ADD CONSTRAINT `fk_count_record_session` FOREIGN KEY (`session_id`) REFERENCES `mrs_count_session` (`session_id`) ON DELETE CASCADE;
+
+--
+-- 限制表 `mrs_count_record_item`
+--
+ALTER TABLE `mrs_count_record_item`
+  ADD CONSTRAINT `fk_count_item_record` FOREIGN KEY (`record_id`) REFERENCES `mrs_count_record` (`record_id`) ON DELETE CASCADE;
 
 --
 -- 限制表 `mrs_destinations`
