@@ -249,6 +249,11 @@ body {
     gap: 8px;
 }
 
+.autocomplete-wrapper {
+    flex: 1;
+    position: relative;
+}
+
 .search-group .form-control {
     flex: 1;
 }
@@ -256,6 +261,75 @@ body {
 .search-group .btn {
     flex-shrink: 0;
     min-width: 80px;
+}
+
+/* 自动完成建议列表 */
+.autocomplete-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 999;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-top: none;
+    border-radius: 0 0 6px 6px;
+    max-height: 400px;
+    overflow-y: auto;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    margin-top: -1px;
+}
+
+.autocomplete-item {
+    padding: 12px;
+    cursor: pointer;
+    border-bottom: 1px solid #f0f0f0;
+    transition: background-color 0.2s;
+}
+
+.autocomplete-item:last-child {
+    border-bottom: none;
+}
+
+.autocomplete-item:hover,
+.autocomplete-item.active {
+    background-color: #f8f9fa;
+}
+
+.autocomplete-box-number {
+    font-weight: 600;
+    color: #1a73e8;
+    font-size: 16px;
+    margin-bottom: 4px;
+}
+
+.autocomplete-details {
+    font-size: 14px;
+    color: #666;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.autocomplete-detail-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.autocomplete-detail-label {
+    color: #999;
+}
+
+.autocomplete-detail-value {
+    color: #333;
+}
+
+.autocomplete-no-results {
+    padding: 12px;
+    text-align: center;
+    color: #999;
+    font-size: 14px;
 }
 
 /* === 清点任务卡片 === */

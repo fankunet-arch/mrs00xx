@@ -9,9 +9,12 @@
 
     // === 全局变量 ===
     let currentBoxData = null; // 当前搜索到的箱子数据
+    let autocompleteTimeout = null; // 自动完成搜索延时
+    let currentSuggestionIndex = -1; // 当前选中的建议索引
 
     // === DOM 元素 ===
     const boxNumberInput = document.getElementById('box-number-input');
+    const autocompleteSuggestions = document.getElementById('autocomplete-suggestions');
     const btnSearch = document.getElementById('btn-search');
     const resultSection = document.getElementById('result-section');
     const searchResultContainer = document.getElementById('search-result-container');
@@ -116,10 +119,143 @@
     if (boxNumberInput) {
         boxNumberInput.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
+                e.preventDefault();
+                // 如果有选中的建议，选择它
+                if (currentSuggestionIndex >= 0) {
+                    const items = autocompleteSuggestions.querySelectorAll('.autocomplete-item');
+                    if (items[currentSuggestionIndex]) {
+                        items[currentSuggestionIndex].click();
+                        return;
+                    }
+                }
+                // 否则直接搜索
+                hideAutocomplete();
                 searchBox();
             }
         });
+
+        // 实时搜索自动完成
+        boxNumberInput.addEventListener('input', function(e) {
+            const keyword = this.value.trim();
+
+            // 重置建议索引
+            currentSuggestionIndex = -1;
+
+            // 如果输入为空，隐藏建议列表
+            if (keyword.length === 0) {
+                hideAutocomplete();
+                return;
+            }
+
+            // 清除之前的延时
+            clearTimeout(autocompleteTimeout);
+
+            // 延迟300ms后搜索（防抖）
+            autocompleteTimeout = setTimeout(() => {
+                fetchAutocomplete(keyword);
+            }, 300);
+        });
+
+        // 键盘导航（上下键）
+        boxNumberInput.addEventListener('keydown', function(e) {
+            if (!autocompleteSuggestions || autocompleteSuggestions.style.display === 'none') {
+                return;
+            }
+
+            const items = autocompleteSuggestions.querySelectorAll('.autocomplete-item');
+            if (items.length === 0) return;
+
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                currentSuggestionIndex = Math.min(currentSuggestionIndex + 1, items.length - 1);
+                updateSuggestionHighlight(items);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                currentSuggestionIndex = Math.max(currentSuggestionIndex - 1, -1);
+                updateSuggestionHighlight(items);
+            } else if (e.key === 'Escape') {
+                hideAutocomplete();
+            }
+        });
     }
+
+    // === 自动完成搜索 ===
+    function fetchAutocomplete(keyword) {
+        fetch('/mrs/index.php?action=count_autocomplete_box&keyword=' + encodeURIComponent(keyword))
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.data) {
+                    displayAutocomplete(data.data);
+                }
+            })
+            .catch(error => {
+                console.error('Autocomplete error:', error);
+            });
+    }
+
+    function displayAutocomplete(suggestions) {
+        if (!suggestions || suggestions.length === 0) {
+            autocompleteSuggestions.innerHTML = '<div class="autocomplete-no-results">没有找到匹配的箱子</div>';
+            autocompleteSuggestions.style.display = 'block';
+            return;
+        }
+
+        let html = '';
+        suggestions.forEach((item, index) => {
+            html += `
+                <div class="autocomplete-item" data-box-number="${escapeHtml(item.box_number)}" data-index="${index}">
+                    <div class="autocomplete-box-number">${escapeHtml(item.box_number)}</div>
+                    <div class="autocomplete-details">
+                        ${item.sku_name ? `<div class="autocomplete-detail-item"><span class="autocomplete-detail-label">SKU:</span><span class="autocomplete-detail-value">${escapeHtml(item.sku_name)}</span></div>` : ''}
+                        ${item.content_note ? `<div class="autocomplete-detail-item"><span class="autocomplete-detail-label">内容:</span><span class="autocomplete-detail-value">${escapeHtml(item.content_note)}</span></div>` : ''}
+                        ${item.quantity ? `<div class="autocomplete-detail-item"><span class="autocomplete-detail-label">数量:</span><span class="autocomplete-detail-value">${item.quantity}${escapeHtml(item.standard_unit || '件')}</span></div>` : ''}
+                        ${item.batch_name ? `<div class="autocomplete-detail-item"><span class="autocomplete-detail-label">批次:</span><span class="autocomplete-detail-value">${escapeHtml(item.batch_name)}</span></div>` : '<div class="autocomplete-detail-item"><span class="autocomplete-detail-value" style="color:#ff9800;">零散入库</span></div>'}
+                    </div>
+                </div>
+            `;
+        });
+
+        autocompleteSuggestions.innerHTML = html;
+        autocompleteSuggestions.style.display = 'block';
+
+        // 绑定点击事件
+        const items = autocompleteSuggestions.querySelectorAll('.autocomplete-item');
+        items.forEach(item => {
+            item.addEventListener('click', function() {
+                const boxNumber = this.getAttribute('data-box-number');
+                boxNumberInput.value = boxNumber;
+                hideAutocomplete();
+                // 自动触发搜索
+                searchBox();
+            });
+        });
+    }
+
+    function updateSuggestionHighlight(items) {
+        items.forEach((item, index) => {
+            if (index === currentSuggestionIndex) {
+                item.classList.add('active');
+                item.scrollIntoView({ block: 'nearest' });
+            } else {
+                item.classList.remove('active');
+            }
+        });
+    }
+
+    function hideAutocomplete() {
+        if (autocompleteSuggestions) {
+            autocompleteSuggestions.style.display = 'none';
+            autocompleteSuggestions.innerHTML = '';
+        }
+        currentSuggestionIndex = -1;
+    }
+
+    // 点击页面其他地方关闭自动完成
+    document.addEventListener('click', function(e) {
+        if (e.target !== boxNumberInput && !autocompleteSuggestions.contains(e.target)) {
+            hideAutocomplete();
+        }
+    });
 
     // === 显示搜索结果 ===
     function displaySearchResults(results) {

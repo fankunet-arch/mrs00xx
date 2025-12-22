@@ -25,6 +25,7 @@ $allowed_actions = [
     'count_create_session',    // 创建清点任务API
     'count_get_sessions',      // 获取任务列表API
     'count_search_box',        // 搜索箱号API
+    'count_autocomplete_box',  // 自动完成搜索箱号API
     'count_save_record',       // 保存清点记录API
     'count_finish_session',    // 完成清点任务API
     'count_get_recent',        // 获取最近记录API
@@ -48,6 +49,7 @@ $api_actions = [
     'count_create_session',
     'count_get_sessions',
     'count_search_box',
+    'count_autocomplete_box',
     'count_save_record',
     'count_finish_session',
     'count_get_recent',

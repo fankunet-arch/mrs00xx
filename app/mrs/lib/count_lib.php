@@ -72,9 +72,9 @@ function mrs_count_get_sessions($pdo, $status = null, $limit = 20) {
 }
 
 /**
- * 搜索箱号
+ * 搜索箱号（精确查找，用于点击下拉建议后）
  * @param PDO $pdo
- * @param string $box_number 箱号（支持模糊搜索）
+ * @param string $box_number 箱号（精确匹配）
  * @return array|null 找到返回台账信息，否则返回null
  */
 function mrs_count_search_box($pdo, $box_number) {
@@ -87,21 +87,76 @@ function mrs_count_search_box($pdo, $box_number) {
                 l.quantity,
                 l.status,
                 l.inbound_time,
+                l.batch_name,
                 s.sku_id,
                 s.sku_name,
                 s.standard_unit
             FROM mrs_package_ledger l
             LEFT JOIN mrs_sku s ON l.sku_id = s.sku_id
-            WHERE l.box_number LIKE :box_number
+            WHERE l.box_number = :box_number
             AND l.status = 'in_stock'
             ORDER BY l.inbound_time DESC
+            LIMIT 1
+        ");
+
+        $stmt->execute([':box_number' => $box_number]);
+        $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        return $result;
+    } catch (PDOException $e) {
+        error_log("MRS Count: Search box failed - " . $e->getMessage());
+        return [];
+    }
+}
+
+/**
+ * 自动完成搜索箱号（支持模糊搜索）
+ * @param PDO $pdo
+ * @param string $keyword 关键词（搜索箱号、内容备注、SKU名称）
+ * @return array 返回建议列表
+ */
+function mrs_count_autocomplete_box($pdo, $keyword) {
+    try {
+        // 支持搜索：箱号、内容备注、SKU名称
+        // 包括零散入库的箱子（batch_name可以为NULL）
+        $stmt = $pdo->prepare("
+            SELECT
+                l.ledger_id,
+                l.box_number,
+                l.content_note,
+                l.quantity,
+                l.batch_name,
+                l.inbound_time,
+                s.sku_name,
+                s.standard_unit
+            FROM mrs_package_ledger l
+            LEFT JOIN mrs_sku s ON l.sku_id = s.sku_id
+            WHERE l.status = 'in_stock'
+            AND (
+                l.box_number LIKE :keyword
+                OR l.content_note LIKE :keyword
+                OR s.sku_name LIKE :keyword
+            )
+            ORDER BY
+                CASE
+                    WHEN l.box_number LIKE :keyword_start THEN 1
+                    WHEN l.box_number LIKE :keyword THEN 2
+                    ELSE 3
+                END,
+                l.inbound_time DESC
             LIMIT 10
         ");
 
-        $stmt->execute([':box_number' => '%' . $box_number . '%']);
+        $keyword_param = '%' . $keyword . '%';
+        $keyword_start = $keyword . '%';
+
+        $stmt->execute([
+            ':keyword' => $keyword_param,
+            ':keyword_start' => $keyword_start
+        ]);
+
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOException $e) {
-        error_log("MRS Count: Search box failed - " . $e->getMessage());
+        error_log("MRS Count: Autocomplete box failed - " . $e->getMessage());
         return [];
     }
 }
