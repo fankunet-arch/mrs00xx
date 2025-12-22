@@ -1431,6 +1431,256 @@ function mrs_get_monthly_summary($pdo, $month) {
 }
 ```
 
+### 4.7 仓库清点模块
+
+**模块说明**: 2025-12-22新增功能，提供手机端仓库盘点操作，支持箱级清点和数量级清点。
+
+#### 4.7.1 模块概述
+
+**业务目标**:
+- 不定期对仓库进行盘点，确认实物与系统记录一致性
+- 支持分多天完成清点任务
+- 支持箱级确认（只确认箱子存在）和数量级核对（核对箱内物品数量）
+- 自动生成盘盈盘亏报告
+
+**核心特性**:
+- ✅ 独立前台入口 (`/mrs/index.php`) - 手机端优化
+- ✅ 支持箱级清点（快速模式）
+- ✅ 支持数量级清点（详细模式）
+- ✅ 支持一箱多件物品的清点
+- ✅ 现场快速录入新箱功能
+- ✅ 自动生成未清点项报告
+- ✅ 完整的清点记录追溯
+
+#### 4.7.2 数据表设计
+
+**表1: mrs_count_session (清点任务表)**
+```sql
+CREATE TABLE `mrs_count_session` (
+  `session_id` INT UNSIGNED AUTO_INCREMENT,
+  `session_name` VARCHAR(100) NOT NULL COMMENT '清点名称',
+  `status` ENUM('counting', 'completed', 'cancelled') DEFAULT 'counting',
+  `total_counted` INT DEFAULT 0 COMMENT '已清点箱数',
+  `start_time` DATETIME(6) DEFAULT CURRENT_TIMESTAMP(6),
+  `end_time` DATETIME(6) DEFAULT NULL,
+  `remark` TEXT COMMENT '备注',
+  `created_by` VARCHAR(60) COMMENT '创建人',
+  `created_at` DATETIME(6) DEFAULT CURRENT_TIMESTAMP(6),
+  `updated_at` DATETIME(6) DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+  PRIMARY KEY (`session_id`)
+) ENGINE=InnoDB COMMENT='MRS-清点任务表';
+```
+
+**表2: mrs_count_record (清点记录表)**
+```sql
+CREATE TABLE `mrs_count_record` (
+  `record_id` BIGINT UNSIGNED AUTO_INCREMENT,
+  `session_id` INT UNSIGNED NOT NULL,
+  `box_number` VARCHAR(20) NOT NULL COMMENT '箱号',
+  `ledger_id` INT UNSIGNED DEFAULT NULL COMMENT '关联台账ID',
+  `system_content` TEXT COMMENT '系统内容备注',
+  `system_total_qty` DECIMAL(10,2) DEFAULT NULL,
+  `check_mode` ENUM('box_only', 'with_qty') NOT NULL,
+  `has_multiple_items` TINYINT(1) DEFAULT 0,
+  `match_status` ENUM('found', 'not_found', 'matched', 'diff') DEFAULT 'found',
+  `is_new_box` TINYINT(1) DEFAULT 0 COMMENT '是否现场新录入',
+  `remark` TEXT,
+  `counted_by` VARCHAR(60),
+  `counted_at` DATETIME(6) DEFAULT CURRENT_TIMESTAMP(6),
+  PRIMARY KEY (`record_id`),
+  KEY `idx_session` (`session_id`),
+  KEY `idx_box` (`box_number`)
+) ENGINE=InnoDB COMMENT='MRS-清点记录表';
+```
+
+**表3: mrs_count_record_item (清点记录明细表)**
+```sql
+CREATE TABLE `mrs_count_record_item` (
+  `item_id` BIGINT UNSIGNED AUTO_INCREMENT,
+  `record_id` BIGINT UNSIGNED NOT NULL,
+  `sku_id` INT UNSIGNED DEFAULT NULL,
+  `sku_name` VARCHAR(200) NOT NULL,
+  `system_qty` DECIMAL(10,2) DEFAULT NULL,
+  `actual_qty` DECIMAL(10,2) NOT NULL,
+  `diff_qty` DECIMAL(10,2) DEFAULT 0.00,
+  `unit` VARCHAR(20) DEFAULT '件',
+  `remark` TEXT,
+  `created_at` DATETIME(6) DEFAULT CURRENT_TIMESTAMP(6),
+  PRIMARY KEY (`item_id`),
+  KEY `idx_record` (`record_id`)
+) ENGINE=InnoDB COMMENT='MRS-清点记录明细表';
+```
+
+#### 4.7.3 核心业务流程
+
+**流程1: 创建清点任务**
+```
+用户访问 /mrs/index.php
+  → 点击"开始新清点"
+  → 填写清点名称
+  → 创建任务(status=counting)
+  → 跳转到清点操作页面
+```
+
+**流程2: 箱级清点**
+```
+输入箱号 → 搜索系统
+  ↓
+【找到】
+  显示箱子信息 → 选择"只确认箱子存在"
+  → 保存记录(check_mode=box_only, match_status=found)
+  ↓
+【未找到】
+  选项1: 记录为"仓库有但系统无"(match_status=not_found)
+  选项2: 快速录入新箱 → 创建ledger记录 → 保存清点记录(is_new_box=1)
+```
+
+**流程3: 数量级清点**
+```
+输入箱号 → 找到箱子
+  → 选择"核对箱内数量"
+  → 添加物品明细(SKU名称、系统数量、实际数量)
+  → 计算差异(diff_qty = actual_qty - system_qty)
+  → 保存记录(check_mode=with_qty, match_status=matched/diff)
+```
+
+**流程4: 完成清点并生成报告**
+```
+点击"完成清点"
+  → 统计清点数据(总数、只确认数、核对数量数等)
+  → 生成未清点箱号列表(系统有但未清点)
+  → 汇总差异记录(数量不一致的箱子)
+  → 汇总未找到记录(仓库有但系统无)
+  → 更新session状态=completed
+  → 显示清点报告
+```
+
+#### 4.7.4 核心函数
+
+**创建清点任务** (count_lib.php:15-36):
+```php
+function mrs_count_create_session($pdo, $session_name, $created_by = null, $remark = null) {
+    $stmt = $pdo->prepare("
+        INSERT INTO mrs_count_session (session_name, status, created_by, remark, start_time)
+        VALUES (:session_name, 'counting', :created_by, :remark, NOW(6))
+    ");
+    $stmt->execute([
+        ':session_name' => $session_name,
+        ':created_by' => $created_by,
+        ':remark' => $remark
+    ]);
+    return ['success' => true, 'session_id' => (int)$pdo->lastInsertId()];
+}
+```
+
+**搜索箱号** (count_lib.php:70-92):
+```php
+function mrs_count_search_box($pdo, $box_number) {
+    $stmt = $pdo->prepare("
+        SELECT l.*, s.sku_name, s.standard_unit
+        FROM mrs_package_ledger l
+        LEFT JOIN mrs_sku s ON l.sku_id = s.sku_id
+        WHERE l.box_number LIKE :box_number
+        AND l.status = 'in_stock'
+        LIMIT 10
+    ");
+    $stmt->execute([':box_number' => '%' . $box_number . '%']);
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+```
+
+**完成清点并生成报告** (count_lib.php:237-309):
+```php
+function mrs_count_finish_session($pdo, $session_id) {
+    // 1. 统计已清点的箱号
+    $counted_boxes = 查询已清点箱号;
+
+    // 2. 获取系统中所有在库箱号
+    $all_boxes = 查询所有在库箱号;
+
+    // 3. 计算差集(未清点箱号)
+    $missing_boxes = array_diff($all_boxes, $counted_boxes);
+
+    // 4. 统计清点数据
+    $stats = [
+        'total_count' => 总清点数,
+        'box_only_count' => 仅确认箱子数,
+        'with_qty_count' => 核对数量数,
+        'matched_count' => 数量一致数,
+        'diff_count' => 有差异数,
+        'not_found_count' => 仓库有但系统无数
+    ];
+
+    // 5. 获取详细记录
+    $diff_records = 获取有差异的记录;
+    $not_found_records = 获取未找到的记录;
+
+    // 6. 更新任务状态
+    UPDATE mrs_count_session SET status='completed';
+
+    return ['success' => true, 'report' => ...];
+}
+```
+
+#### 4.7.5 API接口清单
+
+| API | 路径 | 方法 | 说明 |
+|-----|------|------|------|
+| 创建清点任务 | count_create_session | POST | 创建新的清点任务 |
+| 获取任务列表 | count_get_sessions | GET | 获取清点任务列表 |
+| 搜索箱号 | count_search_box | GET | 根据箱号搜索台账 |
+| 保存清点记录 | count_save_record | POST | 保存单条清点记录 |
+| 完成清点 | count_finish_session | POST | 完成清点并生成报告 |
+| 获取最近记录 | count_get_recent | GET | 获取最近清点记录 |
+| 快速录入新箱 | count_quick_add_box | POST | 现场快速录入新箱 |
+
+#### 4.7.6 前端页面
+
+**清点首页** (`dc_html/mrs/index.php?action=count_home`):
+- 显示历史清点任务列表
+- 创建新清点任务
+- 继续未完成的清点任务
+
+**清点操作页面** (`dc_html/mrs/index.php?action=count_ops`):
+- 箱号搜索输入
+- 清点记录表单(支持箱级/数量级切换)
+- 最近清点记录列表
+- 完成清点按钮
+
+**手机端优化**:
+- 大按钮设计(min-height: 48px)
+- 输入框字体16px(避免iOS缩放)
+- 响应式布局
+- 触控友好的交互
+
+#### 4.7.7 使用场景
+
+**场景1: 快速盘点**
+```
+仓库管理员拿着手机在仓库走动
+  → 看到箱号A001 → 输入A001 → 找到 → "只确认箱子" → 保存
+  → 看到箱号A002 → 输入A002 → 找到 → "只确认箱子" → 保存
+  → ... 继续下一个箱子
+```
+
+**场景2: 详细盘点**
+```
+打开箱号B001
+  → 输入B001 → 找到 → "核对数量"
+  → 箱内有: 红酒12瓶(系统记录12)、杯子24个(系统记录20)
+  → 添加物品1: 红酒, 系统12, 实际12, 差异0
+  → 添加物品2: 杯子, 系统20, 实际24, 差异+4
+  → 保存(标记为diff)
+```
+
+**场景3: 发现新箱**
+```
+发现箱号X999，但系统中没有
+  → 输入X999 → 未找到 → "快速录入新箱"
+  → 填写: SKU名称"矿泉水", 数量50
+  → 保存 → 自动创建台账记录并标记为已清点(is_new_box=1)
+```
+
 ---
 
 ## 5. 接口设计
