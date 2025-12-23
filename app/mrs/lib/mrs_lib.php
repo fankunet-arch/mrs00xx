@@ -294,7 +294,7 @@ function mrs_get_next_box_number($pdo, $batch_name) {
  * @param string $operator 操作员
  * @return array ['success' => bool, 'created' => int, 'errors' => array]
  */
-function mrs_inbound_packages($pdo, $packages, $spec_info = '', $operator = '') {
+function mrs_inbound_packages($pdo, $packages, $spec_info = '', $operator = '', $shelf_location = '') {
     $created = 0;
     $errors = [];
 
@@ -317,15 +317,18 @@ function mrs_inbound_packages($pdo, $packages, $spec_info = '', $operator = '') 
                 // 获取产品明细数组（新增）
                 $items = $pkg['items'] ?? [];
 
+                // 获取货架位置（优先使用包裹自己的位置，其次使用批量设置的位置）
+                $warehouse_location = trim($pkg['shelf_location'] ?? $shelf_location);
+
                 // 自动生成箱号
                 $box_number = mrs_get_next_box_number($pdo, $batch_name);
 
                 $stmt = $pdo->prepare("
                     INSERT INTO mrs_package_ledger
                     (batch_name, tracking_number, content_note, box_number, spec_info,
-                     expiry_date, quantity, status, inbound_time, created_by)
+                     expiry_date, quantity, warehouse_location, status, inbound_time, created_by)
                     VALUES (:batch_name, :tracking_number, :content_note, :box_number, :spec_info,
-                            :expiry_date, :quantity, 'in_stock', NOW(), :operator)
+                            :expiry_date, :quantity, :warehouse_location, 'in_stock', NOW(), :operator)
                 ");
 
                 $stmt->execute([
@@ -336,6 +339,7 @@ function mrs_inbound_packages($pdo, $packages, $spec_info = '', $operator = '') 
                     'spec_info' => trim($spec_info),
                     'expiry_date' => $expiry_date,
                     'quantity' => $quantity,
+                    'warehouse_location' => $warehouse_location ?: null,
                     'operator' => $operator
                 ]);
 

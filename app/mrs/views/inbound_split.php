@@ -131,6 +131,33 @@ if (!empty($selected_batch)) {
             margin-bottom: 20px;
             border-radius: 4px;
         }
+        /* 货架位置自动补全样式 */
+        .autocomplete-suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 300px;
+            max-height: 200px;
+            overflow-y: auto;
+            background: white;
+            border: 1px solid #ddd;
+            border-top: none;
+            border-radius: 0 0 4px 4px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            z-index: 1000;
+            display: none;
+        }
+        .autocomplete-suggestion {
+            padding: 10px 12px;
+            cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .autocomplete-suggestion:hover {
+            background: #f0f7ff;
+        }
+        .autocomplete-suggestion:last-child {
+            border-bottom: none;
+        }
     </style>
 </head>
 <body>
@@ -201,6 +228,27 @@ if (!empty($selected_batch)) {
                                 <input type="checkbox" id="selectAll">
                                 全选 / 全不选
                             </label>
+                        </div>
+
+                        <!-- 货架位置输入 -->
+                        <div style="margin: 15px 0; padding: 12px; background: #fff3e0; border-left: 4px solid #ff9800; border-radius: 4px;">
+                            <label style="display: block; margin-bottom: 8px; font-weight: 500;">
+                                <span style="color: #e65100;">📦 货架位置 (可选)</span>
+                                <small style="color: #666; font-weight: normal; margin-left: 10px;">提示: 留空则不设置位置</small>
+                            </label>
+                            <div style="position: relative;">
+                                <input type="text"
+                                       id="shelf_location"
+                                       name="shelf_location"
+                                       class="form-control"
+                                       placeholder="例如: A货架3层"
+                                       autocomplete="off"
+                                       style="width: 300px;">
+                                <div id="shelf_location_suggestions" class="autocomplete-suggestions"></div>
+                            </div>
+                            <small style="color: #666; display: block; margin-top: 5px;">
+                                💡 此位置将应用到所有选中的包裹
+                            </small>
                         </div>
 
                         <div class="package-list">
@@ -346,7 +394,8 @@ if (!empty($selected_batch)) {
 
         const data = {
             batch_name: formData.get('batch_name'),
-            packages: packages
+            packages: packages,
+            shelf_location: formData.get('shelf_location') || ''
         };
 
         // 显示加载中
@@ -390,6 +439,80 @@ if (!empty($selected_batch)) {
                 '<div class="message error">网络错误: ' + error + '</div>';
         });
     });
+
+    // 货架位置自动补全
+    (function() {
+        const input = document.getElementById('shelf_location');
+        const suggestionsBox = document.getElementById('shelf_location_suggestions');
+        let debounceTimer;
+
+        if (!input || !suggestionsBox) return;
+
+        // 输入事件
+        input.addEventListener('input', function() {
+            clearTimeout(debounceTimer);
+            const keyword = this.value.trim();
+
+            if (keyword.length === 0) {
+                suggestionsBox.style.display = 'none';
+                return;
+            }
+
+            // 防抖,延迟300ms后请求
+            debounceTimer = setTimeout(() => {
+                fetch('/mrs/index.php?action=api&endpoint=shelf_location_autocomplete&keyword=' + encodeURIComponent(keyword))
+                    .then(response => response.json())
+                    .then(result => {
+                        if (result.success && result.data && result.data.length > 0) {
+                            showSuggestions(result.data);
+                        } else {
+                            suggestionsBox.style.display = 'none';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('自动补全失败:', error);
+                        suggestionsBox.style.display = 'none';
+                    });
+            }, 300);
+        });
+
+        // 显示建议
+        function showSuggestions(suggestions) {
+            suggestionsBox.innerHTML = '';
+            suggestions.forEach(suggestion => {
+                const div = document.createElement('div');
+                div.className = 'autocomplete-suggestion';
+                div.textContent = suggestion;
+                div.addEventListener('click', function() {
+                    input.value = suggestion;
+                    suggestionsBox.style.display = 'none';
+                });
+                suggestionsBox.appendChild(div);
+            });
+            suggestionsBox.style.display = 'block';
+        }
+
+        // 点击外部关闭
+        document.addEventListener('click', function(e) {
+            if (e.target !== input && e.target !== suggestionsBox) {
+                suggestionsBox.style.display = 'none';
+            }
+        });
+
+        // 获得焦点时显示常用位置
+        input.addEventListener('focus', function() {
+            if (this.value.trim().length === 0) {
+                fetch('/mrs/index.php?action=api&endpoint=shelf_location_autocomplete')
+                    .then(response => response.json())
+                    .then(result => {
+                        if (result.success && result.data && result.data.length > 0) {
+                            showSuggestions(result.data);
+                        }
+                    })
+                    .catch(error => console.error('获取常用位置失败:', error));
+            }
+        });
+    })();
     </script>
 </body>
 </html>

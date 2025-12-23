@@ -20,6 +20,7 @@ if (!$input) {
 $batch_name = trim($input['batch_name'] ?? '');
 $packages = $input['packages'] ?? [];
 $spec_info = trim($input['spec_info'] ?? '');
+$shelf_location = trim($input['shelf_location'] ?? '');
 
 // 验证输入
 if (empty($batch_name)) {
@@ -37,7 +38,7 @@ $operator = $_SESSION['user_login'] ?? 'system';
 $pdo = get_mrs_db_connection();
 
 // 执行入库
-$result = mrs_inbound_packages($pdo, $packages, $spec_info, $operator);
+$result = mrs_inbound_packages($pdo, $packages, $spec_info, $operator, $shelf_location);
 
 if ($result['success']) {
     mrs_json_response(true, [
