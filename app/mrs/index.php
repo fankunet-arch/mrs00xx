@@ -1,5 +1,5 @@
 <?php
-// MRS Central Router (v3 - Corrected)
+// MRS Central Router (v4 - Fixed API Routing)
 
 define('MRS_ENTRY', true);
 
@@ -32,8 +32,9 @@ $allowed_actions = array_map(
 $action_file = MRS_ACTION_PATH . '/' . $action . '.php';
 $api_file = MRS_API_PATH . '/' . $action . '.php';
 
-// Dynamic routing for backend_ API calls (prefer API file if it exists)
-if (strpos($action, 'backend_') === 0 && file_exists($api_file)) {
+// FIXED: Check API file first for ALL actions (not just backend_)
+// This allows non-backend API files like batch_list, do_login, logout, shelf_location_* to work
+if (file_exists($api_file)) {
     require_once $api_file;
     exit;
 }
