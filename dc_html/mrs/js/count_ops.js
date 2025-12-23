@@ -394,7 +394,7 @@
                 qtyCheckSection.style.display = 'block';
                 // 自动添加一个物品行
                 if (itemsContainer.children.length === 0) {
-                    addItemRow();
+                    addItemRow(currentBoxData);
                 }
             } else {
                 qtyCheckSection.style.display = 'none';
@@ -407,15 +407,22 @@
         btnAddItem.addEventListener('click', addItemRow);
     }
 
-    function addItemRow() {
+    function addItemRow(data = null) {
         const itemRow = document.createElement('div');
         itemRow.className = 'item-row';
         itemRow.innerHTML = `
             <input type="text" class="form-control item-sku-name" placeholder="SKU名称" required>
-            <input type="number" class="form-control item-system-qty" placeholder="系统数量" step="0.01">
+            <input type="number" class="form-control item-system-qty" placeholder="系统数量" step="0.01" readonly>
             <input type="number" class="form-control item-actual-qty" placeholder="实际数量" step="0.01" required>
             <button type="button" class="btn-remove-item">删除</button>
         `;
+
+        if (data) {
+             itemRow.querySelector('.item-sku-name').value = data.sku_name || '';
+             itemRow.querySelector('.item-system-qty').value = data.quantity || '';
+             // Actual quantity is left empty for user to input
+        }
+
         itemsContainer.appendChild(itemRow);
 
         // 删除按钮事件
