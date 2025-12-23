@@ -210,6 +210,7 @@
                         ${item.content_note ? `<div class="autocomplete-detail-item"><span class="autocomplete-detail-label">内容:</span><span class="autocomplete-detail-value">${escapeHtml(item.content_note)}</span></div>` : ''}
                         ${item.quantity ? `<div class="autocomplete-detail-item"><span class="autocomplete-detail-label">数量:</span><span class="autocomplete-detail-value">${item.quantity}${escapeHtml(item.standard_unit || '件')}</span></div>` : ''}
                         ${item.batch_name ? `<div class="autocomplete-detail-item"><span class="autocomplete-detail-label">批次:</span><span class="autocomplete-detail-value">${escapeHtml(item.batch_name)}</span></div>` : '<div class="autocomplete-detail-item"><span class="autocomplete-detail-value" style="color:#ff9800;">零散入库</span></div>'}
+                        ${item.tracking_number ? `<div class="autocomplete-detail-item"><span class="autocomplete-detail-label">快递:</span><span class="autocomplete-detail-value">${escapeHtml(item.tracking_number)}</span></div>` : ''}
                     </div>
                 </div>
             `;
@@ -268,6 +269,7 @@
                 <div class="session-card" style="cursor: pointer;" data-index="${index}">
                     <div class="session-header">
                         <h3 class="session-name">箱号: ${escapeHtml(box.box_number)}</h3>
+                        ${box.tracking_number ? `<span style="font-size:12px;color:#666;margin-left:8px;">快递: ${escapeHtml(box.tracking_number)}</span>` : ''}
                         <span class="session-status status-${box.status === 'in_stock' ? 'counting' : 'completed'}">
                             ${box.status === 'in_stock' ? '在库' : '已出库'}
                         </span>
