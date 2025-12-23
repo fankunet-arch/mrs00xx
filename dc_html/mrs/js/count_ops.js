@@ -376,6 +376,20 @@
         }
         systemInfoContainer.innerHTML = systemInfo;
 
+        // 显示当前货架位置
+        const shelfLocationInput = document.getElementById('shelf-location');
+        const currentLocationHint = document.getElementById('current-location-hint');
+        const currentLocationValue = document.getElementById('current-location-value');
+        if (shelfLocationInput) {
+            shelfLocationInput.value = '';  // 清空输入框
+            if (boxData.warehouse_location) {
+                currentLocationValue.textContent = boxData.warehouse_location;
+                currentLocationHint.style.display = 'block';
+            } else {
+                currentLocationHint.style.display = 'none';
+            }
+        }
+
         // 重置表单
         document.querySelector('input[name="check-mode"][value="box_only"]').checked = true;
         qtyCheckSection.style.display = 'none';
@@ -444,6 +458,12 @@
             formData.append('ledger_id', ledgerId || '');
             formData.append('check_mode', checkMode);
             formData.append('remark', countRemark.value.trim());
+
+            // 添加货架位置
+            const shelfLocationInput = document.getElementById('shelf-location');
+            if (shelfLocationInput) {
+                formData.append('shelf_location', shelfLocationInput.value.trim());
+            }
 
             // 如果是核对数量模式，收集物品信息
             if (checkMode === 'with_qty') {
@@ -872,4 +892,104 @@
         // 简单的消息提示
         alert(message);
     }
+
+    // === 货架位置自动补全 ===
+    (function() {
+        const shelfLocationInput = document.getElementById('shelf-location');
+        const shelfSuggestionsBox = document.getElementById('shelf-location-suggestions');
+        let debounceTimer;
+
+        if (!shelfLocationInput || !shelfSuggestionsBox) return;
+
+        // 输入事件
+        shelfLocationInput.addEventListener('input', function() {
+            clearTimeout(debounceTimer);
+            const keyword = this.value.trim();
+
+            if (keyword.length === 0) {
+                shelfSuggestionsBox.style.display = 'none';
+                return;
+            }
+
+            // 防抖,延迟300ms后请求
+            debounceTimer = setTimeout(() => {
+                fetch('/mrs/index.php?action=api&endpoint=shelf_location_autocomplete&keyword=' + encodeURIComponent(keyword))
+                    .then(response => response.json())
+                    .then(result => {
+                        if (result.success && result.data && result.data.length > 0) {
+                            showShelfSuggestions(result.data);
+                        } else {
+                            shelfSuggestionsBox.style.display = 'none';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('货架位置自动补全失败:', error);
+                        shelfSuggestionsBox.style.display = 'none';
+                    });
+            }, 300);
+        });
+
+        // 显示建议
+        function showShelfSuggestions(suggestions) {
+            shelfSuggestionsBox.innerHTML = '';
+            shelfSuggestionsBox.style.position = 'absolute';
+            shelfSuggestionsBox.style.width = '100%';
+            shelfSuggestionsBox.style.maxHeight = '200px';
+            shelfSuggestionsBox.style.overflowY = 'auto';
+            shelfSuggestionsBox.style.background = 'white';
+            shelfSuggestionsBox.style.border = '1px solid #ddd';
+            shelfSuggestionsBox.style.borderTop = 'none';
+            shelfSuggestionsBox.style.borderRadius = '0 0 4px 4px';
+            shelfSuggestionsBox.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
+            shelfSuggestionsBox.style.zIndex = '1000';
+
+            suggestions.forEach(suggestion => {
+                const div = document.createElement('div');
+                div.style.padding = '10px 12px';
+                div.style.cursor = 'pointer';
+                div.style.borderBottom = '1px solid #f0f0f0';
+                div.textContent = suggestion;
+                div.addEventListener('click', function() {
+                    shelfLocationInput.value = suggestion;
+                    shelfSuggestionsBox.style.display = 'none';
+                });
+                div.addEventListener('mouseover', function() {
+                    this.style.backgroundColor = '#f0f7ff';
+                });
+                div.addEventListener('mouseout', function() {
+                    this.style.backgroundColor = '';
+                });
+                shelfSuggestionsBox.appendChild(div);
+            });
+
+            // 移除最后一个边框
+            const lastChild = shelfSuggestionsBox.lastChild;
+            if (lastChild) {
+                lastChild.style.borderBottom = 'none';
+            }
+
+            shelfSuggestionsBox.style.display = 'block';
+        }
+
+        // 点击外部关闭
+        document.addEventListener('click', function(e) {
+            if (e.target !== shelfLocationInput && !shelfSuggestionsBox.contains(e.target)) {
+                shelfSuggestionsBox.style.display = 'none';
+            }
+        });
+
+        // 获得焦点时显示常用位置
+        shelfLocationInput.addEventListener('focus', function() {
+            if (this.value.trim().length === 0) {
+                fetch('/mrs/index.php?action=api&endpoint=shelf_location_autocomplete')
+                    .then(response => response.json())
+                    .then(result => {
+                        if (result.success && result.data && result.data.length > 0) {
+                            showShelfSuggestions(result.data);
+                        }
+                    })
+                    .catch(error => console.error('获取常用位置失败:', error));
+            }
+        });
+    })();
 })();

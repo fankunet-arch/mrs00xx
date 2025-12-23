@@ -131,6 +131,19 @@ if ($session['status'] !== 'counting') {
                     <button type="button" id="btn-add-item" class="btn btn-secondary btn-small">+ 添加物品</button>
                 </div>
 
+                <!-- 货架位置 -->
+                <div class="form-group">
+                    <label for="shelf-location">货架位置 (可选)</label>
+                    <div style="position: relative;">
+                        <input type="text" id="shelf-location" class="form-control"
+                               placeholder="例如: A货架3层 (留空则不更新位置)" autocomplete="off">
+                        <div id="shelf-location-suggestions" class="autocomplete-suggestions" style="display: none;"></div>
+                    </div>
+                    <small class="form-text" id="current-location-hint" style="color: #666; display: none;">
+                        当前位置: <span id="current-location-value"></span>
+                    </small>
+                </div>
+
                 <div class="form-group">
                     <label for="count-remark">备注</label>
                     <textarea id="count-remark" class="form-control" rows="2"

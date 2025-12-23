@@ -22,6 +22,7 @@ $check_mode = $_POST['check_mode'] ?? 'box_only';
 $items = isset($_POST['items']) ? json_decode($_POST['items'], true) : [];
 $remark = $_POST['remark'] ?? null;
 $counted_by = $_POST['counted_by'] ?? null;
+$new_shelf_location = trim($_POST['shelf_location'] ?? '');
 
 // 验证必填字段
 if (empty($session_id) || empty($box_number)) {
@@ -100,6 +101,21 @@ try {
         if (!$items_result['success']) {
             throw new Exception($items_result['error'] ?? '保存明细失败');
         }
+    }
+
+    // 如果提供了新货架位置，更新台账
+    if ($ledger_id && $new_shelf_location !== '') {
+        $update_stmt = $pdo->prepare("
+            UPDATE mrs_package_ledger
+            SET warehouse_location = :shelf_location,
+                updated_by = :updated_by
+            WHERE ledger_id = :ledger_id
+        ");
+        $update_stmt->execute([
+            'shelf_location' => $new_shelf_location,
+            'updated_by' => $counted_by,
+            'ledger_id' => $ledger_id
+        ]);
     }
 
     $pdo->commit();
