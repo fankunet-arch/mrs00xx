@@ -65,7 +65,7 @@ if ($session['status'] !== 'counting') {
             <div class="search-group">
                 <div class="autocomplete-wrapper">
                     <input type="text" id="box-number-input" class="form-control input-large"
-                           placeholder="输入箱号、内容或SKU名称搜索" autocomplete="off" autofocus>
+                           placeholder="输入箱号、内容、快递单号或SKU名称搜索" autocomplete="off" autofocus>
                     <div id="autocomplete-suggestions" class="autocomplete-suggestions" style="display: none;"></div>
                 </div>
                 <button id="btn-search" class="btn btn-primary">搜索</button>
