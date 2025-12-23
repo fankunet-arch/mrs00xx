@@ -79,6 +79,9 @@ function mrs_count_get_sessions($pdo, $status = null, $limit = 20) {
  */
 function mrs_count_search_box($pdo, $box_number) {
     try {
+        // [FIX] mrs_package_ledger does not have sku_id.
+        // Removed JOIN with mrs_sku and selection of s.* fields.
+        // Mapped content_note to sku_name for compatibility.
         $stmt = $pdo->prepare("
             SELECT
                 l.ledger_id,
@@ -88,11 +91,10 @@ function mrs_count_search_box($pdo, $box_number) {
                 l.status,
                 l.inbound_time,
                 l.batch_name,
-                s.sku_id,
-                s.sku_name,
-                s.standard_unit
+                NULL as sku_id,
+                l.content_note as sku_name,
+                '件' as standard_unit
             FROM mrs_package_ledger l
-            LEFT JOIN mrs_sku s ON l.sku_id = s.sku_id
             WHERE l.box_number = :box_number
             AND l.status = 'in_stock'
             ORDER BY l.inbound_time DESC
@@ -116,8 +118,9 @@ function mrs_count_search_box($pdo, $box_number) {
  */
 function mrs_count_autocomplete_box($pdo, $keyword) {
     try {
-        // 支持搜索：箱号、内容备注、SKU名称
-        // 包括零散入库的箱子（batch_name可以为NULL）
+        // [FIX] Removed JOIN with mrs_sku.
+        // [FIX] Used unique named parameters to avoid HY093.
+        // [FIX] Removed s.sku_name search and selection.
         $stmt = $pdo->prepare("
             SELECT
                 l.ledger_id,
@@ -126,20 +129,18 @@ function mrs_count_autocomplete_box($pdo, $keyword) {
                 l.quantity,
                 l.batch_name,
                 l.inbound_time,
-                s.sku_name,
-                s.standard_unit
+                l.content_note AS sku_name,
+                '件' AS standard_unit
             FROM mrs_package_ledger l
-            LEFT JOIN mrs_sku s ON l.sku_id = s.sku_id
             WHERE l.status = 'in_stock'
             AND (
-                l.box_number LIKE :keyword
-                OR l.content_note LIKE :keyword
-                OR s.sku_name LIKE :keyword
+                l.box_number LIKE :kw1
+                OR l.content_note LIKE :kw2
             )
             ORDER BY
                 CASE
-                    WHEN l.box_number LIKE :keyword_start THEN 1
-                    WHEN l.box_number LIKE :keyword THEN 2
+                    WHEN l.box_number LIKE :kw_start THEN 1
+                    WHEN l.box_number LIKE :kw3 THEN 2
                     ELSE 3
                 END,
                 l.inbound_time DESC
@@ -150,8 +151,10 @@ function mrs_count_autocomplete_box($pdo, $keyword) {
         $keyword_start = $keyword . '%';
 
         $stmt->execute([
-            ':keyword' => $keyword_param,
-            ':keyword_start' => $keyword_start
+            ':kw1' => $keyword_param,
+            ':kw2' => $keyword_param,
+            ':kw_start' => $keyword_start,
+            ':kw3' => $keyword_param
         ]);
 
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -263,18 +266,18 @@ function mrs_count_save_record_items($pdo, $record_id, $items) {
  */
 function mrs_count_quick_add_box($pdo, $data) {
     try {
+        // [FIX] Removed sku_id from insert as column does not exist.
         $stmt = $pdo->prepare("
             INSERT INTO mrs_package_ledger (
-                sku_id, content_note, box_number, quantity, status,
+                content_note, box_number, quantity, status,
                 inbound_time, created_by, created_at
             ) VALUES (
-                :sku_id, :content_note, :box_number, :quantity, 'in_stock',
+                :content_note, :box_number, :quantity, 'in_stock',
                 NOW(6), :created_by, NOW(6)
             )
         ");
 
         $stmt->execute([
-            ':sku_id' => $data['sku_id'] ?? null,
             ':content_note' => $data['content_note'] ?? null,
             ':box_number' => $data['box_number'],
             ':quantity' => $data['quantity'] ?? null,
