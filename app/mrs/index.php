@@ -21,13 +21,21 @@ if ($action === null) {
 
 $action = basename($action);
 
-// Build a whitelist directly from the actions directory to avoid missing registrations
-$allowed_actions = array_map(
-    function ($file_path) {
-        return pathinfo($file_path, PATHINFO_FILENAME);
-    },
-    glob(MRS_ACTION_PATH . '/*.php') ?: []
-);
+// Build a whitelist from both actions and api directories to avoid missing registrations
+$allowed_actions = array_unique(array_merge(
+    array_map(
+        function ($file_path) {
+            return pathinfo($file_path, PATHINFO_FILENAME);
+        },
+        glob(MRS_ACTION_PATH . '/*.php') ?: []
+    ),
+    array_map(
+        function ($file_path) {
+            return pathinfo($file_path, PATHINFO_FILENAME);
+        },
+        glob(MRS_API_PATH . '/*.php') ?: []
+    )
+));
 
 $action_file = MRS_ACTION_PATH . '/' . $action . '.php';
 $api_file = MRS_API_PATH . '/' . $action . '.php';
@@ -43,10 +51,13 @@ if (!in_array($action, $allowed_actions, true)) {
     mrs_log("Disallowed action requested: {$action}", 'WARNING');
     $action = 'dashboard'; // Default to a safe page
     $action_file = MRS_ACTION_PATH . '/dashboard.php';
+    $api_file = null;
 }
 
 if (file_exists($action_file)) {
     require_once $action_file;
+} elseif ($api_file && file_exists($api_file)) {
+    require_once $api_file;
 } else {
     header("HTTP/1.0 404 Not Found");
     mrs_log("Action file not found: {$action_file}", 'ERROR');
