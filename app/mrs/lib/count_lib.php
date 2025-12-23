@@ -93,15 +93,25 @@ function mrs_count_search_box($pdo, $box_number) {
                 s.standard_unit
             FROM mrs_package_ledger l
             LEFT JOIN mrs_sku s ON l.sku_id = s.sku_id
-            WHERE l.box_number = :box_number
-            AND l.status = 'in_stock'
-            ORDER BY l.inbound_time DESC
-            LIMIT 1
+            WHERE l.status != 'void'
+              AND (
+                    l.box_number LIKE :keyword
+                 OR l.content_note LIKE :keyword
+                 OR s.sku_name LIKE :keyword
+              )
+            ORDER BY
+                CASE WHEN l.box_number = :exact_box THEN 0 ELSE 1 END,
+                l.inbound_time DESC
+            LIMIT 10
         ");
 
-        $stmt->execute([':box_number' => $box_number]);
-        $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        return $result;
+        $keyword = '%' . trim($box_number) . '%';
+
+        $stmt->execute([
+            ':keyword' => $keyword,
+            ':exact_box' => trim($box_number),
+        ]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOException $e) {
         error_log("MRS Count: Search box failed - " . $e->getMessage());
         return [];

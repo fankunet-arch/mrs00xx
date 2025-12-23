@@ -15,9 +15,9 @@ header('Content-Type: application/json; charset=utf-8');
 require_once MRS_LIB_PATH . '/count_lib.php';
 
 // 获取搜索关键词
-$box_number = $_GET['box_number'] ?? null;
+$box_number = trim($_GET['box_number'] ?? '');
 
-if (empty($box_number)) {
+if ($box_number === '') {
     echo json_encode([
         'success' => false,
         'message' => '请输入箱号'
@@ -28,16 +28,11 @@ if (empty($box_number)) {
 // 搜索箱号
 $results = mrs_count_search_box($pdo, $box_number);
 
-if (empty($results)) {
-    echo json_encode([
-        'success' => false,
-        'found' => false,
-        'message' => '系统中未找到此箱号'
-    ], JSON_UNESCAPED_UNICODE);
-} else {
-    echo json_encode([
-        'success' => true,
-        'found' => true,
-        'data' => $results
-    ], JSON_UNESCAPED_UNICODE);
-}
+$found = !empty($results);
+
+echo json_encode([
+    'success' => true,
+    'found' => $found,
+    'message' => $found ? null : '系统中未找到此箱号',
+    'data' => $results
+], JSON_UNESCAPED_UNICODE);
