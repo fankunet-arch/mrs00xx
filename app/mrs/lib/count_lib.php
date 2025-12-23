@@ -74,18 +74,19 @@ function mrs_count_get_sessions($pdo, $status = null, $limit = 20) {
 /**
  * 搜索箱号（精确查找，用于点击下拉建议后）
  * @param PDO $pdo
- * @param string $box_number 箱号（精确匹配）
+ * @param string $box_number 箱号（精确匹配）或快递单号
  * @return array|null 找到返回台账信息，否则返回null
  */
 function mrs_count_search_box($pdo, $box_number) {
     try {
-        // [FIX] mrs_package_ledger does not have sku_id.
-        // Removed JOIN with mrs_sku and selection of s.* fields.
-        // Mapped content_note to sku_name for compatibility.
+        // [FIX] Added tracking_number support.
+        // [FIX] Added l.tracking_number to SELECT.
+        // [FIX] Used unique named parameters to avoid HY093.
         $stmt = $pdo->prepare("
             SELECT
                 l.ledger_id,
                 l.box_number,
+                l.tracking_number,
                 l.content_note,
                 l.quantity,
                 l.status,
@@ -95,13 +96,13 @@ function mrs_count_search_box($pdo, $box_number) {
                 l.content_note as sku_name,
                 '件' as standard_unit
             FROM mrs_package_ledger l
-            WHERE l.box_number = :box_number
+            WHERE (l.box_number = :bn1 OR l.tracking_number = :bn2)
             AND l.status = 'in_stock'
             ORDER BY l.inbound_time DESC
             LIMIT 1
         ");
 
-        $stmt->execute([':box_number' => $box_number]);
+        $stmt->execute([':bn1' => $box_number, ':bn2' => $box_number]);
         $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
         return $result;
     } catch (PDOException $e) {
@@ -113,18 +114,18 @@ function mrs_count_search_box($pdo, $box_number) {
 /**
  * 自动完成搜索箱号（支持模糊搜索）
  * @param PDO $pdo
- * @param string $keyword 关键词（搜索箱号、内容备注、SKU名称）
+ * @param string $keyword 关键词（搜索箱号、快递单号、内容备注、SKU名称）
  * @return array 返回建议列表
  */
 function mrs_count_autocomplete_box($pdo, $keyword) {
     try {
-        // [FIX] Removed JOIN with mrs_sku.
-        // [FIX] Used unique named parameters to avoid HY093.
-        // [FIX] Removed s.sku_name search and selection.
+        // [FIX] Added tracking_number support.
+        // [FIX] Added l.tracking_number to SELECT.
         $stmt = $pdo->prepare("
             SELECT
                 l.ledger_id,
                 l.box_number,
+                l.tracking_number,
                 l.content_note,
                 l.quantity,
                 l.batch_name,
@@ -136,11 +137,13 @@ function mrs_count_autocomplete_box($pdo, $keyword) {
             AND (
                 l.box_number LIKE :kw1
                 OR l.content_note LIKE :kw2
+                OR l.tracking_number LIKE :kw3
             )
             ORDER BY
                 CASE
                     WHEN l.box_number LIKE :kw_start THEN 1
-                    WHEN l.box_number LIKE :kw3 THEN 2
+                    WHEN l.tracking_number LIKE :kw_start_track THEN 1
+                    WHEN l.box_number LIKE :kw4 THEN 2
                     ELSE 3
                 END,
                 l.inbound_time DESC
@@ -153,8 +156,10 @@ function mrs_count_autocomplete_box($pdo, $keyword) {
         $stmt->execute([
             ':kw1' => $keyword_param,
             ':kw2' => $keyword_param,
+            ':kw3' => $keyword_param,
             ':kw_start' => $keyword_start,
-            ':kw3' => $keyword_param
+            ':kw_start_track' => $keyword_start,
+            ':kw4' => $keyword_param
         ]);
 
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -172,7 +177,7 @@ function mrs_count_autocomplete_box($pdo, $keyword) {
  */
 function mrs_count_save_record($pdo, $data) {
     try {
-        $pdo->beginTransaction();
+        // [FIX] Removed transaction control to avoid nesting errors (caller handles transaction)
 
         // 插入清点记录
         $stmt = $pdo->prepare("
@@ -209,11 +214,8 @@ function mrs_count_save_record($pdo, $data) {
         ");
         $stmt->execute([':session_id' => $data['session_id']]);
 
-        $pdo->commit();
-
         return ['success' => true, 'record_id' => $record_id];
     } catch (PDOException $e) {
-        $pdo->rollBack();
         error_log("MRS Count: Save record failed - " . $e->getMessage());
         return ['success' => false, 'error' => '保存清点记录失败'];
     }
