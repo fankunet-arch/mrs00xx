@@ -203,7 +203,7 @@
         let html = '';
         suggestions.forEach((item, index) => {
             html += `
-                <div class="autocomplete-item" data-box-number="${escapeHtml(item.box_number)}" data-index="${index}">
+                <div class="autocomplete-item" data-box-number="${escapeHtml(item.box_number)}" data-tracking-number="${escapeHtml(item.tracking_number || '')}" data-index="${index}">
                     <div class="autocomplete-box-number">${escapeHtml(item.box_number)}</div>
                     <div class="autocomplete-details">
                         ${item.sku_name ? `<div class="autocomplete-detail-item"><span class="autocomplete-detail-label">SKU:</span><span class="autocomplete-detail-value">${escapeHtml(item.sku_name)}</span></div>` : ''}
@@ -224,7 +224,8 @@
         items.forEach(item => {
             item.addEventListener('click', function() {
                 const boxNumber = this.getAttribute('data-box-number');
-                boxNumberInput.value = boxNumber;
+                const trackingNumber = this.getAttribute('data-tracking-number');
+                boxNumberInput.value = trackingNumber || boxNumber;
                 hideAutocomplete();
                 // 自动触发搜索
                 searchBox();

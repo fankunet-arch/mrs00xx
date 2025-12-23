@@ -81,6 +81,7 @@ function mrs_count_search_box($pdo, $box_number) {
     try {
         // [FIX] Added tracking_number support.
         // [FIX] Added l.tracking_number to SELECT.
+        // [FIX] Used unique named parameters to avoid HY093.
         $stmt = $pdo->prepare("
             SELECT
                 l.ledger_id,
@@ -95,13 +96,13 @@ function mrs_count_search_box($pdo, $box_number) {
                 l.content_note as sku_name,
                 '件' as standard_unit
             FROM mrs_package_ledger l
-            WHERE (l.box_number = :box_number OR l.tracking_number = :box_number)
+            WHERE (l.box_number = :bn1 OR l.tracking_number = :bn2)
             AND l.status = 'in_stock'
             ORDER BY l.inbound_time DESC
             LIMIT 1
         ");
 
-        $stmt->execute([':box_number' => $box_number]);
+        $stmt->execute([':bn1' => $box_number, ':bn2' => $box_number]);
         $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
         return $result;
     } catch (PDOException $e) {
@@ -176,7 +177,7 @@ function mrs_count_autocomplete_box($pdo, $keyword) {
  */
 function mrs_count_save_record($pdo, $data) {
     try {
-        $pdo->beginTransaction();
+        // [FIX] Removed transaction control to avoid nesting errors (caller handles transaction)
 
         // 插入清点记录
         $stmt = $pdo->prepare("
@@ -213,11 +214,8 @@ function mrs_count_save_record($pdo, $data) {
         ");
         $stmt->execute([':session_id' => $data['session_id']]);
 
-        $pdo->commit();
-
         return ['success' => true, 'record_id' => $record_id];
     } catch (PDOException $e) {
-        $pdo->rollBack();
         error_log("MRS Count: Save record failed - " . $e->getMessage());
         return ['success' => false, 'error' => '保存清点记录失败'];
     }
