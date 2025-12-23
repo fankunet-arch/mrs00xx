@@ -79,11 +79,14 @@ function mrs_count_get_sessions($pdo, $status = null, $limit = 20) {
  */
 function mrs_count_search_box($pdo, $box_number) {
     try {
+        $box_number = trim($box_number);
+
         // 1) 先尝试精确匹配箱号
         $stmt = $pdo->prepare("
             SELECT
                 l.ledger_id,
                 l.box_number,
+                l.tracking_number,
                 l.content_note,
                 l.quantity,
                 l.status,
@@ -95,7 +98,7 @@ function mrs_count_search_box($pdo, $box_number) {
             FROM mrs_package_ledger l
             LEFT JOIN mrs_sku s ON l.sku_id = s.sku_id
             WHERE l.status = 'in_stock'
-              AND l.box_number = :box_number
+              AND (l.box_number = :box_number OR l.tracking_number = :box_number)
             ORDER BY l.inbound_time DESC
             LIMIT 1
         ");
@@ -107,32 +110,36 @@ function mrs_count_search_box($pdo, $box_number) {
         if (empty($result)) {
             $stmt = $pdo->prepare("
                 SELECT
-                    l.ledger_id,
-                    l.box_number,
-                    l.content_note,
-                    l.quantity,
-                    l.status,
+                l.ledger_id,
+                l.box_number,
+                l.tracking_number,
+                l.content_note,
+                l.quantity,
+                l.status,
                     l.inbound_time,
                     l.batch_name,
                     s.sku_id,
                     s.sku_name,
                     s.standard_unit
                 FROM mrs_package_ledger l
-                LEFT JOIN mrs_sku s ON l.sku_id = s.sku_id
-                WHERE l.status = 'in_stock'
-                  AND (
-                    l.box_number LIKE :keyword
-                    OR l.content_note LIKE :keyword
-                    OR s.sku_name LIKE :keyword
-                  )
-                ORDER BY
-                  CASE
-                    WHEN l.box_number LIKE :keyword_start THEN 1
-                    WHEN l.box_number LIKE :keyword THEN 2
-                    ELSE 3
-                  END,
-                  l.inbound_time DESC
-                LIMIT 5
+            LEFT JOIN mrs_sku s ON l.sku_id = s.sku_id
+            WHERE l.status = 'in_stock'
+              AND (
+                l.box_number LIKE :keyword
+                OR l.tracking_number LIKE :keyword
+                OR l.content_note LIKE :keyword
+                OR s.sku_name LIKE :keyword
+              )
+            ORDER BY
+              CASE
+                WHEN l.box_number LIKE :keyword_start THEN 1
+                WHEN l.tracking_number LIKE :keyword_start THEN 2
+                WHEN l.box_number LIKE :keyword THEN 2
+                WHEN l.tracking_number LIKE :keyword THEN 3
+                ELSE 4
+              END,
+              l.inbound_time DESC
+            LIMIT 5
             ");
 
             $keyword_param = '%' . $box_number . '%';
@@ -167,6 +174,7 @@ function mrs_count_autocomplete_box($pdo, $keyword) {
             SELECT
                 l.ledger_id,
                 l.box_number,
+                l.tracking_number,
                 l.content_note,
                 l.quantity,
                 l.batch_name,
@@ -178,14 +186,17 @@ function mrs_count_autocomplete_box($pdo, $keyword) {
             WHERE l.status = 'in_stock'
             AND (
                 l.box_number LIKE :keyword
+                OR l.tracking_number LIKE :keyword
                 OR l.content_note LIKE :keyword
                 OR s.sku_name LIKE :keyword
             )
             ORDER BY
                 CASE
                     WHEN l.box_number LIKE :keyword_start THEN 1
+                    WHEN l.tracking_number LIKE :keyword_start THEN 2
                     WHEN l.box_number LIKE :keyword THEN 2
-                    ELSE 3
+                    WHEN l.tracking_number LIKE :keyword THEN 3
+                    ELSE 4
                 END,
                 l.inbound_time DESC
             LIMIT 10

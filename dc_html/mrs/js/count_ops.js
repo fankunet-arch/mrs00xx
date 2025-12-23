@@ -206,6 +206,7 @@
                 <div class="autocomplete-item" data-box-number="${escapeHtml(item.box_number)}" data-index="${index}">
                     <div class="autocomplete-box-number">${escapeHtml(item.box_number)}</div>
                     <div class="autocomplete-details">
+                        ${item.tracking_number ? `<div class="autocomplete-detail-item"><span class="autocomplete-detail-label">快递单号:</span><span class="autocomplete-detail-value">${escapeHtml(item.tracking_number)}</span></div>` : ''}
                         ${item.sku_name ? `<div class="autocomplete-detail-item"><span class="autocomplete-detail-label">SKU:</span><span class="autocomplete-detail-value">${escapeHtml(item.sku_name)}</span></div>` : ''}
                         ${item.content_note ? `<div class="autocomplete-detail-item"><span class="autocomplete-detail-label">内容:</span><span class="autocomplete-detail-value">${escapeHtml(item.content_note)}</span></div>` : ''}
                         ${item.quantity ? `<div class="autocomplete-detail-item"><span class="autocomplete-detail-label">数量:</span><span class="autocomplete-detail-value">${item.quantity}${escapeHtml(item.standard_unit || '件')}</span></div>` : ''}
@@ -273,6 +274,7 @@
                         </span>
                     </div>
                     <div class="session-info">
+                        ${box.tracking_number ? `<div class="info-item"><span class="info-label">快递单号:</span><span class="info-value">${escapeHtml(box.tracking_number)}</span></div>` : ''}
                         ${box.sku_name ? `<div class="info-item"><span class="info-label">SKU:</span><span class="info-value">${escapeHtml(box.sku_name)}</span></div>` : ''}
                         ${box.content_note ? `<div class="info-item"><span class="info-label">内容:</span><span class="info-value">${escapeHtml(box.content_note)}</span></div>` : ''}
                         ${box.quantity ? `<div class="info-item"><span class="info-label">数量:</span><span class="info-value">${box.quantity} ${escapeHtml(box.standard_unit || '件')}</span></div>` : ''}
