@@ -79,6 +79,7 @@ function mrs_count_get_sessions($pdo, $status = null, $limit = 20) {
  */
 function mrs_count_search_box($pdo, $box_number) {
     try {
+        // 1) 先尝试精确匹配箱号
         $stmt = $pdo->prepare("
             SELECT
                 l.ledger_id,
@@ -93,14 +94,58 @@ function mrs_count_search_box($pdo, $box_number) {
                 s.standard_unit
             FROM mrs_package_ledger l
             LEFT JOIN mrs_sku s ON l.sku_id = s.sku_id
-            WHERE l.box_number = :box_number
-            AND l.status = 'in_stock'
+            WHERE l.status = 'in_stock'
+              AND l.box_number = :box_number
             ORDER BY l.inbound_time DESC
             LIMIT 1
         ");
 
         $stmt->execute([':box_number' => $box_number]);
         $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // 2) 如未找到，进行模糊搜索，便于只输入部分箱号时仍能返回结果
+        if (empty($result)) {
+            $stmt = $pdo->prepare("
+                SELECT
+                    l.ledger_id,
+                    l.box_number,
+                    l.content_note,
+                    l.quantity,
+                    l.status,
+                    l.inbound_time,
+                    l.batch_name,
+                    s.sku_id,
+                    s.sku_name,
+                    s.standard_unit
+                FROM mrs_package_ledger l
+                LEFT JOIN mrs_sku s ON l.sku_id = s.sku_id
+                WHERE l.status = 'in_stock'
+                  AND (
+                    l.box_number LIKE :keyword
+                    OR l.content_note LIKE :keyword
+                    OR s.sku_name LIKE :keyword
+                  )
+                ORDER BY
+                  CASE
+                    WHEN l.box_number LIKE :keyword_start THEN 1
+                    WHEN l.box_number LIKE :keyword THEN 2
+                    ELSE 3
+                  END,
+                  l.inbound_time DESC
+                LIMIT 5
+            ");
+
+            $keyword_param = '%' . $box_number . '%';
+            $keyword_start = $box_number . '%';
+
+            $stmt->execute([
+                ':keyword' => $keyword_param,
+                ':keyword_start' => $keyword_start,
+            ]);
+
+            $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        }
+
         return $result;
     } catch (PDOException $e) {
         error_log("MRS Count: Search box failed - " . $e->getMessage());
