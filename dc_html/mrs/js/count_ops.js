@@ -420,7 +420,7 @@
         if (data) {
              itemRow.querySelector('.item-sku-name').value = data.sku_name || '';
              itemRow.querySelector('.item-system-qty').value = data.quantity || '';
-             itemRow.querySelector('.item-actual-qty').value = data.quantity || '';
+             // Actual quantity is left empty for user to input
         }
 
         itemsContainer.appendChild(itemRow);
