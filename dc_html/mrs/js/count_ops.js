@@ -937,15 +937,39 @@
         segments.forEach((input, index) => {
             // 只允许输入数字
             input.addEventListener('input', function(e) {
+                // 过滤非数字字符
                 this.value = this.value.replace(/\D/g, '');
 
-                // 自动跳转到下一个输入框
-                if (this.value.length === 2 && index < segments.length - 1) {
-                    segments[index + 1].focus();
+                // 限制最多2位
+                if (this.value.length > 2) {
+                    this.value = this.value.substring(0, 2);
                 }
 
                 // 更新隐藏字段
                 updateShelfLocation();
+
+                // 输入满2位后立即跳转到下一个输入框
+                if (this.value.length === 2 && index < segments.length - 1) {
+                    // 使用setTimeout确保DOM更新后再跳转
+                    setTimeout(() => {
+                        segments[index + 1].focus();
+                        segments[index + 1].select();
+                    }, 0);
+                }
+            });
+
+            // 同时监听keyup事件以处理单字符输入的跳转
+            input.addEventListener('keyup', function(e) {
+                // 如果已经是2位数字且不是导航键，跳转
+                if (this.value.length === 2 && index < segments.length - 1) {
+                    const navKeys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Tab', 'Backspace', 'Delete'];
+                    if (!navKeys.includes(e.key)) {
+                        setTimeout(() => {
+                            segments[index + 1].focus();
+                            segments[index + 1].select();
+                        }, 0);
+                    }
+                }
             });
 
             // 支持键盘导航
