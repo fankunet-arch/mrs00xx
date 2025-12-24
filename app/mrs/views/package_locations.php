@@ -545,7 +545,7 @@ if (!defined('MRS_ENTRY')) {
             if (batch) params.append('batch_name', batch);
             if (status) params.append('status', status);
 
-            fetch(`/mrs/api/backend_package_locations.php?${params.toString()}`)
+            fetch(`/mrs/ap/index.php?action=backend_package_locations&${params.toString()}`)
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {

@@ -54,6 +54,7 @@ $allowed_actions = [
     'package_locations',    // [新增] 货架位置管理
     'update_package_location', // [新增] 更新单个箱子位置
     'batch_update_locations', // [新增] 批量更新箱子位置
+    'backend_package_locations', // [新增] 箱子位置管理API
 ];
 
 // 验证action是否允许
@@ -93,7 +94,8 @@ $api_actions = [
     'product_search_api',
     'product_name_autocomplete', // [新增]
     'update_package_location', // [新增] 更新单个箱子位置API
-    'batch_update_locations' // [新增] 批量更新箱子位置API
+    'batch_update_locations', // [新增] 批量更新箱子位置API
+    'backend_package_locations' // [新增] 箱子位置管理API（带operation参数）
 ];
 
 // 路由到对应的action或API文件 (在app目录中)
