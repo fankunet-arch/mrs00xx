@@ -36,6 +36,7 @@ $current_user = '管理员';
       <div class="menu-item" data-target="catalog">物料档案(SKU)</div>
       <div class="menu-item" data-target="categories">品类管理</div>
       <div class="menu-item" data-target="inventory">库存管理</div>
+      <div class="menu-item" data-target="locations">📦 箱子位置管理</div>
       <div class="menu-item" data-target="reports">统计报表</div>
       <div class="menu-item" data-target="system">系统维护</div>
     </aside>
@@ -240,6 +241,56 @@ $current_user = '管理员';
                 </tr>
               </tbody>
             </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- 页面: 箱子位置管理 -->
+      <div class="page" id="page-locations">
+        <h2>📦 箱子位置管理</h2>
+        <div class="card">
+          <div class="flex-between">
+            <div class="filters">
+              <input type="text" id="location-filter-box" placeholder="箱号" style="width: 120px;" />
+              <input type="text" id="location-filter-location" placeholder="货架位置" style="width: 120px;" />
+              <input type="text" id="location-filter-batch" placeholder="批次" style="width: 120px;" />
+              <select id="location-filter-status" style="width: 120px;">
+                <option value="">全部状态</option>
+                <option value="in_stock">在库</option>
+                <option value="shipped">已出库</option>
+              </select>
+              <button class="secondary" data-action="searchLocations">搜索</button>
+            </div>
+            <div style="display: flex; gap: 10px;">
+              <button data-action="batchUpdateLocation">批量修改位置</button>
+              <button class="secondary" data-action="exportLocations">导出</button>
+            </div>
+          </div>
+          <div class="table-responsive mt-10">
+            <table id="locations-table">
+              <thead>
+                <tr>
+                  <th style="width: 40px;"><input type="checkbox" id="select-all-locations" /></th>
+                  <th>箱号</th>
+                  <th>批次名称</th>
+                  <th>快递单号</th>
+                  <th>货架位置</th>
+                  <th>内容备注</th>
+                  <th>数量</th>
+                  <th>状态</th>
+                  <th>入库时间</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td colspan="10" class="loading">加载中...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="pagination" id="locations-pagination">
+            <!-- 分页将通过JS动态生成 -->
           </div>
         </div>
       </div>
@@ -687,6 +738,409 @@ $current_user = '管理员';
       </div>
     </div>
   </div>
+
+  <!-- 模态框: 修改箱子位置 (单个) -->
+  <div class="modal-backdrop" id="modal-update-location">
+    <div class="modal" style="max-width: 500px;">
+      <div class="modal-header">
+        <h3>修改箱子位置</h3>
+        <button class="text" data-action="closeModal" data-modal-id="modal-update-location">×</button>
+      </div>
+      <form id="form-update-location">
+        <input type="hidden" id="update-ledger-id" />
+        <div class="form-group">
+          <label>箱号</label>
+          <input type="text" id="update-box-number" disabled style="background: #f5f5f5;" />
+        </div>
+        <div class="form-group">
+          <label>批次名称</label>
+          <input type="text" id="update-batch-name" disabled style="background: #f5f5f5;" />
+        </div>
+        <div class="form-group">
+          <label>当前位置</label>
+          <input type="text" id="update-current-location" disabled style="background: #f5f5f5;" />
+        </div>
+        <div class="form-group">
+          <label>新位置 *</label>
+          <small style="color: #666; display: block; margin-bottom: 5px;">格式: 排号-架号-层号 (每段2位数字)</small>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <input type="text" id="update-row" class="shelf-segment-modal" placeholder="排" maxlength="2" autocomplete="off" style="width: 60px; text-align: center; font-size: 16px;">
+            <span style="color: #666; font-weight: bold;">-</span>
+            <input type="text" id="update-rack" class="shelf-segment-modal" placeholder="架" maxlength="2" autocomplete="off" style="width: 60px; text-align: center; font-size: 16px;">
+            <span style="color: #666; font-weight: bold;">-</span>
+            <input type="text" id="update-level" class="shelf-segment-modal" placeholder="层" maxlength="2" autocomplete="off" style="width: 60px; text-align: center; font-size: 16px;">
+            <input type="hidden" id="update-new-location" />
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="text" data-action="closeModal" data-modal-id="modal-update-location">取消</button>
+          <button type="submit">保存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 模态框: 批量修改箱子位置 -->
+  <div class="modal-backdrop" id="modal-batch-update-location">
+    <div class="modal" style="max-width: 500px;">
+      <div class="modal-header">
+        <h3>批量修改箱子位置</h3>
+        <button class="text" data-action="closeModal" data-modal-id="modal-batch-update-location">×</button>
+      </div>
+      <form id="form-batch-update-location">
+        <div class="form-group">
+          <label>已选择箱子数量</label>
+          <input type="text" id="batch-selected-count" disabled style="background: #f5f5f5;" />
+        </div>
+        <div class="form-group">
+          <label>新位置 *</label>
+          <small style="color: #666; display: block; margin-bottom: 5px;">格式: 排号-架号-层号 (每段2位数字)</small>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <input type="text" id="batch-row" class="shelf-segment-modal" placeholder="排" maxlength="2" autocomplete="off" style="width: 60px; text-align: center; font-size: 16px;">
+            <span style="color: #666; font-weight: bold;">-</span>
+            <input type="text" id="batch-rack" class="shelf-segment-modal" placeholder="架" maxlength="2" autocomplete="off" style="width: 60px; text-align: center; font-size: 16px;">
+            <span style="color: #666; font-weight: bold;">-</span>
+            <input type="text" id="batch-level" class="shelf-segment-modal" placeholder="层" maxlength="2" autocomplete="off" style="width: 60px; text-align: center; font-size: 16px;">
+            <input type="hidden" id="batch-new-location" />
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="text" data-action="closeModal" data-modal-id="modal-batch-update-location">取消</button>
+          <button type="submit">保存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // === 箱子位置管理模块 ===
+    (function() {
+        'use strict';
+
+        let currentPage = 1;
+        let selectedBoxes = [];
+
+        // 三段式输入处理函数
+        function initSegmentedInput(rowId, rackId, levelId, hiddenId) {
+            const rowInput = document.getElementById(rowId);
+            const rackInput = document.getElementById(rackId);
+            const levelInput = document.getElementById(levelId);
+            const hiddenInput = document.getElementById(hiddenId);
+
+            if (!rowInput || !rackInput || !levelInput || !hiddenInput) return;
+
+            const segments = [rowInput, rackInput, levelInput];
+
+            function updateHidden() {
+                const row = rowInput.value.trim();
+                const rack = rackInput.value.trim();
+                const level = levelInput.value.trim();
+
+                if (!row && !rack && !level) {
+                    hiddenInput.value = '';
+                    return;
+                }
+
+                const parts = [];
+                if (row) parts.push(row.padStart(2, '0'));
+                if (rack) parts.push(rack.padStart(2, '0'));
+                if (level) parts.push(level.padStart(2, '0'));
+
+                hiddenInput.value = parts.join('-');
+            }
+
+            segments.forEach((input, index) => {
+                input.addEventListener('input', function() {
+                    this.value = this.value.replace(/\D/g, '');
+                    if (this.value.length > 2) {
+                        this.value = this.value.substring(0, 2);
+                    }
+                    updateHidden();
+                    if (this.value.length === 2 && index < segments.length - 1) {
+                        setTimeout(() => {
+                            segments[index + 1].focus();
+                            segments[index + 1].select();
+                        }, 0);
+                    }
+                });
+
+                input.addEventListener('keyup', function(e) {
+                    if (this.value.length === 2 && index < segments.length - 1) {
+                        const navKeys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Tab', 'Backspace', 'Delete'];
+                        if (!navKeys.includes(e.key)) {
+                            setTimeout(() => {
+                                segments[index + 1].focus();
+                                segments[index + 1].select();
+                            }, 0);
+                        }
+                    }
+                });
+            });
+        }
+
+        // 初始化三段式输入（单个修改）
+        initSegmentedInput('update-row', 'update-rack', 'update-level', 'update-new-location');
+        // 初始化三段式输入（批量修改）
+        initSegmentedInput('batch-row', 'batch-rack', 'batch-level', 'batch-new-location');
+
+        // 加载箱子位置列表
+        window.loadPackageLocations = function(page = 1) {
+            currentPage = page;
+
+            const boxNumber = document.getElementById('location-filter-box')?.value || '';
+            const location = document.getElementById('location-filter-location')?.value || '';
+            const batchName = document.getElementById('location-filter-batch')?.value || '';
+            const status = document.getElementById('location-filter-status')?.value || '';
+
+            const params = new URLSearchParams({
+                operation: 'list',
+                box_number: boxNumber,
+                location: location,
+                batch_name: batchName,
+                status: status,
+                page: page,
+                limit: 20
+            });
+
+            fetch('/mrs/index.php?action=backend_package_locations&' + params.toString())
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        displayLocationsList(result.data);
+                    } else {
+                        alert('加载失败: ' + (result.message || '未知错误'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('网络错误');
+                });
+        };
+
+        // 显示箱子位置列表
+        function displayLocationsList(data) {
+            const tbody = document.querySelector('#locations-table tbody');
+            if (!tbody) return;
+
+            tbody.innerHTML = '';
+
+            if (!data.items || data.items.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="10" class="loading">没有找到数据</td></tr>';
+                return;
+            }
+
+            data.items.forEach(item => {
+                const tr = document.createElement('tr');
+                const statusText = item.status === 'in_stock' ? '在库' : (item.status === 'shipped' ? '已出库' : '其他');
+
+                tr.innerHTML = `
+                    <td><input type="checkbox" class="box-checkbox" data-ledger-id="${item.ledger_id}" /></td>
+                    <td>${escapeHtml(item.box_number)}</td>
+                    <td>${escapeHtml(item.batch_name)}</td>
+                    <td>${escapeHtml(item.tracking_number || '')}</td>
+                    <td><strong>${escapeHtml(item.warehouse_location || '未设置')}</strong></td>
+                    <td>${escapeHtml(item.content_note || '-')}</td>
+                    <td>${item.quantity || '-'}</td>
+                    <td>${statusText}</td>
+                    <td>${formatDateTime(item.inbound_time)}</td>
+                    <td>
+                        <button class="text" onclick="showUpdateLocationModal(${item.ledger_id}, '${escapeHtml(item.box_number)}', '${escapeHtml(item.batch_name)}', '${escapeHtml(item.warehouse_location || '')}')">修改位置</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            // 更新分页
+            updatePagination(data.pagination);
+        }
+
+        // 更新分页
+        function updatePagination(pagination) {
+            const container = document.getElementById('locations-pagination');
+            if (!container) return;
+
+            container.innerHTML = `
+                <span>共 ${pagination.total} 条记录，第 ${pagination.page} / ${pagination.total_pages} 页</span>
+                <button ${pagination.page <= 1 ? 'disabled' : ''} onclick="loadPackageLocations(${pagination.page - 1})">上一页</button>
+                <button ${pagination.page >= pagination.total_pages ? 'disabled' : ''} onclick="loadPackageLocations(${pagination.page + 1})">下一页</button>
+            `;
+        }
+
+        // 显示修改位置模态框
+        window.showUpdateLocationModal = function(ledgerId, boxNumber, batchName, currentLocation) {
+            document.getElementById('update-ledger-id').value = ledgerId;
+            document.getElementById('update-box-number').value = boxNumber;
+            document.getElementById('update-batch-name').value = batchName;
+            document.getElementById('update-current-location').value = currentLocation || '未设置';
+
+            // 清空输入框
+            document.getElementById('update-row').value = '';
+            document.getElementById('update-rack').value = '';
+            document.getElementById('update-level').value = '';
+            document.getElementById('update-new-location').value = '';
+
+            document.getElementById('modal-update-location').style.display = 'flex';
+        };
+
+        // 提交单个位置更新
+        document.getElementById('form-update-location')?.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const ledgerId = document.getElementById('update-ledger-id').value;
+            const newLocation = document.getElementById('update-new-location').value;
+
+            if (!newLocation) {
+                alert('请输入新位置');
+                return;
+            }
+
+            fetch('/mrs/index.php?action=backend_package_locations', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    operation: 'update',
+                    ledger_id: ledgerId,
+                    new_location: newLocation
+                })
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    alert('位置更新成功');
+                    document.getElementById('modal-update-location').style.display = 'none';
+                    loadPackageLocations(currentPage);
+                } else {
+                    alert('更新失败: ' + (result.message || '未知错误'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('网络错误');
+            });
+        });
+
+        // 批量更新位置
+        window.batchUpdateLocationHandler = function() {
+            const checkboxes = document.querySelectorAll('.box-checkbox:checked');
+            const ledgerIds = Array.from(checkboxes).map(cb => cb.dataset.ledgerId);
+
+            if (ledgerIds.length === 0) {
+                alert('请先选择要修改的箱子');
+                return;
+            }
+
+            selectedBoxes = ledgerIds;
+            document.getElementById('batch-selected-count').value = ledgerIds.length + ' 个箱子';
+
+            // 清空输入框
+            document.getElementById('batch-row').value = '';
+            document.getElementById('batch-rack').value = '';
+            document.getElementById('batch-level').value = '';
+            document.getElementById('batch-new-location').value = '';
+
+            document.getElementById('modal-batch-update-location').style.display = 'flex';
+        };
+
+        // 提交批量位置更新
+        document.getElementById('form-batch-update-location')?.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const newLocation = document.getElementById('batch-new-location').value;
+
+            if (!newLocation) {
+                alert('请输入新位置');
+                return;
+            }
+
+            if (!confirm(`确定要将 ${selectedBoxes.length} 个箱子的位置修改为 ${newLocation} 吗？`)) {
+                return;
+            }
+
+            fetch('/mrs/index.php?action=backend_package_locations', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    operation: 'batch_update',
+                    ledger_ids: selectedBoxes,
+                    new_location: newLocation
+                })
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    alert(result.message || '批量更新成功');
+                    document.getElementById('modal-batch-update-location').style.display = 'none';
+                    loadPackageLocations(currentPage);
+                } else {
+                    alert('更新失败: ' + (result.message || '未知错误'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('网络错误');
+            });
+        });
+
+        // 全选/取消全选
+        document.getElementById('select-all-locations')?.addEventListener('change', function() {
+            const checkboxes = document.querySelectorAll('.box-checkbox');
+            checkboxes.forEach(cb => cb.checked = this.checked);
+        });
+
+        // 工具函数
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function formatDateTime(dateTime) {
+            if (!dateTime) return '-';
+            const date = new Date(dateTime);
+            return date.toLocaleString('zh-CN');
+        }
+
+        // 绑定事件
+        document.addEventListener('DOMContentLoaded', function() {
+            // 绑定搜索按钮
+            document.querySelector('[data-action="searchLocations"]')?.addEventListener('click', function() {
+                loadPackageLocations(1);
+            });
+
+            // 绑定批量修改按钮
+            document.querySelector('[data-action="batchUpdateLocation"]')?.addEventListener('click', batchUpdateLocationHandler);
+
+            // 关闭模态框
+            document.querySelectorAll('[data-action="closeModal"]').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const modalId = this.dataset.modalId;
+                    if (modalId) {
+                        document.getElementById(modalId).style.display = 'none';
+                    }
+                });
+            });
+
+            // 点击背景关闭模态框
+            document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
+                backdrop.addEventListener('click', function(e) {
+                    if (e.target === this) {
+                        this.style.display = 'none';
+                    }
+                });
+            });
+
+            // 当切换到位置管理页面时加载数据
+            const locationsMenuItem = document.querySelector('[data-target="locations"]');
+            if (locationsMenuItem) {
+                locationsMenuItem.addEventListener('click', function() {
+                    setTimeout(() => {
+                        loadPackageLocations(1);
+                    }, 100);
+                });
+            }
+        });
+    })();
+  </script>
 
   <script type="module" src="js/modules/main.js?v=<?php echo time() + 3; ?>"></script>
 </body>
