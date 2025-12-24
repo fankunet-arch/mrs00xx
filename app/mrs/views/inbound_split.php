@@ -230,24 +230,40 @@ if (!empty($selected_batch)) {
                             </label>
                         </div>
 
-                        <!-- 货架位置输入 -->
+                        <!-- 货架位置输入 (三段式) -->
                         <div style="margin: 15px 0; padding: 12px; background: #fff3e0; border-left: 4px solid #ff9800; border-radius: 4px;">
                             <label style="display: block; margin-bottom: 8px; font-weight: 500;">
                                 <span style="color: #e65100;">📦 货架位置 (可选)</span>
-                                <small style="color: #666; font-weight: normal; margin-left: 10px;">提示: 留空则不设置位置</small>
+                                <small style="color: #666; font-weight: normal; margin-left: 10px;">格式: 排号-架号-层号 (每段2位数字)</small>
                             </label>
-                            <div style="position: relative;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
                                 <input type="text"
-                                       id="shelf_location"
-                                       name="shelf_location"
-                                       class="form-control"
-                                       placeholder="例如: A货架3层"
+                                       id="shelf_row"
+                                       class="form-control shelf-segment"
+                                       placeholder="排"
+                                       maxlength="2"
                                        autocomplete="off"
-                                       style="width: 300px;">
-                                <div id="shelf_location_suggestions" class="autocomplete-suggestions"></div>
+                                       style="width: 60px; text-align: center; font-size: 16px;">
+                                <span style="color: #666; font-weight: bold;">-</span>
+                                <input type="text"
+                                       id="shelf_rack"
+                                       class="form-control shelf-segment"
+                                       placeholder="架"
+                                       maxlength="2"
+                                       autocomplete="off"
+                                       style="width: 60px; text-align: center; font-size: 16px;">
+                                <span style="color: #666; font-weight: bold;">-</span>
+                                <input type="text"
+                                       id="shelf_level"
+                                       class="form-control shelf-segment"
+                                       placeholder="层"
+                                       maxlength="2"
+                                       autocomplete="off"
+                                       style="width: 60px; text-align: center; font-size: 16px;">
+                                <input type="hidden" id="shelf_location" name="shelf_location">
                             </div>
                             <small style="color: #666; display: block; margin-top: 5px;">
-                                💡 此位置将应用到所有选中的包裹
+                                💡 此位置将应用到所有选中的包裹 (例如: 01-02-03)
                             </small>
                         </div>
 
@@ -440,77 +456,100 @@ if (!empty($selected_batch)) {
         });
     });
 
-    // 货架位置自动补全
+    // 三段式货架位置输入处理
     (function() {
-        const input = document.getElementById('shelf_location');
-        const suggestionsBox = document.getElementById('shelf_location_suggestions');
-        let debounceTimer;
+        const rowInput = document.getElementById('shelf_row');
+        const rackInput = document.getElementById('shelf_rack');
+        const levelInput = document.getElementById('shelf_level');
+        const hiddenInput = document.getElementById('shelf_location');
 
-        if (!input || !suggestionsBox) return;
+        if (!rowInput || !rackInput || !levelInput || !hiddenInput) return;
 
-        // 输入事件
-        input.addEventListener('input', function() {
-            clearTimeout(debounceTimer);
-            const keyword = this.value.trim();
+        const segments = [rowInput, rackInput, levelInput];
 
-            if (keyword.length === 0) {
-                suggestionsBox.style.display = 'none';
+        // 更新隐藏字段
+        function updateShelfLocation() {
+            const row = rowInput.value.trim();
+            const rack = rackInput.value.trim();
+            const level = levelInput.value.trim();
+
+            // 如果都为空，隐藏字段也为空
+            if (!row && !rack && !level) {
+                hiddenInput.value = '';
                 return;
             }
 
-            // 防抖,延迟300ms后请求
-            debounceTimer = setTimeout(() => {
-                fetch('/mrs/index.php?action=api&endpoint=shelf_location_autocomplete&keyword=' + encodeURIComponent(keyword))
-                    .then(response => response.json())
-                    .then(result => {
-                        if (result.success && result.data && result.data.length > 0) {
-                            showSuggestions(result.data);
-                        } else {
-                            suggestionsBox.style.display = 'none';
-                        }
-                    })
-                    .catch(error => {
-                        console.error('自动补全失败:', error);
-                        suggestionsBox.style.display = 'none';
-                    });
-            }, 300);
-        });
+            // 组合成格式化字符串
+            const parts = [];
+            if (row) parts.push(row.padStart(2, '0'));
+            if (rack) parts.push(rack.padStart(2, '0'));
+            if (level) parts.push(level.padStart(2, '0'));
 
-        // 显示建议
-        function showSuggestions(suggestions) {
-            suggestionsBox.innerHTML = '';
-            suggestions.forEach(suggestion => {
-                const div = document.createElement('div');
-                div.className = 'autocomplete-suggestion';
-                div.textContent = suggestion;
-                div.addEventListener('click', function() {
-                    input.value = suggestion;
-                    suggestionsBox.style.display = 'none';
-                });
-                suggestionsBox.appendChild(div);
-            });
-            suggestionsBox.style.display = 'block';
+            hiddenInput.value = parts.join('-');
         }
 
-        // 点击外部关闭
-        document.addEventListener('click', function(e) {
-            if (e.target !== input && e.target !== suggestionsBox) {
-                suggestionsBox.style.display = 'none';
-            }
-        });
+        // 为每个输入框添加事件监听
+        segments.forEach((input, index) => {
+            // 只允许输入数字
+            input.addEventListener('input', function(e) {
+                this.value = this.value.replace(/\D/g, '');
 
-        // 获得焦点时显示常用位置
-        input.addEventListener('focus', function() {
-            if (this.value.trim().length === 0) {
-                fetch('/mrs/index.php?action=api&endpoint=shelf_location_autocomplete')
-                    .then(response => response.json())
-                    .then(result => {
-                        if (result.success && result.data && result.data.length > 0) {
-                            showSuggestions(result.data);
-                        }
-                    })
-                    .catch(error => console.error('获取常用位置失败:', error));
-            }
+                // 自动跳转到下一个输入框
+                if (this.value.length === 2 && index < segments.length - 1) {
+                    segments[index + 1].focus();
+                }
+
+                // 更新隐藏字段
+                updateShelfLocation();
+            });
+
+            // 支持键盘导航
+            input.addEventListener('keydown', function(e) {
+                // Backspace: 如果当前为空，跳到上一个
+                if (e.key === 'Backspace' && this.value.length === 0 && index > 0) {
+                    e.preventDefault();
+                    segments[index - 1].focus();
+                    segments[index - 1].value = '';
+                    updateShelfLocation();
+                }
+
+                // 左箭头: 跳到上一个
+                if (e.key === 'ArrowLeft' && this.selectionStart === 0 && index > 0) {
+                    e.preventDefault();
+                    segments[index - 1].focus();
+                    segments[index - 1].setSelectionRange(segments[index - 1].value.length, segments[index - 1].value.length);
+                }
+
+                // 右箭头: 跳到下一个
+                if (e.key === 'ArrowRight' && this.selectionStart === this.value.length && index < segments.length - 1) {
+                    e.preventDefault();
+                    segments[index + 1].focus();
+                    segments[index + 1].setSelectionRange(0, 0);
+                }
+            });
+
+            // 粘贴处理：自动拆分格式化字符串
+            input.addEventListener('paste', function(e) {
+                e.preventDefault();
+                const pasteData = e.clipboardData.getData('text').trim();
+
+                // 如果是格式化字符串（如 "01-02-03"）
+                if (pasteData.includes('-')) {
+                    const parts = pasteData.split('-').map(p => p.trim().replace(/\D/g, ''));
+                    if (parts[0]) rowInput.value = parts[0].substring(0, 2);
+                    if (parts[1]) rackInput.value = parts[1].substring(0, 2);
+                    if (parts[2]) levelInput.value = parts[2].substring(0, 2);
+                    updateShelfLocation();
+                } else {
+                    // 否则只粘贴数字到当前框
+                    const numbers = pasteData.replace(/\D/g, '');
+                    this.value = numbers.substring(0, 2);
+                    if (numbers.length > 2 && index < segments.length - 1) {
+                        segments[index + 1].focus();
+                    }
+                    updateShelfLocation();
+                }
+            });
         });
     })();
     </script>

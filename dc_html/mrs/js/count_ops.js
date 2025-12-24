@@ -376,18 +376,26 @@
         }
         systemInfoContainer.innerHTML = systemInfo;
 
-        // 显示当前货架位置
-        const shelfLocationInput = document.getElementById('shelf-location');
+        // 显示当前货架位置（三段式）
+        const shelfRowInput = document.getElementById('shelf-row');
+        const shelfRackInput = document.getElementById('shelf-rack');
+        const shelfLevelInput = document.getElementById('shelf-level');
+        const shelfLocationHidden = document.getElementById('shelf-location');
         const currentLocationHint = document.getElementById('current-location-hint');
         const currentLocationValue = document.getElementById('current-location-value');
-        if (shelfLocationInput) {
-            shelfLocationInput.value = '';  // 清空输入框
-            if (boxData.warehouse_location) {
-                currentLocationValue.textContent = boxData.warehouse_location;
-                currentLocationHint.style.display = 'block';
-            } else {
-                currentLocationHint.style.display = 'none';
-            }
+
+        // 清空三段输入框
+        if (shelfRowInput) shelfRowInput.value = '';
+        if (shelfRackInput) shelfRackInput.value = '';
+        if (shelfLevelInput) shelfLevelInput.value = '';
+        if (shelfLocationHidden) shelfLocationHidden.value = '';
+
+        // 显示当前位置提示
+        if (boxData.warehouse_location) {
+            currentLocationValue.textContent = boxData.warehouse_location;
+            currentLocationHint.style.display = 'block';
+        } else {
+            currentLocationHint.style.display = 'none';
         }
 
         // 重置表单
@@ -459,10 +467,10 @@
             formData.append('check_mode', checkMode);
             formData.append('remark', countRemark.value.trim());
 
-            // 添加货架位置
-            const shelfLocationInput = document.getElementById('shelf-location');
-            if (shelfLocationInput) {
-                formData.append('shelf_location', shelfLocationInput.value.trim());
+            // 添加货架位置（从隐藏字段读取三段式组合后的值）
+            const shelfLocationHidden = document.getElementById('shelf-location');
+            if (shelfLocationHidden) {
+                formData.append('shelf_location', shelfLocationHidden.value.trim());
             }
 
             // 如果是核对数量模式，收集物品信息
@@ -893,103 +901,100 @@
         alert(message);
     }
 
-    // === 货架位置自动补全 ===
+    // === 三段式货架位置输入处理 ===
     (function() {
-        const shelfLocationInput = document.getElementById('shelf-location');
-        const shelfSuggestionsBox = document.getElementById('shelf-location-suggestions');
-        let debounceTimer;
+        const rowInput = document.getElementById('shelf-row');
+        const rackInput = document.getElementById('shelf-rack');
+        const levelInput = document.getElementById('shelf-level');
+        const hiddenInput = document.getElementById('shelf-location');
 
-        if (!shelfLocationInput || !shelfSuggestionsBox) return;
+        if (!rowInput || !rackInput || !levelInput || !hiddenInput) return;
 
-        // 输入事件
-        shelfLocationInput.addEventListener('input', function() {
-            clearTimeout(debounceTimer);
-            const keyword = this.value.trim();
+        const segments = [rowInput, rackInput, levelInput];
 
-            if (keyword.length === 0) {
-                shelfSuggestionsBox.style.display = 'none';
+        // 更新隐藏字段
+        function updateShelfLocation() {
+            const row = rowInput.value.trim();
+            const rack = rackInput.value.trim();
+            const level = levelInput.value.trim();
+
+            // 如果都为空，隐藏字段也为空
+            if (!row && !rack && !level) {
+                hiddenInput.value = '';
                 return;
             }
 
-            // 防抖,延迟300ms后请求
-            debounceTimer = setTimeout(() => {
-                fetch('/mrs/index.php?action=api&endpoint=shelf_location_autocomplete&keyword=' + encodeURIComponent(keyword))
-                    .then(response => response.json())
-                    .then(result => {
-                        if (result.success && result.data && result.data.length > 0) {
-                            showShelfSuggestions(result.data);
-                        } else {
-                            shelfSuggestionsBox.style.display = 'none';
-                        }
-                    })
-                    .catch(error => {
-                        console.error('货架位置自动补全失败:', error);
-                        shelfSuggestionsBox.style.display = 'none';
-                    });
-            }, 300);
-        });
+            // 组合成格式化字符串
+            const parts = [];
+            if (row) parts.push(row.padStart(2, '0'));
+            if (rack) parts.push(rack.padStart(2, '0'));
+            if (level) parts.push(level.padStart(2, '0'));
 
-        // 显示建议
-        function showShelfSuggestions(suggestions) {
-            shelfSuggestionsBox.innerHTML = '';
-            shelfSuggestionsBox.style.position = 'absolute';
-            shelfSuggestionsBox.style.width = '100%';
-            shelfSuggestionsBox.style.maxHeight = '200px';
-            shelfSuggestionsBox.style.overflowY = 'auto';
-            shelfSuggestionsBox.style.background = 'white';
-            shelfSuggestionsBox.style.border = '1px solid #ddd';
-            shelfSuggestionsBox.style.borderTop = 'none';
-            shelfSuggestionsBox.style.borderRadius = '0 0 4px 4px';
-            shelfSuggestionsBox.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
-            shelfSuggestionsBox.style.zIndex = '1000';
-
-            suggestions.forEach(suggestion => {
-                const div = document.createElement('div');
-                div.style.padding = '10px 12px';
-                div.style.cursor = 'pointer';
-                div.style.borderBottom = '1px solid #f0f0f0';
-                div.textContent = suggestion;
-                div.addEventListener('click', function() {
-                    shelfLocationInput.value = suggestion;
-                    shelfSuggestionsBox.style.display = 'none';
-                });
-                div.addEventListener('mouseover', function() {
-                    this.style.backgroundColor = '#f0f7ff';
-                });
-                div.addEventListener('mouseout', function() {
-                    this.style.backgroundColor = '';
-                });
-                shelfSuggestionsBox.appendChild(div);
-            });
-
-            // 移除最后一个边框
-            const lastChild = shelfSuggestionsBox.lastChild;
-            if (lastChild) {
-                lastChild.style.borderBottom = 'none';
-            }
-
-            shelfSuggestionsBox.style.display = 'block';
+            hiddenInput.value = parts.join('-');
         }
 
-        // 点击外部关闭
-        document.addEventListener('click', function(e) {
-            if (e.target !== shelfLocationInput && !shelfSuggestionsBox.contains(e.target)) {
-                shelfSuggestionsBox.style.display = 'none';
-            }
-        });
+        // 为每个输入框添加事件监听
+        segments.forEach((input, index) => {
+            // 只允许输入数字
+            input.addEventListener('input', function(e) {
+                this.value = this.value.replace(/\D/g, '');
 
-        // 获得焦点时显示常用位置
-        shelfLocationInput.addEventListener('focus', function() {
-            if (this.value.trim().length === 0) {
-                fetch('/mrs/index.php?action=api&endpoint=shelf_location_autocomplete')
-                    .then(response => response.json())
-                    .then(result => {
-                        if (result.success && result.data && result.data.length > 0) {
-                            showShelfSuggestions(result.data);
-                        }
-                    })
-                    .catch(error => console.error('获取常用位置失败:', error));
-            }
+                // 自动跳转到下一个输入框
+                if (this.value.length === 2 && index < segments.length - 1) {
+                    segments[index + 1].focus();
+                }
+
+                // 更新隐藏字段
+                updateShelfLocation();
+            });
+
+            // 支持键盘导航
+            input.addEventListener('keydown', function(e) {
+                // Backspace: 如果当前为空，跳到上一个
+                if (e.key === 'Backspace' && this.value.length === 0 && index > 0) {
+                    e.preventDefault();
+                    segments[index - 1].focus();
+                    segments[index - 1].value = '';
+                    updateShelfLocation();
+                }
+
+                // 左箭头: 跳到上一个
+                if (e.key === 'ArrowLeft' && this.selectionStart === 0 && index > 0) {
+                    e.preventDefault();
+                    segments[index - 1].focus();
+                    segments[index - 1].setSelectionRange(segments[index - 1].value.length, segments[index - 1].value.length);
+                }
+
+                // 右箭头: 跳到下一个
+                if (e.key === 'ArrowRight' && this.selectionStart === this.value.length && index < segments.length - 1) {
+                    e.preventDefault();
+                    segments[index + 1].focus();
+                    segments[index + 1].setSelectionRange(0, 0);
+                }
+            });
+
+            // 粘贴处理：自动拆分格式化字符串
+            input.addEventListener('paste', function(e) {
+                e.preventDefault();
+                const pasteData = e.clipboardData.getData('text').trim();
+
+                // 如果是格式化字符串（如 "01-02-03"）
+                if (pasteData.includes('-')) {
+                    const parts = pasteData.split('-').map(p => p.trim().replace(/\D/g, ''));
+                    if (parts[0]) rowInput.value = parts[0].substring(0, 2);
+                    if (parts[1]) rackInput.value = parts[1].substring(0, 2);
+                    if (parts[2]) levelInput.value = parts[2].substring(0, 2);
+                    updateShelfLocation();
+                } else {
+                    // 否则只粘贴数字到当前框
+                    const numbers = pasteData.replace(/\D/g, '');
+                    this.value = numbers.substring(0, 2);
+                    if (numbers.length > 2 && index < segments.length - 1) {
+                        segments[index + 1].focus();
+                    }
+                    updateShelfLocation();
+                }
+            });
         });
     })();
 })();
