@@ -16,7 +16,8 @@ $menu_items = [
         'title' => '库存管理',
         'icon' => '📦',
         'items' => [
-            ['action' => 'inventory_list', 'label' => '库存总览']
+            ['action' => 'inventory_list', 'label' => '库存总览'],
+            ['action' => 'package_locations', 'label' => '货架位置管理']
         ]
     ],
     [

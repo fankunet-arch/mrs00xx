@@ -279,6 +279,7 @@
                         ${box.sku_name ? `<div class="info-item"><span class="info-label">SKU:</span><span class="info-value">${escapeHtml(box.sku_name)}</span></div>` : ''}
                         ${box.content_note ? `<div class="info-item"><span class="info-label">内容:</span><span class="info-value">${escapeHtml(box.content_note)}</span></div>` : ''}
                         ${box.quantity ? `<div class="info-item"><span class="info-label">数量:</span><span class="info-value">${box.quantity} ${escapeHtml(box.standard_unit || '件')}</span></div>` : ''}
+                        ${box.warehouse_location ? `<div class="info-item" style="background: #fff3e0; padding: 4px 8px; margin: 4px 0; border-radius: 4px;"><span class="info-label" style="color: #e65100;">📦 货架位置:</span><span class="info-value" style="font-weight: bold; color: #e65100;">${escapeHtml(box.warehouse_location)}</span></div>` : ''}
                         <div class="info-item"><span class="info-label">入库时间:</span><span class="info-value">${formatDateTime(box.inbound_time)}</span></div>
                     </div>
                 </div>
@@ -373,6 +374,11 @@
         }
         if (boxData.quantity) {
             systemInfo += `<div class="system-info-item"><span class="system-info-label">系统数量:</span><span class="system-info-value">${boxData.quantity} ${escapeHtml(boxData.standard_unit || '件')}</span></div>`;
+        }
+        if (boxData.warehouse_location) {
+            systemInfo += `<div class="system-info-item" style="background: #fff3e0; padding: 8px; border-left: 3px solid #ff9800;"><span class="system-info-label" style="color: #e65100;">📦 当前货架位置:</span><span class="system-info-value" style="font-weight: bold; color: #e65100;">${escapeHtml(boxData.warehouse_location)}</span></div>`;
+        } else {
+            systemInfo += `<div class="system-info-item" style="background: #f5f5f5; padding: 8px;"><span class="system-info-label">📦 当前货架位置:</span><span class="system-info-value" style="color: #999;">未设置</span></div>`;
         }
         systemInfoContainer.innerHTML = systemInfo;
 
