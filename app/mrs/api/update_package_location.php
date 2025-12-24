@@ -26,26 +26,25 @@ try {
     }
 
     $ledger_id = $input['ledger_id'] ?? null;
-    $new_location = trim($input['new_location'] ?? '');
+    $new_location = isset($input['new_location']) ? trim($input['new_location']) : null;
 
     // 验证参数
     if (!$ledger_id || !is_numeric($ledger_id)) {
         json_response(false, null, '无效的箱子ID');
     }
 
-    if ($new_location === '') {
-        json_response(false, null, '新位置不能为空');
-    }
-
-    // 验证格式 (XX-XX-XX)
-    if (!preg_match('/^\d{2}-\d{2}-\d{2}$/', $new_location)) {
-        json_response(false, null, '位置格式错误，应为：XX-XX-XX (如 01-02-03)');
+    // 如果new_location为空字符串，表示清除位置
+    if ($new_location !== '' && $new_location !== null) {
+        // 验证格式 (XX-XX-XX)
+        if (!preg_match('/^\d{2}-\d{2}-\d{2}$/', $new_location)) {
+            json_response(false, null, '位置格式错误，应为：XX-XX-XX (如 01-02-03)');
+        }
     }
 
     // 获取数据库连接
     $pdo = get_mrs_db_connection();
 
-    // 更新位置
+    // 更新位置（空字符串表示清除位置）
     $stmt = $pdo->prepare("
         UPDATE mrs_package_ledger
         SET warehouse_location = :location,
@@ -53,16 +52,20 @@ try {
         WHERE ledger_id = :ledger_id
     ");
 
-    $stmt->bindValue(':location', $new_location);
+    // 如果是空字符串，设置为NULL（清除位置）
+    $location_value = ($new_location === '' || $new_location === null) ? null : $new_location;
+    $stmt->bindValue(':location', $location_value);
     $stmt->bindValue(':ledger_id', (int)$ledger_id, PDO::PARAM_INT);
     $stmt->execute();
 
     if ($stmt->rowCount() > 0) {
-        mrs_log('箱子位置已更新', 'INFO', [
+        $action = $location_value ? '已更新' : '已清除';
+        mrs_log("箱子位置{$action}", 'INFO', [
             'ledger_id' => $ledger_id,
-            'new_location' => $new_location
+            'new_location' => $location_value ?? '(已清除)'
         ]);
-        json_response(true, null, '位置更新成功');
+        $message = $location_value ? '位置更新成功' : '位置已清除';
+        json_response(true, null, $message);
     } else {
         json_response(false, null, '更新失败或箱子不存在');
     }

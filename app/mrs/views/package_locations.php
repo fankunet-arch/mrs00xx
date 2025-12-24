@@ -406,14 +406,25 @@ if (!defined('MRS_ENTRY')) {
                 </div>
 
                 <div class="form-group">
-                    <label>新位置 *</label>
-                    <small>格式: 排号-架号-层号 (每段2位数字)</small>
+                    <label>快递尾号</label>
+                    <input type="text" id="update-tracking-tail" disabled style="background: #f5f5f5; color: #666;" />
+                </div>
+
+                <div class="form-group">
+                    <label>物品内容</label>
+                    <input type="text" id="update-content-note" disabled style="background: #f5f5f5; color: #666;" />
+                </div>
+
+                <div class="form-group">
+                    <label>新位置</label>
+                    <small>格式: 排号-架号-层号 (每段2位数字，全部留空即清除位置)</small>
                     <div class="shelf-inputs">
                         <input type="text" id="update-row" class="shelf-segment" placeholder="排" maxlength="2" autocomplete="off" />
                         <span>-</span>
                         <input type="text" id="update-rack" class="shelf-segment" placeholder="架" maxlength="2" autocomplete="off" />
                         <span>-</span>
                         <input type="text" id="update-level" class="shelf-segment" placeholder="层" maxlength="2" autocomplete="off" />
+                        <button type="button" onclick="clearLocationInputs('update')" style="margin-left: 10px; padding: 8px 12px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px;">清空</button>
                     </div>
                 </div>
 
@@ -438,14 +449,15 @@ if (!defined('MRS_ENTRY')) {
                 </div>
 
                 <div class="form-group">
-                    <label>新位置 *</label>
-                    <small>格式: 排号-架号-层号 (每段2位数字)</small>
+                    <label>新位置</label>
+                    <small>格式: 排号-架号-层号 (每段2位数字，全部留空即清除位置)</small>
                     <div class="shelf-inputs">
                         <input type="text" id="batch-row" class="shelf-segment" placeholder="排" maxlength="2" autocomplete="off" />
                         <span>-</span>
                         <input type="text" id="batch-rack" class="shelf-segment" placeholder="架" maxlength="2" autocomplete="off" />
                         <span>-</span>
                         <input type="text" id="batch-level" class="shelf-segment" placeholder="层" maxlength="2" autocomplete="off" />
+                        <button type="button" onclick="clearLocationInputs('batch')" style="margin-left: 10px; padding: 8px 12px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px;">清空</button>
                     </div>
                 </div>
 
@@ -570,7 +582,9 @@ if (!defined('MRS_ENTRY')) {
                 return;
             }
 
-            tbody.innerHTML = items.map(item => `
+            tbody.innerHTML = items.map(item => {
+                const trackingTail = item.tracking_number ? item.tracking_number.slice(-6) : '-';
+                return `
                 <tr>
                     <td>
                         <input type="checkbox" class="item-checkbox" value="${item.ledger_id}" />
@@ -588,12 +602,13 @@ if (!defined('MRS_ENTRY')) {
                     </td>
                     <td>${item.inbound_time || '-'}</td>
                     <td>
-                        <button class="edit" onclick="showUpdateModal(${item.ledger_id}, '${escapeHtml(item.box_number)}', '${escapeHtml(item.warehouse_location || '')}')">
+                        <button class="edit" onclick="showUpdateModal(${item.ledger_id}, '${escapeHtml(item.box_number || '')}', '${trackingTail}', '${escapeHtml(item.content_note || '')}', '${escapeHtml(item.warehouse_location || '')}')">
                             修改位置
                         </button>
                     </td>
                 </tr>
-            `).join('');
+                `;
+            }).join('');
         }
 
         // 更新分页
@@ -613,9 +628,11 @@ if (!defined('MRS_ENTRY')) {
         }
 
         // 显示单个修改模态框
-        function showUpdateModal(ledgerId, boxNumber, currentLocation) {
+        function showUpdateModal(ledgerId, boxNumber, trackingTail, contentNote, currentLocation) {
             document.getElementById('update-ledger-id').value = ledgerId;
             document.getElementById('update-box-number').value = boxNumber;
+            document.getElementById('update-tracking-tail').value = trackingTail || '无';
+            document.getElementById('update-content-note').value = contentNote || '无';
 
             // 解析现有位置
             const parts = currentLocation.split('-');
@@ -626,21 +643,44 @@ if (!defined('MRS_ENTRY')) {
             openModal('modal-update-single');
         }
 
+        // 清空位置输入框
+        function clearLocationInputs(type) {
+            if (type === 'update') {
+                document.getElementById('update-row').value = '';
+                document.getElementById('update-rack').value = '';
+                document.getElementById('update-level').value = '';
+            } else if (type === 'batch') {
+                document.getElementById('batch-row').value = '';
+                document.getElementById('batch-rack').value = '';
+                document.getElementById('batch-level').value = '';
+            }
+        }
+
         // 提交单个修改
         function submitSingleUpdate(event) {
             event.preventDefault();
 
             const ledgerId = document.getElementById('update-ledger-id').value;
-            const row = document.getElementById('update-row').value.trim().padStart(2, '0');
-            const rack = document.getElementById('update-rack').value.trim().padStart(2, '0');
-            const level = document.getElementById('update-level').value.trim().padStart(2, '0');
+            const row = document.getElementById('update-row').value.trim();
+            const rack = document.getElementById('update-rack').value.trim();
+            const level = document.getElementById('update-level').value.trim();
 
-            if (!row || !rack || !level) {
-                alert('请填写完整的位置信息（排号-架号-层号）');
-                return;
+            let newLocation = '';
+
+            // 检查是否全部为空（清除位置）
+            if (!row && !rack && !level) {
+                if (!confirm('确定要清除此箱子的货架位置信息吗？')) {
+                    return;
+                }
+                newLocation = ''; // 空字符串表示清除
+            } else {
+                // 必须全部填写
+                if (!row || !rack || !level) {
+                    alert('请填写完整的位置信息（排号-架号-层号），或全部留空以清除位置');
+                    return;
+                }
+                newLocation = `${row.padStart(2, '0')}-${rack.padStart(2, '0')}-${level.padStart(2, '0')}`;
             }
-
-            const newLocation = `${row}-${rack}-${level}`;
 
             fetch('/mrs/ap/index.php?action=update_package_location', {
                 method: 'POST',
@@ -655,7 +695,7 @@ if (!defined('MRS_ENTRY')) {
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    alert('位置更新成功');
+                    alert(newLocation ? '位置更新成功' : '位置已清除');
                     closeModal('modal-update-single');
                     loadPackageLocations(currentPage);
                 } else {
@@ -692,18 +732,28 @@ if (!defined('MRS_ENTRY')) {
             const checked = document.querySelectorAll('.item-checkbox:checked');
             const ledgerIds = Array.from(checked).map(cb => parseInt(cb.value));
 
-            const row = document.getElementById('batch-row').value.trim().padStart(2, '0');
-            const rack = document.getElementById('batch-rack').value.trim().padStart(2, '0');
-            const level = document.getElementById('batch-level').value.trim().padStart(2, '0');
+            const row = document.getElementById('batch-row').value.trim();
+            const rack = document.getElementById('batch-rack').value.trim();
+            const level = document.getElementById('batch-level').value.trim();
 
-            if (!row || !rack || !level) {
-                alert('请填写完整的位置信息（排号-架号-层号）');
-                return;
+            let newLocation = '';
+            let confirmMessage = '';
+
+            // 检查是否全部为空（清除位置）
+            if (!row && !rack && !level) {
+                newLocation = ''; // 空字符串表示清除
+                confirmMessage = `确定要清除 ${ledgerIds.length} 个箱子的货架位置信息吗？`;
+            } else {
+                // 必须全部填写
+                if (!row || !rack || !level) {
+                    alert('请填写完整的位置信息（排号-架号-层号），或全部留空以清除位置');
+                    return;
+                }
+                newLocation = `${row.padStart(2, '0')}-${rack.padStart(2, '0')}-${level.padStart(2, '0')}`;
+                confirmMessage = `确定要将 ${ledgerIds.length} 个箱子的位置更新为 ${newLocation} 吗？`;
             }
 
-            const newLocation = `${row}-${rack}-${level}`;
-
-            if (!confirm(`确定要将 ${ledgerIds.length} 个箱子的位置更新为 ${newLocation} 吗？`)) {
+            if (!confirm(confirmMessage)) {
                 return;
             }
 
@@ -720,7 +770,10 @@ if (!defined('MRS_ENTRY')) {
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    alert(`成功更新 ${data.data.affected} 个箱子的位置`);
+                    const message = newLocation
+                        ? `成功更新 ${data.data.affected} 个箱子的位置为 ${newLocation}`
+                        : `成功清除 ${data.data.affected} 个箱子的位置`;
+                    alert(message);
                     closeModal('modal-batch-update');
                     loadPackageLocations(currentPage);
                     document.getElementById('select-all').checked = false;

@@ -26,20 +26,19 @@ try {
     }
 
     $ledger_ids = $input['ledger_ids'] ?? [];
-    $new_location = trim($input['new_location'] ?? '');
+    $new_location = isset($input['new_location']) ? trim($input['new_location']) : null;
 
     // 验证参数
     if (empty($ledger_ids) || !is_array($ledger_ids)) {
         json_response(false, null, '请选择要更新的箱子');
     }
 
-    if ($new_location === '') {
-        json_response(false, null, '新位置不能为空');
-    }
-
-    // 验证格式 (XX-XX-XX)
-    if (!preg_match('/^\d{2}-\d{2}-\d{2}$/', $new_location)) {
-        json_response(false, null, '位置格式错误，应为：XX-XX-XX (如 01-02-03)');
+    // 如果new_location为空字符串，表示清除位置
+    if ($new_location !== '' && $new_location !== null) {
+        // 验证格式 (XX-XX-XX)
+        if (!preg_match('/^\d{2}-\d{2}-\d{2}$/', $new_location)) {
+            json_response(false, null, '位置格式错误，应为：XX-XX-XX (如 01-02-03)');
+        }
     }
 
     // 过滤和验证ID
@@ -54,6 +53,9 @@ try {
     // 获取数据库连接
     $pdo = get_mrs_db_connection();
 
+    // 如果是空字符串，设置为NULL（清除位置）
+    $location_value = ($new_location === '' || $new_location === null) ? null : $new_location;
+
     // 构建批量更新SQL
     $placeholders = implode(',', array_fill(0, count($ledger_ids), '?'));
     $stmt = $pdo->prepare("
@@ -64,18 +66,22 @@ try {
     ");
 
     // 绑定参数
-    $params = array_merge([$new_location], array_values($ledger_ids));
+    $params = array_merge([$location_value], array_values($ledger_ids));
     $stmt->execute($params);
 
     $affected = $stmt->rowCount();
 
     if ($affected > 0) {
-        mrs_log('批量更新箱子位置', 'INFO', [
+        $action = $location_value ? '批量更新箱子位置' : '批量清除箱子位置';
+        mrs_log($action, 'INFO', [
             'count' => $affected,
-            'new_location' => $new_location,
+            'new_location' => $location_value ?? '(已清除)',
             'ledger_ids' => $ledger_ids
         ]);
-        json_response(true, ['affected' => $affected], "成功更新 {$affected} 个箱子的位置");
+        $message = $location_value
+            ? "成功更新 {$affected} 个箱子的位置"
+            : "成功清除 {$affected} 个箱子的位置";
+        json_response(true, ['affected' => $affected], $message);
     } else {
         json_response(false, null, '更新失败，请检查箱子是否存在');
     }
