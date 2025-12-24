@@ -89,6 +89,7 @@ function mrs_count_search_box($pdo, $box_number) {
                 l.tracking_number,
                 l.content_note,
                 l.quantity,
+                l.warehouse_location,
                 l.status,
                 l.inbound_time,
                 l.batch_name,

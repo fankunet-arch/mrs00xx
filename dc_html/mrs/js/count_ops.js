@@ -376,6 +376,28 @@
         }
         systemInfoContainer.innerHTML = systemInfo;
 
+        // 显示当前货架位置（三段式）
+        const shelfRowInput = document.getElementById('shelf-row');
+        const shelfRackInput = document.getElementById('shelf-rack');
+        const shelfLevelInput = document.getElementById('shelf-level');
+        const shelfLocationHidden = document.getElementById('shelf-location');
+        const currentLocationHint = document.getElementById('current-location-hint');
+        const currentLocationValue = document.getElementById('current-location-value');
+
+        // 清空三段输入框
+        if (shelfRowInput) shelfRowInput.value = '';
+        if (shelfRackInput) shelfRackInput.value = '';
+        if (shelfLevelInput) shelfLevelInput.value = '';
+        if (shelfLocationHidden) shelfLocationHidden.value = '';
+
+        // 显示当前位置提示
+        if (boxData.warehouse_location) {
+            currentLocationValue.textContent = boxData.warehouse_location;
+            currentLocationHint.style.display = 'block';
+        } else {
+            currentLocationHint.style.display = 'none';
+        }
+
         // 重置表单
         document.querySelector('input[name="check-mode"][value="box_only"]').checked = true;
         qtyCheckSection.style.display = 'none';
@@ -444,6 +466,12 @@
             formData.append('ledger_id', ledgerId || '');
             formData.append('check_mode', checkMode);
             formData.append('remark', countRemark.value.trim());
+
+            // 添加货架位置（从隐藏字段读取三段式组合后的值）
+            const shelfLocationHidden = document.getElementById('shelf-location');
+            if (shelfLocationHidden) {
+                formData.append('shelf_location', shelfLocationHidden.value.trim());
+            }
 
             // 如果是核对数量模式，收集物品信息
             if (checkMode === 'with_qty') {
@@ -872,4 +900,101 @@
         // 简单的消息提示
         alert(message);
     }
+
+    // === 三段式货架位置输入处理 ===
+    (function() {
+        const rowInput = document.getElementById('shelf-row');
+        const rackInput = document.getElementById('shelf-rack');
+        const levelInput = document.getElementById('shelf-level');
+        const hiddenInput = document.getElementById('shelf-location');
+
+        if (!rowInput || !rackInput || !levelInput || !hiddenInput) return;
+
+        const segments = [rowInput, rackInput, levelInput];
+
+        // 更新隐藏字段
+        function updateShelfLocation() {
+            const row = rowInput.value.trim();
+            const rack = rackInput.value.trim();
+            const level = levelInput.value.trim();
+
+            // 如果都为空，隐藏字段也为空
+            if (!row && !rack && !level) {
+                hiddenInput.value = '';
+                return;
+            }
+
+            // 组合成格式化字符串
+            const parts = [];
+            if (row) parts.push(row.padStart(2, '0'));
+            if (rack) parts.push(rack.padStart(2, '0'));
+            if (level) parts.push(level.padStart(2, '0'));
+
+            hiddenInput.value = parts.join('-');
+        }
+
+        // 为每个输入框添加事件监听
+        segments.forEach((input, index) => {
+            // 只允许输入数字
+            input.addEventListener('input', function(e) {
+                this.value = this.value.replace(/\D/g, '');
+
+                // 自动跳转到下一个输入框
+                if (this.value.length === 2 && index < segments.length - 1) {
+                    segments[index + 1].focus();
+                }
+
+                // 更新隐藏字段
+                updateShelfLocation();
+            });
+
+            // 支持键盘导航
+            input.addEventListener('keydown', function(e) {
+                // Backspace: 如果当前为空，跳到上一个
+                if (e.key === 'Backspace' && this.value.length === 0 && index > 0) {
+                    e.preventDefault();
+                    segments[index - 1].focus();
+                    segments[index - 1].value = '';
+                    updateShelfLocation();
+                }
+
+                // 左箭头: 跳到上一个
+                if (e.key === 'ArrowLeft' && this.selectionStart === 0 && index > 0) {
+                    e.preventDefault();
+                    segments[index - 1].focus();
+                    segments[index - 1].setSelectionRange(segments[index - 1].value.length, segments[index - 1].value.length);
+                }
+
+                // 右箭头: 跳到下一个
+                if (e.key === 'ArrowRight' && this.selectionStart === this.value.length && index < segments.length - 1) {
+                    e.preventDefault();
+                    segments[index + 1].focus();
+                    segments[index + 1].setSelectionRange(0, 0);
+                }
+            });
+
+            // 粘贴处理：自动拆分格式化字符串
+            input.addEventListener('paste', function(e) {
+                e.preventDefault();
+                const pasteData = e.clipboardData.getData('text').trim();
+
+                // 如果是格式化字符串（如 "01-02-03"）
+                if (pasteData.includes('-')) {
+                    const parts = pasteData.split('-').map(p => p.trim().replace(/\D/g, ''));
+                    if (parts[0]) rowInput.value = parts[0].substring(0, 2);
+                    if (parts[1]) rackInput.value = parts[1].substring(0, 2);
+                    if (parts[2]) levelInput.value = parts[2].substring(0, 2);
+                    updateShelfLocation();
+                } else {
+                    // 否则只粘贴数字到当前框
+                    const numbers = pasteData.replace(/\D/g, '');
+                    this.value = numbers.substring(0, 2);
+                    if (numbers.length > 2 && index < segments.length - 1) {
+                        segments[index + 1].focus();
+                    }
+                    updateShelfLocation();
+                }
+            });
+        });
+    })();
 })();

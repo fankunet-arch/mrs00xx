@@ -97,6 +97,206 @@ function mrs_is_user_logged_in(): bool {
 }
 
 /**
+ * 别名函数: 检查用户登录状态 (向后兼容)
+ * @return bool
+ */
+function is_user_logged_in(): bool {
+    return mrs_is_user_logged_in();
+}
+
+// ============================================
+// 批次管理别名函数 (向后兼容)
+// ============================================
+
+/**
+ * 获取批次列表
+ * @param int $limit 返回数量限制
+ * @param string|null $status 批次状态筛选
+ * @return array
+ */
+function get_batch_list($limit = 20, $status = null) {
+    try {
+        $pdo = get_mrs_db_connection();
+
+        $sql = "SELECT
+                    batch_id,
+                    batch_code,
+                    batch_name,
+                    batch_date,
+                    batch_status,
+                    location_name,
+                    supplier_name,
+                    remark,
+                    created_by,
+                    created_at,
+                    updated_at
+                FROM mrs_batch";
+
+        $params = [];
+
+        if ($status !== null) {
+            $sql .= " WHERE batch_status = :status";
+            $params[':status'] = $status;
+        }
+
+        $sql .= " ORDER BY created_at DESC LIMIT :limit";
+
+        $stmt = $pdo->prepare($sql);
+
+        foreach ($params as $key => $value) {
+            $stmt->bindValue($key, $value);
+        }
+        $stmt->bindValue(':limit', (int)$limit, PDO::PARAM_INT);
+
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+        mrs_log('获取批次列表失败: ' . $e->getMessage(), 'ERROR');
+        return [];
+    }
+}
+
+/**
+ * 根据ID获取批次信息
+ * @param int $batch_id 批次ID
+ * @return array|false
+ */
+function get_batch_by_id($batch_id) {
+    try {
+        $pdo = get_mrs_db_connection();
+
+        $stmt = $pdo->prepare("
+            SELECT
+                batch_id,
+                batch_code,
+                batch_name,
+                batch_date,
+                batch_status,
+                location_name,
+                supplier_name,
+                remark,
+                created_by,
+                created_at,
+                updated_at
+            FROM mrs_batch
+            WHERE batch_id = :batch_id
+        ");
+
+        $stmt->bindValue(':batch_id', (int)$batch_id, PDO::PARAM_INT);
+        $stmt->execute();
+
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+        mrs_log('获取批次信息失败: ' . $e->getMessage(), 'ERROR', ['batch_id' => $batch_id]);
+        return false;
+    }
+}
+
+/**
+ * 获取批次的原始收货记录
+ * @param int $batch_id 批次ID
+ * @return array
+ */
+function get_batch_raw_records($batch_id) {
+    try {
+        $pdo = get_mrs_db_connection();
+
+        $stmt = $pdo->prepare("
+            SELECT
+                r.raw_record_id,
+                r.batch_id,
+                r.input_sku_name,
+                r.input_case_qty,
+                r.input_single_qty,
+                r.physical_box_count,
+                r.status,
+                r.matched_sku_id,
+                r.created_at,
+                r.updated_at,
+                s.sku_name,
+                s.brand_name,
+                s.standard_unit,
+                s.case_unit_name,
+                s.case_to_standard_qty
+            FROM mrs_batch_raw_record r
+            LEFT JOIN mrs_sku s ON r.matched_sku_id = s.sku_id
+            WHERE r.batch_id = :batch_id
+            ORDER BY r.created_at ASC
+        ");
+
+        $stmt->bindValue(':batch_id', (int)$batch_id, PDO::PARAM_INT);
+        $stmt->execute();
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+        mrs_log('获取批次原始记录失败: ' . $e->getMessage(), 'ERROR', ['batch_id' => $batch_id]);
+        return [];
+    }
+}
+
+/**
+ * 保存原始收货记录
+ * @param array $data 记录数据
+ * @return int|false 返回新记录ID或false
+ */
+function save_raw_record($data) {
+    try {
+        $pdo = get_mrs_db_connection();
+
+        // 准备数据
+        $batch_id = $data['batch_id'] ?? null;
+        $input_sku_name = $data['input_sku_name'] ?? ($data['sku_name'] ?? '');
+        $input_case_qty = $data['input_case_qty'] ?? ($data['case_qty'] ?? 0);
+        $input_single_qty = $data['input_single_qty'] ?? ($data['single_qty'] ?? ($data['qty'] ?? 0));
+        $physical_box_count = $data['physical_box_count'] ?? 1;
+        $matched_sku_id = $data['matched_sku_id'] ?? ($data['sku_id'] ?? null);
+
+        // 验证必填字段
+        if (!$batch_id) {
+            mrs_log('保存原始记录失败: 缺少batch_id', 'ERROR');
+            return false;
+        }
+
+        $stmt = $pdo->prepare("
+            INSERT INTO mrs_batch_raw_record (
+                batch_id,
+                input_sku_name,
+                input_case_qty,
+                input_single_qty,
+                physical_box_count,
+                matched_sku_id,
+                status
+            ) VALUES (
+                :batch_id,
+                :input_sku_name,
+                :input_case_qty,
+                :input_single_qty,
+                :physical_box_count,
+                :matched_sku_id,
+                'pending'
+            )
+        ");
+
+        $stmt->bindValue(':batch_id', (int)$batch_id, PDO::PARAM_INT);
+        $stmt->bindValue(':input_sku_name', $input_sku_name);
+        $stmt->bindValue(':input_case_qty', (float)$input_case_qty);
+        $stmt->bindValue(':input_single_qty', (float)$input_single_qty);
+        $stmt->bindValue(':physical_box_count', (int)$physical_box_count, PDO::PARAM_INT);
+        $stmt->bindValue(':matched_sku_id', $matched_sku_id ? (int)$matched_sku_id : null, PDO::PARAM_INT);
+
+        $stmt->execute();
+
+        $record_id = (int)$pdo->lastInsertId();
+        mrs_log('原始记录保存成功', 'INFO', ['record_id' => $record_id, 'batch_id' => $batch_id]);
+
+        return $record_id;
+    } catch (Exception $e) {
+        mrs_log('保存原始记录失败: ' . $e->getMessage(), 'ERROR', ['data' => $data]);
+        return false;
+    }
+}
+
+/**
  * 销毁会话
  * @return void
  */
@@ -294,7 +494,7 @@ function mrs_get_next_box_number($pdo, $batch_name) {
  * @param string $operator 操作员
  * @return array ['success' => bool, 'created' => int, 'errors' => array]
  */
-function mrs_inbound_packages($pdo, $packages, $spec_info = '', $operator = '') {
+function mrs_inbound_packages($pdo, $packages, $spec_info = '', $operator = '', $shelf_location = '') {
     $created = 0;
     $errors = [];
 
@@ -317,15 +517,18 @@ function mrs_inbound_packages($pdo, $packages, $spec_info = '', $operator = '') 
                 // 获取产品明细数组（新增）
                 $items = $pkg['items'] ?? [];
 
+                // 获取货架位置（优先使用包裹自己的位置，其次使用批量设置的位置）
+                $warehouse_location = trim($pkg['shelf_location'] ?? $shelf_location);
+
                 // 自动生成箱号
                 $box_number = mrs_get_next_box_number($pdo, $batch_name);
 
                 $stmt = $pdo->prepare("
                     INSERT INTO mrs_package_ledger
                     (batch_name, tracking_number, content_note, box_number, spec_info,
-                     expiry_date, quantity, status, inbound_time, created_by)
+                     expiry_date, quantity, warehouse_location, status, inbound_time, created_by)
                     VALUES (:batch_name, :tracking_number, :content_note, :box_number, :spec_info,
-                            :expiry_date, :quantity, 'in_stock', NOW(), :operator)
+                            :expiry_date, :quantity, :warehouse_location, 'in_stock', NOW(), :operator)
                 ");
 
                 $stmt->execute([
@@ -336,6 +539,7 @@ function mrs_inbound_packages($pdo, $packages, $spec_info = '', $operator = '') 
                     'spec_info' => trim($spec_info),
                     'expiry_date' => $expiry_date,
                     'quantity' => $quantity,
+                    'warehouse_location' => $warehouse_location ?: null,
                     'operator' => $operator
                 ]);
 

@@ -131,6 +131,29 @@ if ($session['status'] !== 'counting') {
                     <button type="button" id="btn-add-item" class="btn btn-secondary btn-small">+ 添加物品</button>
                 </div>
 
+                <!-- 货架位置 (三段式) -->
+                <div class="form-group">
+                    <label for="shelf-location">货架位置 (可选)</label>
+                    <small class="form-text" style="color: #666;">格式: 排号-架号-层号 (每段2位数字，留空则不更新位置)</small>
+                    <div style="display: flex; align-items: center; gap: 8px; margin-top: 5px;">
+                        <input type="text" id="shelf-row" class="form-control shelf-segment"
+                               placeholder="排" maxlength="2" autocomplete="off"
+                               style="width: 60px; text-align: center; font-size: 16px;">
+                        <span style="color: #666; font-weight: bold;">-</span>
+                        <input type="text" id="shelf-rack" class="form-control shelf-segment"
+                               placeholder="架" maxlength="2" autocomplete="off"
+                               style="width: 60px; text-align: center; font-size: 16px;">
+                        <span style="color: #666; font-weight: bold;">-</span>
+                        <input type="text" id="shelf-level" class="form-control shelf-segment"
+                               placeholder="层" maxlength="2" autocomplete="off"
+                               style="width: 60px; text-align: center; font-size: 16px;">
+                        <input type="hidden" id="shelf-location">
+                    </div>
+                    <small class="form-text" id="current-location-hint" style="color: #666; display: none; margin-top: 5px;">
+                        当前位置: <span id="current-location-value"></span>
+                    </small>
+                </div>
+
                 <div class="form-group">
                     <label for="count-remark">备注</label>
                     <textarea id="count-remark" class="form-control" rows="2"
