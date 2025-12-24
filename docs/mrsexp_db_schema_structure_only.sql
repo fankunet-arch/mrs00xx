@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- 主机： mhdlmskp2kpxguj.mysql.db
--- 生成日期： 2025-12-23 00:26:57
+-- 生成日期： 2025-12-24 01:17:37
 -- 服务器版本： 8.4.6-6
 -- PHP 版本： 8.1.33
 
@@ -449,7 +449,7 @@ CREATE TABLE `mrs_package_ledger` (
   `tracking_number` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '快递单号',
   `content_note` text COLLATE utf8mb4_unicode_ci COMMENT '内容备注',
   `box_number` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '箱号',
-  `warehouse_location` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '仓库位置',
+  `warehouse_location` varchar(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '货架位置',
   `spec_info` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '规格备注',
   `expiry_date` date DEFAULT NULL COMMENT '保质期（非生产日期，选填）',
   `quantity` int UNSIGNED DEFAULT NULL COMMENT '数量（选填，参考用途）',
@@ -465,6 +465,88 @@ CREATE TABLE `mrs_package_ledger` (
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='MRS 包裹台账表';
 
+--
+-- 触发器 `mrs_package_ledger`
+--
+DROP TRIGGER IF EXISTS `trg_ledger_location_change`;
+DELIMITER $$
+CREATE TRIGGER `trg_ledger_location_change` AFTER UPDATE ON `mrs_package_ledger` FOR EACH ROW BEGIN
+    -- 如果货架位置发生变更,记录历史
+    IF OLD.warehouse_location != NEW.warehouse_location OR
+       (OLD.warehouse_location IS NULL AND NEW.warehouse_location IS NOT NULL) OR
+       (OLD.warehouse_location IS NOT NULL AND NEW.warehouse_location IS NULL) THEN
+
+        INSERT INTO mrs_shelf_location_history
+        (ledger_id, box_number, old_location, new_location, change_reason, operator)
+        VALUES
+        (NEW.ledger_id, NEW.box_number, OLD.warehouse_location, NEW.warehouse_location,
+         '位置更新', NEW.updated_by);
+    END IF;
+END
+$$
+DELIMITER ;
+
+-- --------------------------------------------------------
+
+--
+-- 表的结构 `mrs_shelf_locations`
+--
+
+DROP TABLE IF EXISTS `mrs_shelf_locations`;
+CREATE TABLE `mrs_shelf_locations` (
+  `location_id` int UNSIGNED NOT NULL COMMENT '位置ID',
+  `shelf_code` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '货架编号 (如: A, B, C)',
+  `shelf_name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '货架名称 (如: A货架)',
+  `level_number` tinyint DEFAULT NULL COMMENT '层数 (NULL表示不分层)',
+  `location_full_name` varchar(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '完整位置名称 (如: A货架3层)',
+  `capacity` int DEFAULT NULL COMMENT '容量(箱) - 可选',
+  `current_usage` int DEFAULT '0' COMMENT '当前使用量 - 自动计算',
+  `zone` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '区域 (如: 常温区、冷藏区) - 可选',
+  `is_active` tinyint(1) DEFAULT '1' COMMENT '是否启用',
+  `sort_order` int DEFAULT '0' COMMENT '排序',
+  `remark` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci COMMENT '备注',
+  `created_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
+  `updated_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='MRS-货架位置配置表';
+
+-- --------------------------------------------------------
+
+--
+-- 表的结构 `mrs_shelf_location_history`
+--
+
+DROP TABLE IF EXISTS `mrs_shelf_location_history`;
+CREATE TABLE `mrs_shelf_location_history` (
+  `history_id` bigint UNSIGNED NOT NULL COMMENT '历史记录ID',
+  `ledger_id` bigint UNSIGNED NOT NULL COMMENT '台账ID',
+  `box_number` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '箱号',
+  `old_location` varchar(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '原位置',
+  `new_location` varchar(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '新位置',
+  `change_reason` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '变更原因 (入库/清点/调整)',
+  `operator` varchar(60) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '操作人',
+  `created_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '变更时间'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='MRS-货架位置变更历史表';
+
+-- --------------------------------------------------------
+
+--
+-- 替换视图以便查看 `mrs_shelf_location_stats`
+-- （参见下面的实际视图）
+--
+DROP VIEW IF EXISTS `mrs_shelf_location_stats`;
+CREATE TABLE `mrs_shelf_location_stats` (
+`capacity` int
+,`current_usage` bigint
+,`is_active` tinyint(1)
+,`level_number` tinyint
+,`location_full_name` varchar(150)
+,`location_id` int unsigned
+,`shelf_code` varchar(20)
+,`shelf_name` varchar(100)
+,`usage_rate` decimal(26,2)
+,`zone` varchar(50)
+);
+
 -- --------------------------------------------------------
 
 --
@@ -479,6 +561,7 @@ CREATE TABLE `mrs_sku` (
   `sku_name` varchar(200) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'SKU名称',
   `brand_name` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '品牌名称',
   `spec_info` varchar(200) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '规格信息',
+  `default_shelf_location` varchar(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '默认货架位置',
   `standard_unit` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT '件' COMMENT '标准单位（件、个、瓶等）',
   `case_unit_name` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT '箱' COMMENT '箱单位名称',
   `case_to_standard_qty` decimal(10,2) DEFAULT '1.00' COMMENT '每箱标准数量',
@@ -720,7 +803,27 @@ ALTER TABLE `mrs_package_ledger`
   ADD KEY `idx_outbound_time` (`outbound_time`),
   ADD KEY `idx_destination` (`destination_id`),
   ADD KEY `idx_expiry_date` (`expiry_date`),
-  ADD KEY `idx_product_status` (`status`);
+  ADD KEY `idx_product_status` (`status`),
+  ADD KEY `idx_warehouse_location` (`warehouse_location`);
+
+--
+-- 表的索引 `mrs_shelf_locations`
+--
+ALTER TABLE `mrs_shelf_locations`
+  ADD PRIMARY KEY (`location_id`),
+  ADD UNIQUE KEY `uk_location_full` (`location_full_name`),
+  ADD KEY `idx_shelf_code` (`shelf_code`),
+  ADD KEY `idx_active` (`is_active`),
+  ADD KEY `idx_zone` (`zone`);
+
+--
+-- 表的索引 `mrs_shelf_location_history`
+--
+ALTER TABLE `mrs_shelf_location_history`
+  ADD PRIMARY KEY (`history_id`),
+  ADD KEY `idx_ledger` (`ledger_id`),
+  ADD KEY `idx_box` (`box_number`),
+  ADD KEY `idx_created_at` (`created_at`);
 
 --
 -- 表的索引 `mrs_sku`
@@ -730,7 +833,8 @@ ALTER TABLE `mrs_sku`
   ADD UNIQUE KEY `uk_sku_code` (`sku_code`),
   ADD KEY `idx_category_id` (`category_id`),
   ADD KEY `idx_sku_name` (`sku_name`),
-  ADD KEY `idx_brand_name` (`brand_name`);
+  ADD KEY `idx_brand_name` (`brand_name`),
+  ADD KEY `idx_default_shelf` (`default_shelf_location`);
 
 --
 -- 表的索引 `mrs_usage_log`
@@ -881,6 +985,18 @@ ALTER TABLE `mrs_package_ledger`
   MODIFY `ledger_id` bigint UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '台账ID (主键)';
 
 --
+-- 使用表AUTO_INCREMENT `mrs_shelf_locations`
+--
+ALTER TABLE `mrs_shelf_locations`
+  MODIFY `location_id` int UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '位置ID';
+
+--
+-- 使用表AUTO_INCREMENT `mrs_shelf_location_history`
+--
+ALTER TABLE `mrs_shelf_location_history`
+  MODIFY `history_id` bigint UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '历史记录ID';
+
+--
 -- 使用表AUTO_INCREMENT `mrs_sku`
 --
 ALTER TABLE `mrs_sku`
@@ -907,6 +1023,16 @@ DROP TABLE IF EXISTS `mrs_destination_stats`;
 
 DROP VIEW IF EXISTS `mrs_destination_stats`;
 CREATE ALGORITHM=UNDEFINED DEFINER=`mhdlmskp2kpxguj`@`%` SQL SECURITY DEFINER VIEW `mrs_destination_stats`  AS SELECT `d`.`destination_id` AS `destination_id`, `d`.`destination_name` AS `destination_name`, `dt`.`type_name` AS `type_name`, count(`l`.`ledger_id`) AS `total_shipments`, count(distinct cast(`l`.`outbound_time` as date)) AS `days_used`, max(`l`.`outbound_time`) AS `last_used_time` FROM ((`mrs_destinations` `d` left join `mrs_destination_types` `dt` on((`d`.`type_code` = `dt`.`type_code`))) left join `mrs_package_ledger` `l` on(((`d`.`destination_id` = `l`.`destination_id`) and (`l`.`status` = 'shipped')))) WHERE (`d`.`is_active` = 1) GROUP BY `d`.`destination_id`, `d`.`destination_name`, `dt`.`type_name` ORDER BY `total_shipments` DESC ;
+
+-- --------------------------------------------------------
+
+--
+-- 视图结构 `mrs_shelf_location_stats`
+--
+DROP TABLE IF EXISTS `mrs_shelf_location_stats`;
+
+DROP VIEW IF EXISTS `mrs_shelf_location_stats`;
+CREATE ALGORITHM=UNDEFINED DEFINER=`mhdlmskp2kpxguj`@`%` SQL SECURITY DEFINER VIEW `mrs_shelf_location_stats`  AS SELECT `sl`.`location_id` AS `location_id`, `sl`.`shelf_code` AS `shelf_code`, `sl`.`shelf_name` AS `shelf_name`, `sl`.`level_number` AS `level_number`, `sl`.`location_full_name` AS `location_full_name`, `sl`.`capacity` AS `capacity`, `sl`.`zone` AS `zone`, count(`pl`.`ledger_id`) AS `current_usage`, (case when ((`sl`.`capacity` is not null) and (`sl`.`capacity` > 0)) then round(((count(`pl`.`ledger_id`) / `sl`.`capacity`) * 100),2) else NULL end) AS `usage_rate`, `sl`.`is_active` AS `is_active` FROM (`mrs_shelf_locations` `sl` left join `mrs_package_ledger` `pl` on(((`sl`.`location_full_name` = `pl`.`warehouse_location`) and (`pl`.`status` = 'in_stock')))) GROUP BY `sl`.`location_id`, `sl`.`shelf_code`, `sl`.`shelf_name`, `sl`.`level_number`, `sl`.`location_full_name`, `sl`.`capacity`, `sl`.`zone`, `sl`.`is_active` ORDER BY `sl`.`sort_order` ASC ;
 
 --
 -- 限制导出的表
