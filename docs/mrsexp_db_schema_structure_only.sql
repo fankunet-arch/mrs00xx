@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- 主机： mhdlmskp2kpxguj.mysql.db
--- 生成日期： 2025-12-24 01:17:37
+-- 生成日期： 2025-12-27 12:31:36
 -- 服务器版本： 8.4.6-6
 -- PHP 版本： 8.1.33
 
@@ -293,12 +293,12 @@ CREATE TABLE `mrs_destinations` (
 --
 DROP VIEW IF EXISTS `mrs_destination_stats`;
 CREATE TABLE `mrs_destination_stats` (
-`days_used` bigint
-,`destination_id` int unsigned
+`destination_id` int unsigned
 ,`destination_name` varchar(100)
-,`last_used_time` datetime
-,`total_shipments` bigint
 ,`type_name` varchar(50)
+,`total_shipments` bigint
+,`days_used` bigint
+,`last_used_time` datetime
 );
 
 -- --------------------------------------------------------
@@ -535,16 +535,16 @@ CREATE TABLE `mrs_shelf_location_history` (
 --
 DROP VIEW IF EXISTS `mrs_shelf_location_stats`;
 CREATE TABLE `mrs_shelf_location_stats` (
-`capacity` int
-,`current_usage` bigint
-,`is_active` tinyint(1)
-,`level_number` tinyint
-,`location_full_name` varchar(150)
-,`location_id` int unsigned
+`location_id` int unsigned
 ,`shelf_code` varchar(20)
 ,`shelf_name` varchar(100)
-,`usage_rate` decimal(26,2)
+,`level_number` tinyint
+,`location_full_name` varchar(150)
+,`capacity` int
 ,`zone` varchar(50)
+,`current_usage` bigint
+,`usage_rate` decimal(26,2)
+,`is_active` tinyint(1)
 );
 
 -- --------------------------------------------------------
