@@ -108,7 +108,7 @@ function mrs_tracking_tail($tracking_number)
         .label-meta {
             margin-top: 4mm;
             display: flex;
-            justify-content: space-between;
+            justify-content: center;
             align-items: center;
             flex-wrap: nowrap;
             gap: 1.5mm 3mm;
@@ -225,8 +225,7 @@ function mrs_tracking_tail($tracking_number)
                                     <div class="label-card">
                                         <div class="label-title"><?= htmlspecialchars($content) ?></div>
                                         <div class="label-meta">
-                                            <span>箱号 <?= htmlspecialchars($package['box_number']) ?></span>
-                                            <span>尾号 <?= htmlspecialchars($tail) ?></span>
+                                            <span><?= htmlspecialchars($selected_batch) ?>-<?= htmlspecialchars($package['box_number']) ?>-<?= htmlspecialchars($tail) ?></span>
                                         </div>
                                         <?php if (!empty($spec)): ?>
                                             <div class="label-spec">规格：<?= htmlspecialchars($spec) ?></div>
