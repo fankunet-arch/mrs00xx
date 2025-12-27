@@ -22,14 +22,14 @@ AFTER `batch_name`;
 -- ========================================
 DROP TEMPORARY TABLE IF EXISTS tmp_batch_mapping;
 CREATE TEMPORARY TABLE tmp_batch_mapping (
-    old_batch_name VARCHAR(100),
-    new_batch_name VARCHAR(100),
+    old_batch_name VARCHAR(100) COLLATE utf8mb4_unicode_ci,
+    new_batch_name VARCHAR(100) COLLATE utf8mb4_unicode_ci,
     batch_id INT UNSIGNED,
     first_counted_at DATETIME,
     batch_created_at DATETIME,
     sort_priority INT,
     new_batch_number INT
-);
+) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ========================================
 -- 步骤3: 填充临时映射表
