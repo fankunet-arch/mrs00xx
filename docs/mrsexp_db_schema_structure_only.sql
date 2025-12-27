@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- 主机： mhdlmskp2kpxguj.mysql.db
--- 生成日期： 2025-12-27 12:31:36
+-- 生成日期： 2025-12-27 15:27:26
 -- 服务器版本： 8.4.6-6
 -- PHP 版本： 8.1.33
 
@@ -33,6 +33,7 @@ DROP TABLE IF EXISTS `express_batch`;
 CREATE TABLE `express_batch` (
   `batch_id` int UNSIGNED NOT NULL COMMENT '批次ID',
   `batch_name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '批次名称（手工录入）',
+  `batch_cycle` int UNSIGNED NOT NULL DEFAULT '1' COMMENT '批次周期（用于区分循环使用的相同编号）',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `created_by` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '创建人',
   `status` enum('active','closed') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'active' COMMENT '批次状态',
@@ -618,7 +619,7 @@ CREATE TABLE `sys_users` (
 --
 ALTER TABLE `express_batch`
   ADD PRIMARY KEY (`batch_id`),
-  ADD UNIQUE KEY `uk_batch_name` (`batch_name`),
+  ADD UNIQUE KEY `uk_batch_name_cycle` (`batch_name`,`batch_cycle`),
   ADD KEY `idx_created_at` (`created_at`),
   ADD KEY `idx_status` (`status`);
 
