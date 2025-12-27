@@ -21,6 +21,7 @@ define('DB_NAME', getenv('EXPRESS_DB_NAME') ?: (getenv('MRS_DB_NAME') ?: 'mhdlms
 define('DB_USER', getenv('EXPRESS_DB_USER') ?: (getenv('MRS_DB_USER') ?: 'mhdlmskp2kpxguj'));
 define('DB_PASS', getenv('EXPRESS_DB_PASS') ?: (getenv('MRS_DB_PASS') ?: 'BWNrmksqMEqgbX37r3QNDJLGRrUka'));
 define('DB_CHARSET', getenv('EXPRESS_DB_CHARSET') ?: 'utf8mb4');
+define('DB_SOCKET', getenv('EXPRESS_DB_SOCKET') ?: (getenv('MRS_DB_SOCKET') ?: ''));
 
 // ============================================
 // 路径常量
@@ -92,6 +93,7 @@ $db_config = [
     'user' => DB_USER,
     'pass' => DB_PASS,
     'charset' => DB_CHARSET,
+    'socket' => DB_SOCKET,
     'options' => [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
@@ -121,6 +123,10 @@ function get_express_db_connection() {
                 $db_config['dbname'],
                 $db_config['charset']
             );
+
+            if (!empty($db_config['socket'])) {
+                $dsn .= ';unix_socket=' . $db_config['socket'];
+            }
 
             $pdo = new PDO(
                 $dsn,

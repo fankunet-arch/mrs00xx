@@ -44,9 +44,9 @@ if (!$batch) {
                 <input type="hidden" id="batch_id" value="<?= $batch_id ?>">
 
                 <div class="form-group">
-                    <label for="batch_name">批次名称: <span class="required">*</span></label>
-                    <input type="text" id="batch_name" name="batch_name" class="form-control"
-                           value="<?= htmlspecialchars($batch['batch_name']) ?>" required>
+                    <label>批次编号:</label>
+                    <input type="text" class="form-control" value="<?= htmlspecialchars($batch['batch_name']) ?>" readonly disabled style="background-color: #f5f5f5; cursor: not-allowed;">
+                    <small class="form-text">批次编号不可修改</small>
                 </div>
 
                 <div class="form-group">
@@ -78,17 +78,9 @@ if (!$batch) {
             e.preventDefault();
 
             const batchId = document.getElementById('batch_id').value;
-            const batchName = document.getElementById('batch_name').value.trim();
             const status = document.getElementById('status').value;
             const notes = document.getElementById('notes').value.trim();
             const messageDiv = document.getElementById('message');
-
-            if (!batchName) {
-                messageDiv.className = 'message error';
-                messageDiv.textContent = '批次名称不能为空';
-                messageDiv.style.display = 'block';
-                return;
-            }
 
             try {
                 const response = await fetch('/express/exp/index.php?action=batch_edit_save', {
@@ -98,7 +90,6 @@ if (!$batch) {
                     },
                     body: JSON.stringify({
                         batch_id: batchId,
-                        batch_name: batchName,
                         status: status,
                         notes: notes
                     })

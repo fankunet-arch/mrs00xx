@@ -22,21 +22,22 @@ if (!defined('EXPRESS_ENTRY')) {
     <div class="main-content">
         <header class="page-header">
             <h1>创建新批次</h1>
+            <small style="color: #666;">批次编号将自动生成（000-999循环）</small>
         </header>
 
         <div class="content-wrapper">
             <form id="batch-create-form" class="form-horizontal">
                 <div class="form-group">
-                    <label for="batch_name">批次名称: <span class="required">*</span></label>
-                    <input type="text" id="batch_name" name="batch_name" class="form-control"
-                           placeholder="例如：2024-11-28批次" required>
-                    <small class="form-text">批次名称必须唯一</small>
+                    <label for="tracking_numbers">快递单号:</label>
+                    <textarea id="tracking_numbers" name="tracking_numbers" class="form-control" rows="8"
+                              placeholder="每行一个快递单号，或批量粘贴（可选格式：单号|有效期|数量）&#10;例如：&#10;SF1234567890&#10;YT9876543210|2025-12-31|5&#10;JD1122334455"></textarea>
+                    <small class="form-text">可以创建空批次后再添加快递单号，也可以直接录入或批量导入</small>
                 </div>
 
                 <div class="form-group">
                     <label for="notes">备注:</label>
-                    <textarea id="notes" name="notes" class="form-control" rows="4"
-                              placeholder="批次备注信息"></textarea>
+                    <textarea id="notes" name="notes" class="form-control" rows="3"
+                              placeholder="批次备注信息（可选）"></textarea>
                 </div>
 
                 <div class="form-actions">
@@ -53,15 +54,30 @@ if (!defined('EXPRESS_ENTRY')) {
         document.getElementById('batch-create-form').addEventListener('submit', async function(e) {
             e.preventDefault();
 
-            const batch_name = document.getElementById('batch_name').value.trim();
+            const trackingNumbersText = document.getElementById('tracking_numbers').value.trim();
             const notes = document.getElementById('notes').value.trim();
             const messageDiv = document.getElementById('message');
 
-            if (!batch_name) {
-                messageDiv.className = 'message error';
-                messageDiv.textContent = '批次名称不能为空';
-                messageDiv.style.display = 'block';
-                return;
+            // 解析快递单号
+            const trackingNumbers = [];
+            if (trackingNumbersText) {
+                const lines = trackingNumbersText.split('\n');
+                for (const line of lines) {
+                    const trimmedLine = line.trim();
+                    if (!trimmedLine) continue;
+
+                    // 支持格式：单号|有效期|数量
+                    const parts = trimmedLine.split('|').map(p => p.trim());
+                    if (parts.length === 1) {
+                        trackingNumbers.push(parts[0]);
+                    } else {
+                        trackingNumbers.push({
+                            tracking_number: parts[0],
+                            expiry_date: parts[1] || null,
+                            quantity: parts[2] ? parseInt(parts[2]) : null
+                        });
+                    }
+                }
             }
 
             try {
@@ -71,8 +87,8 @@ if (!defined('EXPRESS_ENTRY')) {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        batch_name: batch_name,
-                        notes: notes,
+                        tracking_numbers: trackingNumbers,
+                        notes: notes || null,
                         created_by: '<?= $_SESSION['user_login'] ?? 'admin' ?>'
                     })
                 });
@@ -81,12 +97,19 @@ if (!defined('EXPRESS_ENTRY')) {
 
                 if (data.success) {
                     messageDiv.className = 'message success';
-                    messageDiv.textContent = '批次创建成功！正在跳转...';
+                    let msg = `批次 ${data.data.batch_name} 创建成功！`;
+                    if (data.data.imported_count > 0) {
+                        msg += ` 导入 ${data.data.imported_count} 个快递单号`;
+                    }
+                    if (data.data.duplicates > 0) {
+                        msg += `，${data.data.duplicates} 个重复`;
+                    }
+                    messageDiv.textContent = msg + ' 正在跳转...';
                     messageDiv.style.display = 'block';
 
                     setTimeout(() => {
                         window.location.href = '/express/exp/index.php?action=batch_detail&batch_id=' + data.data.batch_id;
-                    }, 1000);
+                    }, 1500);
                 } else {
                     messageDiv.className = 'message error';
                     messageDiv.textContent = data.message || '创建失败';

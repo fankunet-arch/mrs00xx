@@ -27,3 +27,4 @@ composer.phar
 tmp/
 temp/
 *.tmp
+mysql_data/

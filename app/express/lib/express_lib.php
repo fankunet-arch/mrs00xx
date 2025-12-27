@@ -193,28 +193,80 @@ function express_get_batch_by_id($pdo, $batch_id) {
 }
 
 /**
- * 创建新批次
+ * 生成下一个可用的批次编号（000-999循环）
  * @param PDO $pdo
- * @param string $batch_name
+ * @return array ['batch_name' => '001', 'batch_cycle' => 1] 或 false
+ */
+function express_generate_next_batch_number($pdo) {
+    try {
+        // 获取当前最大的批次编号和周期
+        $stmt = $pdo->prepare("
+            SELECT batch_name, batch_cycle
+            FROM express_batch
+            ORDER BY batch_cycle DESC, batch_name DESC
+            LIMIT 1
+        ");
+        $stmt->execute();
+        $last_batch = $stmt->fetch();
+
+        if (!$last_batch) {
+            // 第一个批次
+            return ['batch_name' => '000', 'batch_cycle' => 1];
+        }
+
+        $current_number = intval($last_batch['batch_name']);
+        $current_cycle = intval($last_batch['batch_cycle']);
+
+        // 如果当前编号 < 999，继续递增
+        if ($current_number < 999) {
+            $next_number = $current_number + 1;
+            $next_cycle = $current_cycle;
+        } else {
+            // 达到999，循环到000，周期+1
+            $next_number = 0;
+            $next_cycle = $current_cycle + 1;
+        }
+
+        return [
+            'batch_name' => str_pad($next_number, 3, '0', STR_PAD_LEFT),
+            'batch_cycle' => $next_cycle
+        ];
+    } catch (PDOException $e) {
+        express_log('Failed to generate batch number: ' . $e->getMessage(), 'ERROR');
+        return false;
+    }
+}
+
+/**
+ * 创建新批次（自动生成3位数编号）
+ * @param PDO $pdo
  * @param string $created_by
  * @param string $notes
  * @return int|false 返回新批次ID或false
  */
-function express_create_batch($pdo, $batch_name, $created_by = null, $notes = null) {
+function express_create_batch($pdo, $created_by = null, $notes = null) {
     try {
+        // 生成下一个批次编号
+        $batch_info = express_generate_next_batch_number($pdo);
+        if (!$batch_info) {
+            return false;
+        }
+
         $stmt = $pdo->prepare("
-            INSERT INTO express_batch (batch_name, created_by, notes)
-            VALUES (:batch_name, :created_by, :notes)
+            INSERT INTO express_batch (batch_name, batch_cycle, created_by, notes)
+            VALUES (:batch_name, :batch_cycle, :created_by, :notes)
         ");
 
         $stmt->execute([
-            'batch_name' => trim($batch_name),
+            'batch_name' => $batch_info['batch_name'],
+            'batch_cycle' => $batch_info['batch_cycle'],
             'created_by' => $created_by,
             'notes' => $notes
         ]);
 
-        express_log('Batch created: ' . $batch_name, 'INFO');
-        return $pdo->lastInsertId();
+        $batch_id = $pdo->lastInsertId();
+        express_log('Batch created: ' . $batch_info['batch_name'] . ' (cycle: ' . $batch_info['batch_cycle'] . ')', 'INFO');
+        return $batch_id;
     } catch (PDOException $e) {
         express_log('Failed to create batch: ' . $e->getMessage(), 'ERROR');
         return false;
@@ -222,28 +274,25 @@ function express_create_batch($pdo, $batch_name, $created_by = null, $notes = nu
 }
 
 /**
- * 更新批次信息
+ * 更新批次信息（批次编号不可修改，只能修改状态和备注）
  * @param PDO $pdo
  * @param int $batch_id
- * @param string $batch_name
  * @param string $status
  * @param string|null $notes
  * @return array
  */
-function express_update_batch($pdo, $batch_id, $batch_name, $status = 'active', $notes = null) {
+function express_update_batch($pdo, $batch_id, $status = 'active', $notes = null) {
     try {
         $normalized_status = in_array($status, ['active', 'closed']) ? $status : 'active';
 
         $stmt = $pdo->prepare("
             UPDATE express_batch
-            SET batch_name = :batch_name,
-                status = :status,
+            SET status = :status,
                 notes = :notes
             WHERE batch_id = :batch_id
         ");
 
         $stmt->execute([
-            'batch_name' => trim($batch_name),
             'status' => $normalized_status,
             'notes' => $notes,
             'batch_id' => $batch_id
@@ -256,12 +305,8 @@ function express_update_batch($pdo, $batch_id, $batch_name, $status = 'active', 
         express_log('Batch updated: ' . $batch_id, 'INFO');
         return ['success' => true, 'message' => '批次更新成功'];
     } catch (PDOException $e) {
-        $message = $e->getCode() === '23000'
-            ? '批次名称已存在'
-            : '批次更新失败: ' . $e->getMessage();
-
         express_log('Failed to update batch: ' . $e->getMessage(), 'ERROR');
-        return ['success' => false, 'message' => $message];
+        return ['success' => false, 'message' => '批次更新失败: ' . $e->getMessage()];
     }
 }
 
