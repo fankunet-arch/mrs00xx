@@ -133,7 +133,7 @@ function express_tracking_tail($tracking_number)
         .label-meta {
             margin-top: 4mm;
             display: flex;
-            justify-content: flex-start;
+            justify-content: center;
             align-items: center;
             gap: 8mm;
             font-size: 18pt;
@@ -181,7 +181,7 @@ function express_tracking_tail($tracking_number)
             <div class="label-card">
                 <div class="label-title"><?= htmlspecialchars($content) ?></div>
                 <div class="label-meta">
-                    <span class="tracking-tail">尾号：<?= htmlspecialchars($tail) ?></span>
+                    <span class="tracking-tail"><?= htmlspecialchars($batch['batch_name']) ?>-<?= htmlspecialchars($tail) ?></span>
                 </div>
             </div>
         <?php endforeach; ?>
