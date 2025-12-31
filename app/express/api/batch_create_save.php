@@ -68,7 +68,7 @@ try {
     }
 
     // 更新批次统计
-    express_update_batch_stats($pdo, $batch_id);
+    express_update_batch_statistics($pdo, $batch_id);
 
     $pdo->commit();
 
