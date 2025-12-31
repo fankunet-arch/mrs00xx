@@ -32,7 +32,7 @@ try {
     $stmt = $pdo->prepare("
         SELECT r.*, s.sku_name, s.brand_name, s.standard_unit, c.category_name
         FROM mrs_batch_raw_record r
-        LEFT JOIN mrs_sku s ON r.sku_id = s.sku_id
+        LEFT JOIN mrs_sku s ON r.matched_sku_id = s.sku_id
         LEFT JOIN mrs_category c ON s.category_id = c.category_id
         WHERE r.batch_id = ?
         ORDER BY r.created_at DESC
@@ -52,36 +52,32 @@ try {
             $confirmed_items[$item['sku_id']] = $item;
         }
 
-        // Query ALL raw records grouped by SKU and processing_status
-        // IMPORTANT: Use LEFT JOIN to include records with NULL sku_id (unknown items)
+        // Query ALL raw records grouped by SKU and status
+        // IMPORTANT: Use LEFT JOIN to include records with NULL matched_sku_id (unknown items)
         $stmt = $pdo->prepare("
             SELECT
-                r.sku_id,
+                r.matched_sku_id as sku_id,
                 r.input_sku_name,
-                r.processing_status,
+                r.status as processing_status,
                 COALESCE(s.sku_name, r.input_sku_name, '未知物料') as sku_name,
                 COALESCE(s.brand_name, '未知品牌') as brand_name,
                 COALESCE(c.category_name, '未分类') as category_name,
-                COALESCE(s.is_precise_item, 1) as is_precise_item,
-                COALESCE(s.standard_unit, r.unit_name) as standard_unit,
+                1 as is_precise_item,
+                COALESCE(s.standard_unit, '件') as standard_unit,
                 s.case_unit_name,
                 s.case_to_standard_qty,
-                r.unit_name as input_unit_name,
+                '箱' as input_unit_name,
                 SUM(
-                    CASE
-                        WHEN r.unit_name = s.case_unit_name AND s.case_to_standard_qty > 0
-                        THEN r.qty * s.case_to_standard_qty
-                        ELSE r.qty
-                    END
+                    (r.input_case_qty * COALESCE(s.case_to_standard_qty, 1)) + r.input_single_qty
                 ) as total_quantity,
-                SUM(r.qty) as total_raw_input_qty,
+                SUM(r.input_case_qty + r.input_single_qty) as total_raw_input_qty,
                 SUM(COALESCE(r.physical_box_count, 0)) as total_physical_boxes,
                 COUNT(*) as record_count
             FROM mrs_batch_raw_record r
-            LEFT JOIN mrs_sku s ON r.sku_id = s.sku_id
+            LEFT JOIN mrs_sku s ON r.matched_sku_id = s.sku_id
             LEFT JOIN mrs_category c ON s.category_id = c.category_id
             WHERE r.batch_id = ?
-            GROUP BY r.sku_id, r.input_sku_name, r.processing_status, s.sku_name, s.brand_name, c.category_name, s.is_precise_item, s.standard_unit, s.case_unit_name, s.case_to_standard_qty, r.unit_name
+            GROUP BY r.matched_sku_id, r.input_sku_name, r.status, s.sku_name, s.brand_name, c.category_name, s.standard_unit, s.case_unit_name, s.case_to_standard_qty
         ");
         $stmt->execute([$batch_id]);
         $merge_data = $stmt->fetchAll(PDO::FETCH_ASSOC);

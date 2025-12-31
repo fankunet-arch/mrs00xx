@@ -58,29 +58,24 @@ try {
     // 获取原始记录并按SKU分组汇总
     // [FIX] Calculate standardized total quantity
     $rawSql = "SELECT
-                    r.sku_id,
+                    r.matched_sku_id as sku_id,
                     s.sku_name,
                     s.brand_name,
                     s.standard_unit,
                     s.case_unit_name,
                     s.case_to_standard_qty,
-                    s.is_precise_item,
+                    1 as is_precise_item,
                     c.category_name,
-                    r.unit_name,
                     SUM(
-                        CASE
-                            WHEN r.unit_name = s.case_unit_name AND s.case_to_standard_qty > 0
-                            THEN r.qty * s.case_to_standard_qty
-                            ELSE r.qty
-                        END
+                        (r.input_case_qty * COALESCE(s.case_to_standard_qty, 1)) + r.input_single_qty
                     ) as total_qty,
                     SUM(COALESCE(r.physical_box_count, 0)) as total_physical_boxes,
                     COUNT(*) as record_count
                 FROM mrs_batch_raw_record r
-                LEFT JOIN mrs_sku s ON r.sku_id = s.sku_id
+                LEFT JOIN mrs_sku s ON r.matched_sku_id = s.sku_id
                 LEFT JOIN mrs_category c ON s.category_id = c.category_id
                 WHERE r.batch_id = :batch_id
-                GROUP BY r.sku_id, r.unit_name";
+                GROUP BY r.matched_sku_id";
     $rawStmt = $pdo->prepare($rawSql);
     $rawStmt->bindValue(':batch_id', $batchId, PDO::PARAM_INT);
     $rawStmt->execute();

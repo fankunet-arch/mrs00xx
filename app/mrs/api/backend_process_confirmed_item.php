@@ -65,16 +65,12 @@ try {
     // MUST calculate standardized total quantity to handle mixed units (e.g. input in Boxes vs Pieces)
     $dynamic_check_sql = "SELECT
                             SUM(
-                                CASE
-                                    WHEN r.unit_name = s.case_unit_name AND s.case_to_standard_qty > 0
-                                    THEN r.qty * s.case_to_standard_qty
-                                    ELSE r.qty
-                                END
+                                (r.input_case_qty * COALESCE(s.case_to_standard_qty, 1)) + r.input_single_qty
                             ) as total_qty,
                             SUM(r.physical_box_count) as total_boxes
                           FROM mrs_batch_raw_record r
-                          LEFT JOIN mrs_sku s ON r.sku_id = s.sku_id
-                          WHERE r.batch_id = :batch_id AND r.sku_id = :sku_id AND r.processing_status = 'pending'";
+                          LEFT JOIN mrs_sku s ON r.matched_sku_id = s.sku_id
+                          WHERE r.batch_id = :batch_id AND r.matched_sku_id = :sku_id AND r.status = 'pending'";
     $dynamic_stmt = $pdo->prepare($dynamic_check_sql);
     $dynamic_stmt->execute([':batch_id' => $batch_id, ':sku_id' => $sku_id]);
     $dynamic_row = $dynamic_stmt->fetch(PDO::FETCH_ASSOC);

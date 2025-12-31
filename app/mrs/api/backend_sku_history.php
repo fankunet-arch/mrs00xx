@@ -56,14 +56,14 @@ try {
                     b.batch_date as date,
                     b.batch_code as code,
                     '入库' as type,
-                    rr.qty as qty,
-                    CONCAT('+', rr.qty) as qty_display,
+                    (rr.input_case_qty + rr.input_single_qty) as qty,
+                    CONCAT('+', (rr.input_case_qty + rr.input_single_qty)) as qty_display,
                     b.location_name as location,
                     b.remark as remark,
                     b.created_at as created_at
                 FROM mrs_batch_raw_record rr
                 JOIN mrs_batch b ON rr.batch_id = b.batch_id
-                WHERE rr.sku_id = :sku_id2
+                WHERE rr.matched_sku_id = :sku_id2
                 AND b.batch_status NOT IN ('confirmed', 'posted'))
                 ORDER BY date DESC, created_at DESC";
 

@@ -46,23 +46,23 @@ try {
     $sql = "SELECT
                 r.raw_record_id,
                 r.batch_id,
-                r.sku_id,
+                r.matched_sku_id,
                 r.input_sku_name,
-                r.qty,
+                r.input_case_qty,
+                r.input_single_qty,
                 r.physical_box_count,
-                r.unit_name,
-                r.operator_name,
-                r.recorded_at,
-                r.note,
+                r.status,
+                r.created_at,
+                r.updated_at,
                 COALESCE(r.input_sku_name, s.sku_name) AS sku_name,
                 s.brand_name,
                 s.standard_unit,
                 s.case_unit_name,
                 s.case_to_standard_qty
             FROM mrs_batch_raw_record r
-            LEFT JOIN mrs_sku s ON r.sku_id = s.sku_id
-            WHERE r.batch_id = :batch_id AND r.sku_id = :sku_id
-            ORDER BY r.recorded_at ASC";
+            LEFT JOIN mrs_sku s ON r.matched_sku_id = s.sku_id
+            WHERE r.batch_id = :batch_id AND r.matched_sku_id = :sku_id
+            ORDER BY r.created_at ASC";
 
     $stmt = $pdo->prepare($sql);
     $stmt->bindValue(':batch_id', $batch_id, PDO::PARAM_INT);

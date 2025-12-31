@@ -2496,7 +2496,7 @@ function mrs_check_packages_for_deletion($pdo, $tracking_numbers) {
                     ORDER BY pi.sort_order
                     SEPARATOR ', '
                 ) as products,
-                COUNT(ul.log_id) as outbound_count
+                COUNT(ul.id) as outbound_count
             FROM mrs_package_ledger pl
             LEFT JOIN mrs_package_items pi ON pl.ledger_id = pi.ledger_id
             LEFT JOIN mrs_usage_log ul ON pl.ledger_id = ul.ledger_id
@@ -2613,7 +2613,11 @@ function mrs_bulk_delete_packages($pdo, $ledger_ids, $operator = '', $reason = '
             ];
         }
 
-        // 记录删除操作日志（在删除前记录包裹信息）
+        // 记录删除操作日志(在删除前记录包裹信息)
+        // 使用PHP字符串拼接避免参数绑定问题
+        $reason_escaped = $pdo->quote($reason);
+        $operator_escaped = $pdo->quote($operator);
+
         $log_sql = "
             INSERT INTO mrs_operation_log
             (operation_type, operation_detail, operator, created_at)
@@ -2624,17 +2628,16 @@ function mrs_bulk_delete_packages($pdo, $ledger_ids, $operator = '', $reason = '
                     ', Batch: ', batch_name,
                     ', Box: ', box_number,
                     ', Location: ', IFNULL(warehouse_location, 'N/A'),
-                    ', Reason: ', ?
+                    ', Reason: ', $reason_escaped
                 ) as operation_detail,
-                ? as operator,
+                $operator_escaped as operator,
                 NOW(6) as created_at
             FROM mrs_package_ledger
             WHERE ledger_id IN ($placeholders)
         ";
 
-        $log_params = array_merge([$reason, $operator], $ledger_ids);
         $stmt = $pdo->prepare($log_sql);
-        $stmt->execute($log_params);
+        $stmt->execute($ledger_ids);
 
         // 删除包裹项（虽然有外键级联，但显式删除更清晰）
         $delete_items_sql = "

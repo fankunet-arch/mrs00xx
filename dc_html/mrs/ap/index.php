@@ -25,38 +25,81 @@ if ($action !== 'login' && $action !== 'do_login') {
 
 // 后台允许的action列表
 $allowed_actions = [
+    // === 认证相关 ===
     'login',                // 登录页面
     'do_login',             // 处理登录
     'logout',               // 登出
+
+    // === 仪表板 ===
+    'dashboard',            // 后台首页仪表板
+    'backend_dashboard',    // 后台管理仪表板
+    'backend_manage',       // 后台管理中心
+
+    // === 库存管理 ===
     'inventory_list',       // 库存列表
     'inventory_detail',     // 库存明细
+
+    // === 入库管理 ===
     'inbound',              // 入库页面
     'inbound_split',        // 拆分入库页面
     'inbound_save',         // 保存入库
     'inbound_split_save',   // 拆分入库保存
+
+    // === 出库管理 ===
     'outbound',             // 出库页面
+    'outbound_list',        // 出库单列表
+    'outbound_detail',      // 出库单详情
+    'outbound_create',      // 创建出库单
     'outbound_save',        // 保存出库
     'partial_outbound',     // 拆零出货
-    'usage_statistics',     // 用量统计
     'debug_partial_outbound', // 拆零出货调试
-    'reports',              // 统计报表
+
+    // === 批次管理 ===
+    'batch_list',           // 批次列表
+    'batch_create',         // 新建批次
+    'batch_create_save',    // 保存新建批次
+    'batch_detail',         // 批次详情
+    'batch_edit',           // 编辑批次
+    'batch_save',           // 保存批次
+    'batch_print',          // 批次箱贴打印
+    'get_batch_list_api',   // 批次列表API
+    'get_batch_records_api', // 批次记录API
+
+    // === SKU管理 ===
+    'sku_list',             // SKU列表
+    'sku_edit',             // 编辑SKU
     'sku_manage',           // 物料管理
     'sku_save',             // 保存物料
+    'sku_search_api',       // SKU搜索API
+
+    // === 分类管理 ===
+    'category_list',        // 分类列表
+    'category_edit',        // 编辑分类
+    'category_save',        // 保存分类
+
+    // === 去向管理 ===
+    'destination_manage',   // 去向管理
+    'destination_save',     // 保存去向
+
+    // === 统计报表 ===
+    'reports',              // 统计报表
+    'usage_statistics',     // 用量统计
+
+    // === 包裹管理 ===
     'status_change',        // 状态变更
     'update_package',       // 修改包裹信息
     'get_package_items',    // 获取包裹产品明细
-    'batch_print',          // 批次箱贴打印
-    'destination_manage',   // 去向管理
-    'destination_save',     // 保存去向
+    'package_locations',    // 货架位置管理
+    'update_package_location', // 更新单个箱子位置
+    'batch_update_locations', // 批量更新箱子位置
+    'bulk_package_deletion', // 批量删除包裹（库存修正）
+
+    // === API接口 ===
     'box_search_api',       // 箱子搜索API
     'product_search_api',   // 产品搜索API
-    'product_name_autocomplete', // [新增] 产品名称自动完成
-    'package_locations',    // [新增] 货架位置管理
-    'update_package_location', // [新增] 更新单个箱子位置
-    'batch_update_locations', // [新增] 批量更新箱子位置
-    'backend_package_locations', // [新增] 箱子位置管理API
-    'bulk_package_deletion', // [新增] 批量删除包裹（库存修正）- 视图页面
-    'backend_bulk_deletion', // [新增] 批量删除包裹API
+    'product_name_autocomplete', // 产品名称自动完成
+    'backend_package_locations', // 箱子位置管理API
+    'backend_bulk_deletion', // 批量删除包裹API
 ];
 
 // 验证action是否允许
@@ -81,24 +124,30 @@ if (!in_array($action, $allowed_actions)) {
 // API action (返回JSON)
 $api_actions = [
     'do_login',
+    'logout',
     'inbound_save',
     'inbound_split_save',
     'outbound_save',
     'partial_outbound',
     'usage_statistics',
-    'logout',
     'sku_save',
+    'category_save',
+    'batch_save',
+    'batch_create_save',
     'status_change',
     'update_package',
     'get_package_items',
     'destination_save',
     'box_search_api',
     'product_search_api',
-    'product_name_autocomplete', // [新增]
-    'update_package_location', // [新增] 更新单个箱子位置API
-    'batch_update_locations', // [新增] 批量更新箱子位置API
-    'backend_package_locations', // [新增] 箱子位置管理API（带operation参数）
-    'backend_bulk_deletion' // [新增] 批量删除包裹API
+    'sku_search_api',
+    'get_batch_list_api',
+    'get_batch_records_api',
+    'product_name_autocomplete',
+    'update_package_location',
+    'batch_update_locations',
+    'backend_package_locations',
+    'backend_bulk_deletion',
 ];
 
 // 路由到对应的action或API文件 (在app目录中)
