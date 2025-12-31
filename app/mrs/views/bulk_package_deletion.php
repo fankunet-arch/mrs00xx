@@ -264,7 +264,7 @@ if (!defined('MRS_ENTRY')) {
             document.getElementById('resultSection').style.display = 'none';
 
             try {
-                const response = await fetch('/mrs/ap/index.php?action=bulk_package_deletion', {
+                const response = await fetch('/mrs/ap/index.php?action=backend_bulk_deletion', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -408,7 +408,7 @@ if (!defined('MRS_ENTRY')) {
             document.getElementById('loadingMessage').style.display = 'block';
 
             try {
-                const response = await fetch('/mrs/ap/index.php?action=bulk_package_deletion', {
+                const response = await fetch('/mrs/ap/index.php?action=backend_bulk_deletion', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'

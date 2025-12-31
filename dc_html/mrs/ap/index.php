@@ -55,7 +55,8 @@ $allowed_actions = [
     'update_package_location', // [新增] 更新单个箱子位置
     'batch_update_locations', // [新增] 批量更新箱子位置
     'backend_package_locations', // [新增] 箱子位置管理API
-    'bulk_package_deletion', // [新增] 批量删除包裹（库存修正）
+    'bulk_package_deletion', // [新增] 批量删除包裹（库存修正）- 视图页面
+    'backend_bulk_deletion', // [新增] 批量删除包裹API
 ];
 
 // 验证action是否允许
@@ -97,7 +98,7 @@ $api_actions = [
     'update_package_location', // [新增] 更新单个箱子位置API
     'batch_update_locations', // [新增] 批量更新箱子位置API
     'backend_package_locations', // [新增] 箱子位置管理API（带operation参数）
-    'bulk_package_deletion' // [新增] 批量删除包裹API
+    'backend_bulk_deletion' // [新增] 批量删除包裹API
 ];
 
 // 路由到对应的action或API文件 (在app目录中)
