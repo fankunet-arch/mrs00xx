@@ -2350,3 +2350,100 @@ function mrs_get_pagination_params($default_limit = null, $max_limit = null, $li
     ];
 }
 
+// ============================================
+// SKU管理函数
+// ============================================
+
+/**
+ * 获取所有SKU列表
+ * @param PDO $pdo 数据库连接
+ * @param string $status SKU状态过滤 ('active', 'inactive', 'all')
+ * @return array SKU列表
+ */
+function mrs_get_all_skus($pdo, $status = 'active') {
+    try {
+        $sql = "SELECT
+                    sku_id,
+                    sku_name,
+                    sku_code,
+                    brand_name,
+                    category_id,
+                    standard_unit,
+                    case_unit_name,
+                    case_to_standard_qty,
+                    status,
+                    remark,
+                    created_at,
+                    updated_at
+                FROM mrs_sku";
+
+        if ($status !== 'all') {
+            $sql .= " WHERE status = :status";
+        }
+
+        $sql .= " ORDER BY sku_name ASC";
+
+        $stmt = $pdo->prepare($sql);
+
+        if ($status !== 'all') {
+            $stmt->execute(['status' => $status]);
+        } else {
+            $stmt->execute();
+        }
+
+        return $stmt->fetchAll();
+    } catch (PDOException $e) {
+        mrs_log('Failed to get all SKUs: ' . $e->getMessage(), 'ERROR');
+        return [];
+    }
+}
+
+/**
+ * 创建新的SKU（如果已存在则返回现有的ID）
+ * @param PDO $pdo 数据库连接
+ * @param string $sku_name SKU名称
+ * @return int|false SKU ID 或 false（失败）
+ */
+function mrs_create_sku($pdo, $sku_name) {
+    try {
+        $sku_name = trim($sku_name);
+
+        if (empty($sku_name)) {
+            mrs_log('SKU name is empty', 'WARNING');
+            return false;
+        }
+
+        // 先检查是否已存在同名SKU
+        $stmt = $pdo->prepare("
+            SELECT sku_id
+            FROM mrs_sku
+            WHERE sku_name = :sku_name
+            AND status = 'active'
+            LIMIT 1
+        ");
+        $stmt->execute(['sku_name' => $sku_name]);
+        $existing = $stmt->fetch();
+
+        if ($existing) {
+            // 已存在，返回现有的ID
+            mrs_log("SKU already exists: {$sku_name} (ID: {$existing['sku_id']})", 'INFO');
+            return (int)$existing['sku_id'];
+        }
+
+        // 不存在，创建新SKU
+        $stmt = $pdo->prepare("
+            INSERT INTO mrs_sku (sku_name, status, created_at, updated_at)
+            VALUES (:sku_name, 'active', NOW(6), NOW(6))
+        ");
+        $stmt->execute(['sku_name' => $sku_name]);
+
+        $sku_id = $pdo->lastInsertId();
+        mrs_log("Created new SKU: {$sku_name} (ID: {$sku_id})", 'INFO');
+
+        return (int)$sku_id;
+    } catch (PDOException $e) {
+        mrs_log('Failed to create SKU: ' . $e->getMessage(), 'ERROR');
+        return false;
+    }
+}
+
