@@ -167,8 +167,8 @@ if (!empty($selected_batch)) {
         <div class="page-header">
             <h1>拆分入库（Express批次 → SKU系统）</h1>
             <div class="header-actions">
-                <a href="/mrs/index.php?action=inbound" class="btn btn-secondary">切换到整箱入库</a>
-                <a href="/mrs/index.php?action=inventory_list" class="btn btn-secondary">返回库存</a>
+                <a href="/mrs/ap/index.php?action=inbound" class="btn btn-secondary">切换到整箱入库</a>
+                <a href="/mrs/ap/index.php?action=inventory_list" class="btn btn-secondary">返回库存</a>
             </div>
         </div>
 
@@ -191,7 +191,7 @@ if (!empty($selected_batch)) {
             <!-- 第一步：选择批次 -->
             <div class="form-group">
                 <label for="batch_select">选择 Express 批次 <span class="required">*</span></label>
-                <select id="batch_select" class="form-control" onchange="window.location.href='/mrs/index.php?action=inbound_split&batch=' + this.value">
+                <select id="batch_select" class="form-control" onchange="window.location.href='/mrs/ap/index.php?action=inbound_split&batch=' + this.value">
                     <option value="">-- 请选择批次 --</option>
                     <?php if (empty($available_batches)): ?>
                         <option value="" disabled>暂无可拆分入库的批次</option>
@@ -418,7 +418,7 @@ if (!empty($selected_batch)) {
         document.getElementById('resultMessage').innerHTML =
             '<div class="message info">正在处理拆分入库，请稍候...</div>';
 
-        fetch('/mrs/index.php?action=inbound_split_save', {
+        fetch('/mrs/ap/index.php?action=inbound_split_save', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -438,13 +438,13 @@ if (!empty($selected_batch)) {
                     msg += '<br><strong>部分错误:</strong><br>' + result.errors.join('<br>');
                 }
 
-                msg += '<br><br>请前往 <a href="/mrs/index.php?action=backend_manage">后台管理</a> 匹配 SKU 并确认入库。';
+                msg += '<br><br>请前往 <a href="/mrs/ap/index.php?action=backend_manage">后台管理</a> 匹配 SKU 并确认入库。';
                 msg += '</div>';
                 messageDiv.innerHTML = msg;
 
                 // 3秒后刷新页面
                 setTimeout(() => {
-                    window.location.href = '/mrs/index.php?action=inbound_split&batch=' + encodeURIComponent(data.batch_name);
+                    window.location.href = '/mrs/ap/index.php?action=inbound_split&batch=' + encodeURIComponent(data.batch_name);
                 }, 3000);
             } else {
                 messageDiv.innerHTML = '<div class="message error">拆分入库失败: ' + (result.message || '未知错误') + '</div>';
