@@ -2447,3 +2447,236 @@ function mrs_create_sku($pdo, $sku_name) {
     }
 }
 
+/**
+ * 检查包裹是否可以删除（批量）
+ * @param PDO $pdo 数据库连接
+ * @param array $tracking_numbers 快递单号数组
+ * @return array 返回结果数组，包含可删除和不可删除的包裹信息
+ */
+function mrs_check_packages_for_deletion($pdo, $tracking_numbers) {
+    try {
+        if (empty($tracking_numbers)) {
+            return [
+                'success' => false,
+                'message' => '快递单号列表为空'
+            ];
+        }
+
+        // 去重和清理快递单号
+        $tracking_numbers = array_unique(array_map('trim', $tracking_numbers));
+        $tracking_numbers = array_filter($tracking_numbers, function($tn) {
+            return !empty($tn);
+        });
+
+        if (empty($tracking_numbers)) {
+            return [
+                'success' => false,
+                'message' => '没有有效的快递单号'
+            ];
+        }
+
+        // 构建IN查询的占位符
+        $placeholders = str_repeat('?,', count($tracking_numbers) - 1) . '?';
+
+        // 查询所有包裹及其出库状态
+        $sql = "
+            SELECT
+                pl.ledger_id,
+                pl.tracking_number,
+                pl.batch_name,
+                pl.box_number,
+                pl.warehouse_location,
+                pl.status,
+                pl.inbound_time,
+                pl.outbound_time,
+                pl.destination_id,
+                pl.content_note,
+                GROUP_CONCAT(
+                    CONCAT(pi.product_name, '(', pi.quantity, ')')
+                    ORDER BY pi.sort_order
+                    SEPARATOR ', '
+                ) as products,
+                COUNT(ul.log_id) as outbound_count
+            FROM mrs_package_ledger pl
+            LEFT JOIN mrs_package_items pi ON pl.ledger_id = pi.ledger_id
+            LEFT JOIN mrs_usage_log ul ON pl.ledger_id = ul.ledger_id
+            WHERE pl.tracking_number IN ($placeholders)
+            GROUP BY pl.ledger_id
+            ORDER BY pl.tracking_number
+        ";
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($tracking_numbers);
+        $packages = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $deletable = [];
+        $non_deletable = [];
+        $not_found = [];
+
+        // 找出未找到的快递单号
+        $found_tracking_numbers = array_column($packages, 'tracking_number');
+        $not_found = array_diff($tracking_numbers, $found_tracking_numbers);
+
+        // 检查每个包裹
+        foreach ($packages as $package) {
+            $can_delete = true;
+            $reason = '';
+
+            // 检查是否已出库
+            if ($package['status'] === 'shipped' || !empty($package['outbound_time'])) {
+                $can_delete = false;
+                $reason = '已有出库记录';
+            } elseif ($package['outbound_count'] > 0) {
+                $can_delete = false;
+                $reason = '存在出库使用记录';
+            }
+
+            $package_info = [
+                'ledger_id' => $package['ledger_id'],
+                'tracking_number' => $package['tracking_number'],
+                'batch_name' => $package['batch_name'],
+                'box_number' => $package['box_number'],
+                'warehouse_location' => $package['warehouse_location'],
+                'status' => $package['status'],
+                'products' => $package['products'] ?? '',
+                'inbound_time' => $package['inbound_time'],
+                'reason' => $reason
+            ];
+
+            if ($can_delete) {
+                $deletable[] = $package_info;
+            } else {
+                $non_deletable[] = $package_info;
+            }
+        }
+
+        return [
+            'success' => true,
+            'deletable' => $deletable,
+            'non_deletable' => $non_deletable,
+            'not_found' => array_values($not_found),
+            'summary' => [
+                'total_requested' => count($tracking_numbers),
+                'found' => count($packages),
+                'deletable' => count($deletable),
+                'non_deletable' => count($non_deletable),
+                'not_found' => count($not_found)
+            ]
+        ];
+
+    } catch (PDOException $e) {
+        mrs_log('Failed to check packages for deletion: ' . $e->getMessage(), 'ERROR');
+        return [
+            'success' => false,
+            'message' => '数据库查询失败: ' . $e->getMessage()
+        ];
+    }
+}
+
+/**
+ * 批量删除包裹（硬删除）
+ * @param PDO $pdo 数据库连接
+ * @param array $ledger_ids 要删除的包裹ledger_id数组
+ * @param string $operator 操作员
+ * @param string $reason 删除原因
+ * @return array 返回删除结果
+ */
+function mrs_bulk_delete_packages($pdo, $ledger_ids, $operator = '', $reason = '') {
+    try {
+        if (empty($ledger_ids)) {
+            return [
+                'success' => false,
+                'message' => '没有要删除的包裹'
+            ];
+        }
+
+        $pdo->beginTransaction();
+
+        // 再次检查这些包裹是否可以删除
+        $placeholders = str_repeat('?,', count($ledger_ids) - 1) . '?';
+        $check_sql = "
+            SELECT ledger_id, tracking_number, status, outbound_time
+            FROM mrs_package_ledger
+            WHERE ledger_id IN ($placeholders)
+            AND (status = 'shipped' OR outbound_time IS NOT NULL)
+        ";
+        $stmt = $pdo->prepare($check_sql);
+        $stmt->execute($ledger_ids);
+        $invalid_packages = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        if (!empty($invalid_packages)) {
+            $pdo->rollBack();
+            return [
+                'success' => false,
+                'message' => '存在不可删除的包裹',
+                'invalid_packages' => $invalid_packages
+            ];
+        }
+
+        // 记录删除操作日志（在删除前记录包裹信息）
+        $log_sql = "
+            INSERT INTO mrs_operation_log
+            (operation_type, operation_detail, operator, created_at)
+            SELECT
+                'package_deletion' as operation_type,
+                CONCAT(
+                    'Deleted package - Tracking: ', tracking_number,
+                    ', Batch: ', batch_name,
+                    ', Box: ', box_number,
+                    ', Location: ', IFNULL(warehouse_location, 'N/A'),
+                    ', Reason: ', ?
+                ) as operation_detail,
+                ? as operator,
+                NOW(6) as created_at
+            FROM mrs_package_ledger
+            WHERE ledger_id IN ($placeholders)
+        ";
+
+        $log_params = array_merge([$reason, $operator], $ledger_ids);
+        $stmt = $pdo->prepare($log_sql);
+        $stmt->execute($log_params);
+
+        // 删除包裹项（虽然有外键级联，但显式删除更清晰）
+        $delete_items_sql = "
+            DELETE FROM mrs_package_items
+            WHERE ledger_id IN ($placeholders)
+        ";
+        $stmt = $pdo->prepare($delete_items_sql);
+        $stmt->execute($ledger_ids);
+        $items_deleted = $stmt->rowCount();
+
+        // 删除包裹台账
+        $delete_ledger_sql = "
+            DELETE FROM mrs_package_ledger
+            WHERE ledger_id IN ($placeholders)
+        ";
+        $stmt = $pdo->prepare($delete_ledger_sql);
+        $stmt->execute($ledger_ids);
+        $packages_deleted = $stmt->rowCount();
+
+        $pdo->commit();
+
+        mrs_log(
+            "Bulk deleted {$packages_deleted} packages by {$operator}. Reason: {$reason}",
+            'INFO'
+        );
+
+        return [
+            'success' => true,
+            'packages_deleted' => $packages_deleted,
+            'items_deleted' => $items_deleted,
+            'message' => "成功删除 {$packages_deleted} 个包裹"
+        ];
+
+    } catch (PDOException $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        mrs_log('Failed to bulk delete packages: ' . $e->getMessage(), 'ERROR');
+        return [
+            'success' => false,
+            'message' => '删除失败: ' . $e->getMessage()
+        ];
+    }
+}
+
