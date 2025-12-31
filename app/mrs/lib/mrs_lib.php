@@ -2496,7 +2496,7 @@ function mrs_check_packages_for_deletion($pdo, $tracking_numbers) {
                     ORDER BY pi.sort_order
                     SEPARATOR ', '
                 ) as products,
-                COUNT(ul.log_id) as outbound_count
+                COUNT(ul.id) as outbound_count
             FROM mrs_package_ledger pl
             LEFT JOIN mrs_package_items pi ON pl.ledger_id = pi.ledger_id
             LEFT JOIN mrs_usage_log ul ON pl.ledger_id = ul.ledger_id
