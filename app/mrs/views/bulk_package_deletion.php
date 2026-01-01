@@ -76,15 +76,20 @@ if (!defined('MRS_ENTRY')) {
         }
 
         .table thead th {
-            background-color: #f8f9fa;
+            background-color: #3c8dbc;
+            color: white;
             border-bottom: 2px solid #dee2e6;
             font-weight: 600;
-            font-size: 13px;
+            font-size: 14px;
+            text-align: center;
+            padding: 12px;
         }
 
         .table td {
-            font-size: 13px;
+            font-size: 14px;
             vertical-align: middle;
+            text-align: center;
+            padding: 12px 10px;
         }
 
         /* 输入框样式 */
@@ -222,7 +227,7 @@ if (!defined('MRS_ENTRY')) {
                         <button type="button" class="btn btn-primary" onclick="checkPackages()">
                             <i class="fa fa-search"></i> 检查包裹状态
                         </button>
-                        <button type="button" class="btn btn-default" onclick="clearAll()" style="margin-left: 10px;">
+                        <button type="button" class="btn btn-default" onclick="clearAll()" style="margin-left: 25px;">
                             <i class="fa fa-refresh"></i> 清空重置
                         </button>
                     </div>
