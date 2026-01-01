@@ -17,105 +17,170 @@ if (!defined('MRS_ENTRY')) {
     <link rel="stylesheet" href="/mrs/ap/css/backend.css">
     <link rel="stylesheet" href="/mrs/ap/css/modal.css">
     <style>
-        .warning-box {
-            background: #fff3cd;
-            border: 1px solid #ffc107;
+        /* 页面特定样式优化 */
+        .content-wrapper {
             padding: 15px;
-            border-radius: 6px;
+        }
+
+        /* 警告框优化 */
+        .callout-warning {
+            border-left: 5px solid #ffc107;
+            background-color: #fff3cd;
+            padding: 15px;
             margin-bottom: 20px;
         }
-        .error-box {
-            background: #f8d7da;
-            border: 1px solid #dc3545;
-            padding: 15px;
-            border-radius: 6px;
-            margin-bottom: 20px;
-        }
-        .success-box {
-            background: #d4edda;
-            border: 1px solid #28a745;
-            padding: 15px;
-            border-radius: 6px;
-            margin-bottom: 20px;
-        }
-        .input-section {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 6px;
-            margin-bottom: 20px;
-        }
-        .result-section {
-            margin-top: 30px;
-        }
-        .result-table {
-            margin-top: 15px;
-        }
-        .result-table th {
-            background: #e9ecef;
-        }
-        .deletable-row {
-            background: #d4edda;
-        }
-        .non-deletable-row {
-            background: #f8d7da;
-        }
-        .summary-stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 15px;
-            margin: 20px 0;
-        }
-        .stat-card {
-            background: white;
-            border: 1px solid #dee2e6;
-            padding: 15px;
-            border-radius: 6px;
-            text-align: center;
-        }
-        .stat-number {
-            font-size: 28px;
-            font-weight: bold;
-            margin: 10px 0;
-        }
-        .stat-label {
-            color: #6c757d;
-            font-size: 14px;
-        }
-        .tracking-input {
-            width: 100%;
-            min-height: 150px;
-            font-family: monospace;
-            font-size: 14px;
-        }
-        .action-buttons {
+
+        /* 统计栏优化 - 更紧凑 */
+        .stats-container {
             display: flex;
-            gap: 10px;
-            margin-top: 15px;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 20px;
         }
-        .modal {
+
+        .mini-stat-box {
+            background: #fff;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px 15px;
+            display: flex;
+            align-items: center;
+            min-width: 140px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .mini-stat-icon {
+            font-size: 24px;
+            margin-right: 15px;
+            opacity: 0.7;
+        }
+
+        .mini-stat-info h6 {
+            margin: 0;
+            font-size: 12px;
+            color: #6c757d;
+            text-transform: uppercase;
+        }
+
+        .mini-stat-info span {
+            font-size: 20px;
+            font-weight: bold;
+            color: #343a40;
+        }
+
+        /* 表格优化 */
+        .table-responsive {
+            background: #fff;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .table thead th {
+            background-color: #3c8dbc;
+            color: white;
+            border-bottom: 2px solid #dee2e6;
+            font-weight: 600;
+            font-size: 14px;
+            text-align: center;
+            padding: 12px;
+        }
+
+        .table td {
+            font-size: 14px;
+            vertical-align: middle;
+            text-align: center;
+            padding: 12px 10px;
+        }
+
+        /* 输入框样式 */
+        .tracking-input {
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            border-color: #ced4da;
+        }
+
+        /* 模态框自定义样式 (AdminLTE风格) */
+        .custom-modal {
             display: none;
             position: fixed;
-            z-index: 1000;
+            z-index: 1050;
             left: 0;
             top: 0;
             width: 100%;
             height: 100%;
+            overflow: hidden;
             background-color: rgba(0,0,0,0.5);
+            outline: 0;
         }
-        .modal-content {
-            background-color: white;
-            margin: 10% auto;
-            padding: 30px;
-            border-radius: 8px;
-            width: 90%;
+
+        .custom-modal-dialog {
+            position: relative;
+            width: auto;
+            margin: 1.75rem auto;
             max-width: 500px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            pointer-events: none;
         }
-        .modal-buttons {
+
+        .custom-modal-content {
+            position: relative;
             display: flex;
-            gap: 10px;
+            flex-direction: column;
+            width: 100%;
+            pointer-events: auto;
+            background-color: #fff;
+            background-clip: padding-box;
+            border: 1px solid rgba(0,0,0,.2);
+            border-radius: .3rem;
+            box-shadow: 0 .5rem 1rem rgba(0,0,0,.5);
+            outline: 0;
+        }
+
+        .custom-modal-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            padding: 1rem 1rem;
+            border-bottom: 1px solid #dee2e6;
+            border-top-left-radius: .3rem;
+            border-top-right-radius: .3rem;
+        }
+
+        .custom-modal-body {
+            position: relative;
+            flex: 1 1 auto;
+            padding: 1rem;
+        }
+
+        .custom-modal-footer {
+            display: flex;
+            align-items: center;
             justify-content: flex-end;
-            margin-top: 20px;
+            padding: 1rem;
+            border-top: 1px solid #dee2e6;
+            border-bottom-right-radius: .3rem;
+            border-bottom-left-radius: .3rem;
+        }
+
+        .custom-modal-title {
+            margin-bottom: 0;
+            line-height: 1.5;
+            font-size: 1.25rem;
+            font-weight: 500;
+        }
+
+        .btn-close {
+            padding: 1rem;
+            margin: -1rem -1rem -1rem auto;
+            background: transparent;
+            border: 0;
+            font-size: 1.5rem;
+            font-weight: 700;
+            line-height: 1;
+            color: #000;
+            text-shadow: 0 1px 0 #fff;
+            opacity: .5;
+            cursor: pointer;
         }
     </style>
 </head>
@@ -126,57 +191,76 @@ if (!defined('MRS_ENTRY')) {
         <div class="page-header">
             <h1>批量删除包裹 - 库存修正</h1>
             <div class="header-actions">
-                <a href="/mrs/ap/index.php?action=inventory_list" class="btn btn-secondary">返回库存</a>
+                <a href="/mrs/ap/index.php?action=inventory_list" class="btn btn-default btn-sm">
+                    <i class="fa fa-arrow-left"></i> 返回库存
+                </a>
             </div>
         </div>
 
         <div class="content-wrapper">
             <!-- 警告提示 -->
-            <div class="warning-box">
-                <h3>⚠️ 重要提示</h3>
-                <ul>
-                    <li>此功能用于修正错误的入库记录，请谨慎操作</li>
-                    <li>只能删除<strong>未出库</strong>的包裹（状态为in_stock且无出库记录）</li>
-                    <li>已出库的包裹将<strong>不可删除</strong>，系统会给出提示</li>
-                    <li>删除后包裹及其产品明细将从系统中移除，<strong>无法恢复</strong></li>
-                    <li>批次中其他包裹的箱号不会受影响</li>
+            <div class="callout-warning">
+                <h5><i class="icon fa fa-warning"></i> 重要提示</h5>
+                <ul style="margin-bottom: 0; padding-left: 20px;">
+                    <li>此功能用于修正错误的入库记录，只能删除<strong>未出库</strong>（状态为in_stock）的包裹。</li>
+                    <li>删除后包裹及其产品明细将<strong>永久移除</strong>，无法恢复。</li>
+                    <li>已出库的包裹无法删除。</li>
                 </ul>
             </div>
 
             <!-- 输入区域 -->
-            <div class="input-section">
-                <h3>步骤1: 输入快递单号</h3>
-                <p class="info-text">支持批量输入，每行一个快递单号，或使用逗号/空格分隔</p>
-                <textarea
-                    id="trackingInput"
-                    class="tracking-input form-control"
-                    placeholder="请输入快递单号，例如：&#10;1234567890123&#10;9876543210987&#10;或&#10;1234567890123, 9876543210987"
-                ></textarea>
-                <div class="action-buttons">
-                    <button type="button" class="btn btn-primary" onclick="checkPackages()">
-                        🔍 检查包裹状态
-                    </button>
-                    <button type="button" class="btn btn-secondary" onclick="clearAll()">
-                        🔄 清空重置
-                    </button>
+            <div class="card card-primary card-outline">
+                <div class="card-header">
+                    <h3 class="card-title">步骤1: 输入快递单号</h3>
+                </div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label>请输入快递单号（支持批量，每行一个）：</label>
+                        <textarea
+                            id="trackingInput"
+                            class="form-control tracking-input"
+                            rows="5"
+                            placeholder="例如：&#10;1234567890123&#10;9876543210987"
+                        ></textarea>
+                    </div>
+                    <div class="mt-3" style="margin-bottom: 25px;">
+                        <button type="button" class="btn btn-primary" onclick="checkPackages()">
+                            <i class="fa fa-search"></i> 检查包裹状态
+                        </button>
+                        <button type="button" class="btn btn-default" onclick="clearAll()" style="margin-left: 25px;">
+                            <i class="fa fa-refresh"></i> 清空重置
+                        </button>
+                    </div>
                 </div>
             </div>
 
             <!-- 加载提示 -->
-            <div id="loadingMessage" style="display: none; text-align: center; padding: 20px;">
-                <p>正在检查包裹状态，请稍候...</p>
+            <div id="loadingMessage" style="display: none; text-align: center; padding: 40px;">
+                <i class="fa fa-spinner fa-spin fa-2x"></i>
+                <p style="margin-top: 10px;">正在处理，请稍候...</p>
             </div>
 
             <!-- 结果区域 -->
-            <div id="resultSection" class="result-section" style="display: none;">
-                <!-- 汇总统计 -->
-                <div id="summaryStats" class="summary-stats"></div>
+            <div id="resultSection" style="display: none; margin-top: 25px;">
 
-                <!-- 可删除的包裹 -->
-                <div id="deletableSection" style="display: none;">
-                    <h3 style="color: #28a745;">✓ 可删除的包裹</h3>
-                    <div class="result-table">
-                        <table class="table">
+                <!-- 统计概览 (美化版) -->
+                <div class="stats-container" id="summaryStats">
+                    <!-- JS将填充内容 -->
+                </div>
+
+                <!-- 可删除区域 -->
+                <div id="deletableSection" class="card card-success card-outline" style="display: none;">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h3 class="card-title text-success"><i class="fa fa-check-circle"></i> 可删除的包裹</h3>
+                        <div class="card-tools">
+                             <!-- 移动端样式微调，增加下边距以防堆叠 -->
+                             <button type="button" class="btn btn-danger btn-sm" onclick="openConfirmModal()" style="margin-bottom: 5px;">
+                                <i class="fa fa-trash"></i> 确认删除这些包裹
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body table-responsive p-0">
+                        <table class="table table-striped table-hover table-bordered m-0">
                             <thead>
                                 <tr>
                                     <th>快递单号</th>
@@ -190,24 +274,15 @@ if (!defined('MRS_ENTRY')) {
                             <tbody id="deletableTableBody"></tbody>
                         </table>
                     </div>
-
-                    <div style="margin-top: 20px;">
-                        <label for="deleteReason">删除原因（必填）:</label>
-                        <input type="text" id="deleteReason" class="form-control"
-                               placeholder="请输入删除原因，例如：错误入库、重复录入等"
-                               style="margin-top: 10px;">
-                        <button type="button" class="btn btn-danger" onclick="confirmDelete()"
-                                style="margin-top: 15px;">
-                            🗑️ 确认删除这些包裹
-                        </button>
-                    </div>
                 </div>
 
-                <!-- 不可删除的包裹 -->
-                <div id="nonDeletableSection" style="display: none; margin-top: 30px;">
-                    <h3 style="color: #dc3545;">✗ 不可删除的包裹</h3>
-                    <div class="result-table">
-                        <table class="table">
+                <!-- 不可删除区域 -->
+                <div id="nonDeletableSection" class="card card-danger card-outline" style="display: none; margin-top: 20px;">
+                    <div class="card-header">
+                        <h3 class="card-title text-danger"><i class="fa fa-times-circle"></i> 不可删除的包裹</h3>
+                    </div>
+                    <div class="card-body table-responsive p-0">
+                        <table class="table table-striped table-hover table-bordered m-0">
                             <thead>
                                 <tr>
                                     <th>快递单号</th>
@@ -223,26 +298,59 @@ if (!defined('MRS_ENTRY')) {
                     </div>
                 </div>
 
-                <!-- 未找到的快递单号 -->
-                <div id="notFoundSection" style="display: none; margin-top: 30px;">
-                    <h3 style="color: #6c757d;">? 未找到的快递单号</h3>
-                    <div class="info-box">
-                        <p>以下快递单号在系统中未找到对应的包裹记录：</p>
-                        <div id="notFoundList" style="margin-top: 10px; font-family: monospace;"></div>
+                <!-- 未找到区域 -->
+                <div id="notFoundSection" class="card card-secondary card-outline" style="display: none; margin-top: 20px;">
+                    <div class="card-header">
+                        <h3 class="card-title text-secondary"><i class="fa fa-question-circle"></i> 未找到的快递单号</h3>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted">以下单号在系统中不存在：</p>
+                        <div id="notFoundList" style="background: #f8f9fa; padding: 10px; border-radius: 4px; font-family: monospace;"></div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- 确认删除模态框 -->
-    <div id="confirmModal" class="modal">
-        <div class="modal-content">
-            <h3>⚠️ 确认删除操作</h3>
-            <p id="confirmMessage"></p>
-            <div class="modal-buttons">
-                <button type="button" class="btn btn-danger" onclick="executeDelete()">确认删除</button>
-                <button type="button" class="btn btn-secondary" onclick="closeModal()">取消</button>
+    <!-- 通用提示模态框 (Alert Modal) -->
+    <div id="alertModal" class="custom-modal">
+        <div class="custom-modal-dialog">
+            <div class="custom-modal-content">
+                <div class="custom-modal-header">
+                    <h5 class="custom-modal-title" id="alertTitle">提示</h5>
+                    <button type="button" class="btn-close" onclick="closeAlertModal()">×</button>
+                </div>
+                <div class="custom-modal-body">
+                    <p id="alertMessage"></p>
+                </div>
+                <div class="custom-modal-footer">
+                    <button type="button" class="btn btn-primary" onclick="closeAlertModal()">确定</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 确认删除模态框 (Confirm Modal) -->
+    <div id="confirmModal" class="custom-modal">
+        <div class="custom-modal-dialog">
+            <div class="custom-modal-content">
+                <div class="custom-modal-header bg-danger text-white">
+                    <h5 class="custom-modal-title" style="color: white;">⚠️ 确认删除</h5>
+                    <button type="button" class="btn-close" onclick="closeConfirmModal()" style="color: white; opacity: 1;">×</button>
+                </div>
+                <div class="custom-modal-body">
+                    <div id="confirmSummary" class="mb-3"></div>
+
+                    <div class="form-group">
+                        <label for="modalDeleteReason" class="text-danger">请输入删除原因 (必填):</label>
+                        <input type="text" id="modalDeleteReason" class="form-control" placeholder="例如：入库错误、包裹破损等">
+                        <small class="text-muted">此操作记录将被审计，请如实填写。</small>
+                    </div>
+                </div>
+                <div class="custom-modal-footer">
+                    <button type="button" class="btn btn-default" onclick="closeConfirmModal()">取消</button>
+                    <button type="button" class="btn btn-danger" onclick="executeDelete()">确认删除</button>
+                </div>
             </div>
         </div>
     </div>
@@ -250,96 +358,108 @@ if (!defined('MRS_ENTRY')) {
     <script>
         let checkResult = null;
 
-        // 检查包裹状态
+        // 显示通用提示模态框
+        function showAlert(message, title = '提示') {
+            document.getElementById('alertTitle').textContent = title;
+            document.getElementById('alertMessage').textContent = message;
+            document.getElementById('alertModal').style.display = 'block';
+        }
+
+        function closeAlertModal() {
+            document.getElementById('alertModal').style.display = 'none';
+        }
+
+        // 检查包裹
         async function checkPackages() {
             const trackingInput = document.getElementById('trackingInput').value.trim();
 
             if (!trackingInput) {
-                alert('请输入快递单号');
+                showAlert('请输入快递单号', '输入错误');
                 return;
             }
 
-            // 显示加载提示
             document.getElementById('loadingMessage').style.display = 'block';
             document.getElementById('resultSection').style.display = 'none';
 
             try {
                 const response = await fetch('/mrs/ap/index.php?action=backend_bulk_deletion', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        action: 'check',
-                        tracking_input: trackingInput
-                    })
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'check', tracking_input: trackingInput })
                 });
 
                 const result = await response.json();
 
                 if (!result.success) {
-                    alert('错误: ' + result.message);
-                    document.getElementById('loadingMessage').style.display = 'none';
+                    showAlert('错误: ' + result.message, '系统错误');
                     return;
                 }
 
-                // 保存检查结果
                 checkResult = result;
-
-                // 显示结果
                 displayCheckResult(result);
 
             } catch (error) {
-                alert('请求失败: ' + error.message);
-                console.error('Error:', error);
+                showAlert('请求失败: ' + error.message, '网络错误');
             } finally {
                 document.getElementById('loadingMessage').style.display = 'none';
             }
         }
 
-        // 显示检查结果
+        // 显示结果
         function displayCheckResult(result) {
             const summary = result.summary;
-
-            // 显示结果区域
             document.getElementById('resultSection').style.display = 'block';
 
-            // 显示汇总统计
+            // 1. 渲染美化后的统计栏
             const statsHtml = `
-                <div class="stat-card">
-                    <div class="stat-label">请求总数</div>
-                    <div class="stat-number">${summary.total_requested}</div>
+                <div class="mini-stat-box">
+                    <div class="mini-stat-icon text-primary">📦</div>
+                    <div class="mini-stat-info">
+                        <h6>请求总数</h6>
+                        <span>${summary.total_requested}</span>
+                    </div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-label">找到包裹</div>
-                    <div class="stat-number">${summary.found}</div>
+                <div class="mini-stat-box">
+                    <div class="mini-stat-icon text-success">✅</div>
+                    <div class="mini-stat-info">
+                        <h6>找到包裹</h6>
+                        <span>${summary.found}</span>
+                    </div>
                 </div>
-                <div class="stat-card" style="background: #d4edda;">
-                    <div class="stat-label">可删除</div>
-                    <div class="stat-number" style="color: #28a745;">${summary.deletable}</div>
+                <div class="mini-stat-box">
+                    <div class="mini-stat-icon text-info">🗑️</div>
+                    <div class="mini-stat-info">
+                        <h6>可删除</h6>
+                        <span class="text-success">${summary.deletable}</span>
+                    </div>
                 </div>
-                <div class="stat-card" style="background: #f8d7da;">
-                    <div class="stat-label">不可删除</div>
-                    <div class="stat-number" style="color: #dc3545;">${summary.non_deletable}</div>
+                <div class="mini-stat-box">
+                    <div class="mini-stat-icon text-danger">🚫</div>
+                    <div class="mini-stat-info">
+                        <h6>不可删除</h6>
+                        <span class="text-danger">${summary.non_deletable}</span>
+                    </div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-label">未找到</div>
-                    <div class="stat-number">${summary.not_found}</div>
+                <div class="mini-stat-box">
+                    <div class="mini-stat-icon text-secondary">❓</div>
+                    <div class="mini-stat-info">
+                        <h6>未找到</h6>
+                        <span>${summary.not_found}</span>
+                    </div>
                 </div>
             `;
             document.getElementById('summaryStats').innerHTML = statsHtml;
 
-            // 显示可删除的包裹
+            // 2. 渲染可删除表格
             if (result.deletable.length > 0) {
                 document.getElementById('deletableSection').style.display = 'block';
-                const tbody = document.getElementById('deletableTableBody');
-                tbody.innerHTML = result.deletable.map(pkg => `
-                    <tr class="deletable-row">
-                        <td>${escapeHtml(pkg.tracking_number)}</td>
+                document.getElementById('deletableTableBody').innerHTML = result.deletable.map(pkg => `
+                    <tr>
+                        <td><code>${escapeHtml(pkg.tracking_number)}</code></td>
                         <td>${escapeHtml(pkg.batch_name)}</td>
                         <td>${escapeHtml(pkg.box_number)}</td>
                         <td>${escapeHtml(pkg.warehouse_location || '-')}</td>
-                        <td>${escapeHtml(pkg.products || '-')}</td>
+                        <td><small>${escapeHtml(pkg.products || '-')}</small></td>
                         <td>${escapeHtml(pkg.inbound_time)}</td>
                     </tr>
                 `).join('');
@@ -347,72 +467,79 @@ if (!defined('MRS_ENTRY')) {
                 document.getElementById('deletableSection').style.display = 'none';
             }
 
-            // 显示不可删除的包裹
+            // 3. 渲染不可删除表格
             if (result.non_deletable.length > 0) {
                 document.getElementById('nonDeletableSection').style.display = 'block';
-                const tbody = document.getElementById('nonDeletableTableBody');
-                tbody.innerHTML = result.non_deletable.map(pkg => `
-                    <tr class="non-deletable-row">
-                        <td>${escapeHtml(pkg.tracking_number)}</td>
+                document.getElementById('nonDeletableTableBody').innerHTML = result.non_deletable.map(pkg => `
+                    <tr>
+                        <td><code>${escapeHtml(pkg.tracking_number)}</code></td>
                         <td>${escapeHtml(pkg.batch_name)}</td>
                         <td>${escapeHtml(pkg.box_number)}</td>
-                        <td>${escapeHtml(pkg.products || '-')}</td>
-                        <td>${escapeHtml(pkg.status)}</td>
-                        <td><strong>${escapeHtml(pkg.reason)}</strong></td>
+                        <td><small>${escapeHtml(pkg.products || '-')}</small></td>
+                        <td><span class="badge badge-warning">${escapeHtml(pkg.status)}</span></td>
+                        <td class="text-danger">${escapeHtml(pkg.reason)}</td>
                     </tr>
                 `).join('');
             } else {
                 document.getElementById('nonDeletableSection').style.display = 'none';
             }
 
-            // 显示未找到的快递单号
+            // 4. 渲染未找到列表
             if (result.not_found.length > 0) {
                 document.getElementById('notFoundSection').style.display = 'block';
                 document.getElementById('notFoundList').innerHTML =
-                    result.not_found.map(tn => `<div>• ${escapeHtml(tn)}</div>`).join('');
+                    result.not_found.map(tn => `<span>${escapeHtml(tn)}</span>`).join(', ');
             } else {
                 document.getElementById('notFoundSection').style.display = 'none';
             }
         }
 
-        // 确认删除
-        function confirmDelete() {
+        // 打开删除确认模态框
+        function openConfirmModal() {
             if (!checkResult || checkResult.deletable.length === 0) {
-                alert('没有可删除的包裹');
+                showAlert('没有可删除的包裹');
                 return;
             }
 
-            const reason = document.getElementById('deleteReason').value.trim();
-            if (!reason) {
-                alert('请输入删除原因');
-                return;
-            }
-
-            // 显示确认模态框
             const count = checkResult.deletable.length;
-            document.getElementById('confirmMessage').innerHTML =
-                `您即将删除 <strong>${count}</strong> 个包裹，此操作不可恢复。<br><br>` +
-                `删除原因: <strong>${escapeHtml(reason)}</strong><br><br>` +
-                `确定要继续吗？`;
+            document.getElementById('confirmSummary').innerHTML =
+                `<p class="lead">您即将删除 <strong>${count}</strong> 个包裹。</p>
+                 <p class="text-muted">此操作不可恢复，删除后库存将减少。</p>`;
+
+            // 清空输入框
+            document.getElementById('modalDeleteReason').value = '';
+
             document.getElementById('confirmModal').style.display = 'block';
+            document.getElementById('modalDeleteReason').focus();
+        }
+
+        function closeConfirmModal() {
+            document.getElementById('confirmModal').style.display = 'none';
         }
 
         // 执行删除
         async function executeDelete() {
-            closeModal();
+            const reason = document.getElementById('modalDeleteReason').value.trim();
+            if (!reason) {
+                // 使用 Alert 模态框提示，而不是 alert()
+                // 但这里为了用户体验，直接高亮输入框可能更好，或者弹出一个小的警告
+                // 既然用户要求全部用模态框，我们可以叠加，或者简单的在当前模态框显示错误
+                // 这里选择叠加AlertModal
+                showAlert('请输入删除原因！', '缺少信息');
+                return;
+            }
 
-            const reason = document.getElementById('deleteReason').value.trim();
+            // 准备数据
             const ledger_ids = checkResult.deletable.map(pkg => pkg.ledger_id);
 
-            // 显示加载提示
+            // UI 状态更新
+            closeConfirmModal();
             document.getElementById('loadingMessage').style.display = 'block';
 
             try {
                 const response = await fetch('/mrs/ap/index.php?action=backend_bulk_deletion', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         action: 'delete',
                         ledger_ids: ledger_ids,
@@ -422,51 +549,37 @@ if (!defined('MRS_ENTRY')) {
 
                 const result = await response.json();
 
-                if (!result.success) {
-                    alert('删除失败: ' + result.message);
-                    return;
+                if (result.success) {
+                    showAlert('删除成功！' + result.message, '操作成功');
+                    clearAll(); // 重置界面
+                } else {
+                    showAlert('删除失败: ' + result.message, '操作失败');
                 }
-
-                // 显示成功消息
-                alert(`✓ 删除成功！\n\n${result.message}`);
-
-                // 清空页面，准备下一次操作
-                clearAll();
-
             } catch (error) {
-                alert('请求失败: ' + error.message);
-                console.error('Error:', error);
+                showAlert('请求失败: ' + error.message, '网络错误');
             } finally {
                 document.getElementById('loadingMessage').style.display = 'none';
             }
         }
 
-        // 关闭模态框
-        function closeModal() {
-            document.getElementById('confirmModal').style.display = 'none';
-        }
-
-        // 清空所有
         function clearAll() {
             document.getElementById('trackingInput').value = '';
-            document.getElementById('deleteReason').value = '';
             document.getElementById('resultSection').style.display = 'none';
             checkResult = null;
         }
 
-        // HTML转义
         function escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
         }
 
-        // 点击模态框外部关闭
+        // 点击外部关闭
         window.onclick = function(event) {
-            const modal = document.getElementById('confirmModal');
-            if (event.target === modal) {
-                closeModal();
-            }
+            const alertModal = document.getElementById('alertModal');
+            const confirmModal = document.getElementById('confirmModal');
+            if (event.target === alertModal) closeAlertModal();
+            if (event.target === confirmModal) closeConfirmModal();
         }
     </script>
 </body>
