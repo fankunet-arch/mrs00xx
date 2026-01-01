@@ -222,7 +222,7 @@ if (!defined('MRS_ENTRY')) {
                         <button type="button" class="btn btn-primary" onclick="checkPackages()">
                             <i class="fa fa-search"></i> 检查包裹状态
                         </button>
-                        <button type="button" class="btn btn-default" onclick="clearAll()">
+                        <button type="button" class="btn btn-default" onclick="clearAll()" style="margin-left: 10px;">
                             <i class="fa fa-refresh"></i> 清空重置
                         </button>
                     </div>
@@ -248,7 +248,8 @@ if (!defined('MRS_ENTRY')) {
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h3 class="card-title text-success"><i class="fa fa-check-circle"></i> 可删除的包裹</h3>
                         <div class="card-tools">
-                             <button type="button" class="btn btn-danger btn-sm" onclick="openConfirmModal()">
+                             <!-- 移动端样式微调，增加下边距以防堆叠 -->
+                             <button type="button" class="btn btn-danger btn-sm" onclick="openConfirmModal()" style="margin-bottom: 5px;">
                                 <i class="fa fa-trash"></i> 确认删除这些包裹
                             </button>
                         </div>
