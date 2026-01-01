@@ -16,173 +16,7 @@ if (!defined('MRS_ENTRY')) {
     <title>批量删除包裹 - 库存修正 - MRS 系统</title>
     <link rel="stylesheet" href="/mrs/ap/css/backend.css">
     <link rel="stylesheet" href="/mrs/ap/css/modal.css">
-    <style>
-        /* 页面特定样式优化 */
-        .content-wrapper {
-            padding: 15px;
-        }
-
-        /* 警告框优化 */
-        .callout-warning {
-            border-left: 5px solid #ffc107;
-            background-color: #fff3cd;
-            padding: 15px;
-            margin-bottom: 20px;
-        }
-
-        /* 统计栏优化 - 更紧凑 */
-        .stats-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .mini-stat-box {
-            background: #fff;
-            border: 1px solid #dee2e6;
-            border-radius: 4px;
-            padding: 10px 15px;
-            display: flex;
-            align-items: center;
-            min-width: 140px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-        }
-
-        .mini-stat-icon {
-            font-size: 24px;
-            margin-right: 15px;
-            opacity: 0.7;
-        }
-
-        .mini-stat-info h6 {
-            margin: 0;
-            font-size: 12px;
-            color: #6c757d;
-            text-transform: uppercase;
-        }
-
-        .mini-stat-info span {
-            font-size: 20px;
-            font-weight: bold;
-            color: #343a40;
-        }
-
-        /* 表格优化 */
-        .table-responsive {
-            background: #fff;
-            border-radius: 4px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-
-        .table thead th {
-            background-color: #3c8dbc;
-            color: white;
-            border-bottom: 2px solid #dee2e6;
-            font-weight: 600;
-            font-size: 14px;
-            text-align: center;
-            padding: 12px;
-        }
-
-        .table td {
-            font-size: 14px;
-            vertical-align: middle;
-            text-align: center;
-            padding: 12px 10px;
-        }
-
-        /* 输入框样式 */
-        .tracking-input {
-            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-            font-size: 13px;
-            line-height: 1.5;
-            border-color: #ced4da;
-        }
-
-        /* 模态框自定义样式 (AdminLTE风格) */
-        .custom-modal {
-            display: none;
-            position: fixed;
-            z-index: 1050;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            background-color: rgba(0,0,0,0.5);
-            outline: 0;
-        }
-
-        .custom-modal-dialog {
-            position: relative;
-            width: auto;
-            margin: 1.75rem auto;
-            max-width: 500px;
-            pointer-events: none;
-        }
-
-        .custom-modal-content {
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            width: 100%;
-            pointer-events: auto;
-            background-color: #fff;
-            background-clip: padding-box;
-            border: 1px solid rgba(0,0,0,.2);
-            border-radius: .3rem;
-            box-shadow: 0 .5rem 1rem rgba(0,0,0,.5);
-            outline: 0;
-        }
-
-        .custom-modal-header {
-            display: flex;
-            align-items: flex-start;
-            justify-content: space-between;
-            padding: 1rem 1rem;
-            border-bottom: 1px solid #dee2e6;
-            border-top-left-radius: .3rem;
-            border-top-right-radius: .3rem;
-        }
-
-        .custom-modal-body {
-            position: relative;
-            flex: 1 1 auto;
-            padding: 1rem;
-        }
-
-        .custom-modal-footer {
-            display: flex;
-            align-items: center;
-            justify-content: flex-end;
-            padding: 1rem;
-            border-top: 1px solid #dee2e6;
-            border-bottom-right-radius: .3rem;
-            border-bottom-left-radius: .3rem;
-        }
-
-        .custom-modal-title {
-            margin-bottom: 0;
-            line-height: 1.5;
-            font-size: 1.25rem;
-            font-weight: 500;
-        }
-
-        .btn-close {
-            padding: 1rem;
-            margin: -1rem -1rem -1rem auto;
-            background: transparent;
-            border: 0;
-            font-size: 1.5rem;
-            font-weight: 700;
-            line-height: 1;
-            color: #000;
-            text-shadow: 0 1px 0 #fff;
-            opacity: .5;
-            cursor: pointer;
-        }
-    </style>
+    <link rel="stylesheet" href="/mrs/ap/css/bulk_package_deletion.css">
 </head>
 <body>
     <?php include MRS_VIEW_PATH . '/shared/sidebar.php'; ?>
@@ -201,7 +35,7 @@ if (!defined('MRS_ENTRY')) {
             <!-- 警告提示 -->
             <div class="callout-warning">
                 <h5><i class="icon fa fa-warning"></i> 重要提示</h5>
-                <ul style="margin-bottom: 0; padding-left: 20px;">
+                <ul class="warning-list">
                     <li>此功能用于修正错误的入库记录，只能删除<strong>未出库</strong>（状态为in_stock）的包裹。</li>
                     <li>删除后包裹及其产品明细将<strong>永久移除</strong>，无法恢复。</li>
                     <li>已出库的包裹无法删除。</li>
@@ -223,11 +57,11 @@ if (!defined('MRS_ENTRY')) {
                             placeholder="例如：&#10;1234567890123&#10;9876543210987"
                         ></textarea>
                     </div>
-                    <div class="mt-3" style="margin-bottom: 25px;">
+                    <div class="button-group">
                         <button type="button" class="btn btn-primary" onclick="checkPackages()">
                             <i class="fa fa-search"></i> 检查包裹状态
                         </button>
-                        <button type="button" class="btn btn-default" onclick="clearAll()" style="margin-left: 25px;">
+                        <button type="button" class="btn btn-default ml-25" onclick="clearAll()">
                             <i class="fa fa-refresh"></i> 清空重置
                         </button>
                     </div>
@@ -235,13 +69,13 @@ if (!defined('MRS_ENTRY')) {
             </div>
 
             <!-- 加载提示 -->
-            <div id="loadingMessage" style="display: none; text-align: center; padding: 40px;">
+            <div id="loadingMessage" class="loading-message">
                 <i class="fa fa-spinner fa-spin fa-2x"></i>
-                <p style="margin-top: 10px;">正在处理，请稍候...</p>
+                <p class="loading-text">正在处理，请稍候...</p>
             </div>
 
             <!-- 结果区域 -->
-            <div id="resultSection" style="display: none; margin-top: 25px;">
+            <div id="resultSection" class="result-section">
 
                 <!-- 统计概览 (美化版) -->
                 <div class="stats-container" id="summaryStats">
@@ -249,12 +83,12 @@ if (!defined('MRS_ENTRY')) {
                 </div>
 
                 <!-- 可删除区域 -->
-                <div id="deletableSection" class="card card-success card-outline" style="display: none;">
+                <div id="deletableSection" class="card card-success card-outline hidden">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h3 class="card-title text-success"><i class="fa fa-check-circle"></i> 可删除的包裹</h3>
                         <div class="card-tools">
                              <!-- 移动端样式微调，增加下边距以防堆叠 -->
-                             <button type="button" class="btn btn-danger btn-sm" onclick="openConfirmModal()" style="margin-bottom: 5px;">
+                             <button type="button" class="btn btn-danger btn-sm mb-5" onclick="openConfirmModal()">
                                 <i class="fa fa-trash"></i> 确认删除这些包裹
                             </button>
                         </div>
@@ -277,7 +111,7 @@ if (!defined('MRS_ENTRY')) {
                 </div>
 
                 <!-- 不可删除区域 -->
-                <div id="nonDeletableSection" class="card card-danger card-outline" style="display: none; margin-top: 20px;">
+                <div id="nonDeletableSection" class="card card-danger card-outline hidden-mt-20">
                     <div class="card-header">
                         <h3 class="card-title text-danger"><i class="fa fa-times-circle"></i> 不可删除的包裹</h3>
                     </div>
@@ -299,13 +133,13 @@ if (!defined('MRS_ENTRY')) {
                 </div>
 
                 <!-- 未找到区域 -->
-                <div id="notFoundSection" class="card card-secondary card-outline" style="display: none; margin-top: 20px;">
+                <div id="notFoundSection" class="card card-secondary card-outline hidden-mt-20">
                     <div class="card-header">
                         <h3 class="card-title text-secondary"><i class="fa fa-question-circle"></i> 未找到的快递单号</h3>
                     </div>
                     <div class="card-body">
                         <p class="text-muted">以下单号在系统中不存在：</p>
-                        <div id="notFoundList" style="background: #f8f9fa; padding: 10px; border-radius: 4px; font-family: monospace;"></div>
+                        <div id="notFoundList" class="not-found-list"></div>
                     </div>
                 </div>
             </div>
@@ -335,8 +169,8 @@ if (!defined('MRS_ENTRY')) {
         <div class="custom-modal-dialog">
             <div class="custom-modal-content">
                 <div class="custom-modal-header bg-danger text-white">
-                    <h5 class="custom-modal-title" style="color: white;">⚠️ 确认删除</h5>
-                    <button type="button" class="btn-close" onclick="closeConfirmModal()" style="color: white; opacity: 1;">×</button>
+                    <h5 class="custom-modal-title text-white">⚠️ 确认删除</h5>
+                    <button type="button" class="btn-close btn-close-white" onclick="closeConfirmModal()">×</button>
                 </div>
                 <div class="custom-modal-body">
                     <div id="confirmSummary" class="mb-3"></div>

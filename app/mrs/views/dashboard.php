@@ -1,57 +1,55 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <title>MRS 管理系统 - <?php echo htmlspecialchars($page_title); ?></title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="/mrs/css/backend.css">
-</head>
-<body>
-    <?php
-    $batch_status_labels = [
-        'draft' => '草稿',
-        'receiving' => '收货中',
-        'pending_merge' => '待合并',
-        'confirmed' => '已确认',
-        'posted' => '已入库',
-    ];
+<?php
+/**
+ * MRS 系统 - 控制台视图
+ * 文件路径: app/mrs/views/dashboard.php
+ */
 
-    $outbound_type_labels = [
-        1 => '领料',
-        2 => '调拨',
-        3 => '退货',
-        4 => '报废',
-    ];
+// 防止直接访问
+if (!defined('MRS_ENTRY')) {
+    die('Access denied');
+}
 
-    $outbound_status_labels = [
-        'draft' => '草稿',
-        'confirmed' => '已确认',
-        'cancelled' => '已取消',
-    ];
-    ?>
-    <header>
-        <div class="title"><?php echo htmlspecialchars($page_title); ?></div>
-        <div class="user">
-            欢迎, <?php echo htmlspecialchars($_SESSION['user_display_name'] ?? '用户'); ?> | <a href="/mrs/be/index.php?action=logout">登出</a>
-        </div>
-    </header>
+$batch_status_labels = [
+    'draft' => '草稿',
+    'receiving' => '收货中',
+    'pending_merge' => '待合并',
+    'confirmed' => '已确认',
+    'posted' => '已入库',
+];
+
+$outbound_type_labels = [
+    1 => '领料',
+    2 => '调拨',
+    3 => '退货',
+    4 => '报废',
+];
+
+$outbound_status_labels = [
+    'draft' => '草稿',
+    'confirmed' => '已确认',
+    'cancelled' => '已取消',
+];
+
+$page_title = '控制台';
+?>
+<?php include MRS_VIEW_PATH . '/shared/header.php'; ?>
     <div class="layout">
         <?php include MRS_VIEW_PATH . '/shared/sidebar.php'; ?>
         <main class="content">
             <div class="card">
-                <div class="flex-between" style="align-items: flex-start; gap: 12px;">
+                <div class="flex-between-start">
                     <div>
                         <h3>欢迎使用 MRS</h3>
-                        <p class="muted" style="margin-top: 8px;">快速查看当前库存健康度、最近业务动态与常用操作。</p>
+                        <p class="muted mt-8">快速查看当前库存健康度、最近业务动态与常用操作。</p>
                         <p class="muted">所有功能均已迁移至新的 MPA 模式，如有需要可从左侧导航进入对应模块。</p>
                     </div>
-                    <div class="muted" style="text-align: right;">
+                    <div class="muted text-right">
                         <div>今天（西班牙时间）：<?php echo htmlspecialchars($current_local_date ?? date('Y-m-d')); ?></div>
                         <div>上次刷新（西班牙时间）：<?php echo htmlspecialchars($last_refresh_time ?? date('H:i')); ?></div>
                     </div>
                 </div>
 
-                <div class="stats-grid" style="margin-top: 18px;">
+                <div class="stats-grid mt-18">
                     <div class="stat-card stat-verified">
                         <div class="stat-number"><?php echo number_format($stats['sku_count']); ?></div>
                         <div class="stat-label">物料 SKU</div>
@@ -76,13 +74,13 @@
             </div>
 
             <div class="card">
-                <div class="flex-between" style="align-items: center;">
+                <div class="flex-between">
                     <div>
                         <h3>快捷操作</h3>
                         <p class="muted">常用入口，方便快速创建或查看业务单据。</p>
                     </div>
                 </div>
-                <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px;">
+                <div class="flex-wrap-gap mt-12">
                     <a class="primary" href="/mrs/be/index.php?action=quick_receipt" target="_blank" rel="noopener noreferrer">快速收货</a>
                     <a class="primary" href="/mrs/be/index.php?action=batch_create">创建批次</a>
                     <a class="secondary" href="/mrs/be/index.php?action=batch_list">查看批次</a>
@@ -94,15 +92,15 @@
             </div>
 
             <div class="card">
-                <div class="flex-between" style="align-items: flex-start;">
+                <div class="flex-between-start">
                     <div>
                         <h3>最新动态</h3>
                         <p class="muted">最近的入库批次与出库单，便于追踪执行情况。</p>
                     </div>
                 </div>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; margin-top: 12px;">
+                <div class="grid-responsive mt-12">
                     <div class="table-responsive">
-                        <h4 style="margin-bottom: 8px;">最近入库批次</h4>
+                        <h4 class="mb-8">最近入库批次</h4>
                         <table>
                             <thead>
                                 <tr>
@@ -131,7 +129,7 @@
                         </table>
                     </div>
                     <div class="table-responsive">
-                        <h4 style="margin-bottom: 8px;">最近出库单</h4>
+                        <h4 class="mb-8">最近出库单</h4>
                         <table>
                             <thead>
                                 <tr>
@@ -163,13 +161,13 @@
             </div>
 
             <div class="card">
-                <div class="flex-between" style="align-items: flex-start;">
+                <div class="flex-between-start">
                     <div>
                         <h3>低库存提醒</h3>
                         <p class="muted">按库存数量从低到高排序的物料，便于及时补货。</p>
                     </div>
                 </div>
-                <div class="table-responsive" style="margin-top: 12px;">
+                <div class="table-responsive mt-12">
                     <table>
                         <thead>
                             <tr>
@@ -200,5 +198,4 @@
             </div>
         </main>
     </div>
-</body>
-</html>
+<?php include MRS_VIEW_PATH . '/shared/footer.php'; ?>

@@ -1,0 +1,679 @@
+/**
+ * MRS Backend Management Styles
+ * 文件路径: dc_html/mrs/css/backend.css
+ * 说明: 后台管理界面样式表
+ */
+
+/* === 全局样式重置 === */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    color: #333;
+    background-color: #f5f7fa;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* === 头部 === */
+header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #fff;
+    padding: 16px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+header .title {
+    font-size: 18px;
+    font-weight: 600;
+}
+
+header .user {
+    font-size: 14px;
+}
+
+/* === 布局 === */
+.layout {
+    display: flex;
+    min-height: calc(100vh - 64px);
+}
+
+aside {
+    width: 220px;
+    background: #fff;
+    border-right: 1px solid #e0e0e0;
+    padding: 20px 0;
+}
+
+.menu-item {
+    padding: 12px 24px;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: #333;
+    font-size: 14px;
+}
+
+.menu-item:hover {
+    background: #f5f7fa;
+    color: #667eea;
+}
+
+.menu-item.active {
+    background: #667eea;
+    color: #fff;
+    border-left: 4px solid #764ba2;
+}
+
+.content {
+    flex: 1;
+    padding: 24px;
+    overflow-y: auto;
+}
+
+/* === 页面切换 === */
+.page {
+    display: none;
+}
+
+.page.active {
+    display: block;
+}
+
+/* === 卡片 === */
+.card {
+    background: #fff;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+}
+
+/* === 标题 === */
+h2 {
+    font-size: 20px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 16px;
+}
+
+h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+}
+
+/* === 按钮 === */
+button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s;
+    background: #667eea;
+    color: #fff;
+}
+
+button:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+button.secondary {
+    background: #f5f7fa;
+    color: #333;
+}
+
+button.secondary:hover {
+    background: #e8eaed;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+button.success {
+    background: #10b981;
+}
+
+button.success:hover {
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+}
+
+button.text {
+    background: transparent;
+    color: #667eea;
+    padding: 8px 16px;
+}
+
+button.text:hover {
+    background: #f5f7fa;
+    box-shadow: none;
+    transform: none;
+}
+
+button.primary {
+    background: #667eea;
+}
+
+button.light-success {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+button.light-success:hover {
+    background: #a7f3d0;
+}
+
+button.small {
+    padding: 6px 12px;
+    font-size: 13px;
+}
+
+/* === 表单元素 === */
+input[type="text"],
+input[type="date"],
+input[type="number"],
+select,
+textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: border-color 0.2s;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+textarea {
+    resize: vertical;
+    font-family: inherit;
+}
+
+/* === 表格 === */
+.table-responsive {
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+table thead {
+    background: #f9fafb;
+}
+
+table th {
+    padding: 12px;
+    text-align: left;
+    font-weight: 600;
+    color: #555;
+    border-bottom: 2px solid #e0e0e0;
+    font-size: 13px;
+}
+
+table td {
+    padding: 12px;
+    border-bottom: 1px solid #f0f0f0;
+    font-size: 14px;
+}
+
+table tbody tr:hover {
+    background: #f9fafb;
+}
+
+table td.loading {
+    text-align: center;
+    color: #999;
+    font-style: italic;
+}
+
+/* === 模态框 === */
+.modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal {
+    background: #fff;
+    border-radius: 8px;
+    max-width: 600px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+
+.modal-lg {
+    max-width: 900px;
+}
+
+.modal-large {
+    max-width: 1000px;
+}
+
+.modal-header {
+    padding: 20px;
+    border-bottom: 1px solid #e0e0e0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+.modal-actions {
+    padding: 20px;
+    border-top: 1px solid #e0e0e0;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+/* === 表单布局 === */
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+}
+
+.form-group {
+    margin-bottom: 16px;
+}
+
+.form-group.full {
+    grid-column: 1 / -1;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 500;
+    font-size: 13px;
+    color: #555;
+}
+
+.form-value {
+    padding: 10px;
+    background: #f9fafb;
+    border-radius: 6px;
+    min-height: 40px;
+}
+
+/* === 筛选区域 === */
+.filters {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.filters input,
+.filters select {
+    width: auto;
+    min-width: 150px;
+}
+
+/* === 辅助类 === */
+.flex-between {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.section-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 12px;
+}
+
+.mt-10 {
+    margin-top: 10px;
+}
+
+.mt-2 {
+    margin-top: 8px;
+}
+
+.mt-4 {
+    margin-top: 16px;
+}
+
+.mb-2 {
+    margin-top: 8px;
+}
+
+.mb-12 {
+    margin-bottom: 12px;
+}
+
+.columns {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+}
+
+.empty {
+    text-align: center;
+    color: #999;
+    padding: 40px 20px;
+    font-style: italic;
+}
+
+.muted {
+    color: #666;
+}
+
+.small {
+    font-size: 12px;
+}
+
+/* === 分页 === */
+.pagination {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 20px;
+    padding: 16px 0;
+}
+
+.pagination button {
+    padding: 8px 16px;
+}
+
+.pagination button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* === 批量导入按钮 === */
+.batch-import-btn {
+    margin-right: 8px;
+}
+
+/* === 从内联样式提取的类 === */
+
+/* 链接样式 */
+.link-white {
+    color: #fff;
+    text-decoration: none;
+}
+
+.link-white:hover {
+    text-decoration: underline;
+}
+
+/* 宽度工具类 */
+.w-40 {
+    width: 40px;
+}
+
+.w-60 {
+    width: 60px;
+}
+
+.w-120 {
+    width: 120px;
+}
+
+/* 列宽类 */
+.col-w-10 {
+    width: 10%;
+}
+
+.col-w-20 {
+    width: 20%;
+}
+
+.col-w-30 {
+    width: 30%;
+}
+
+/* Flex工具类 */
+.flex-gap-10 {
+    display: flex;
+    gap: 10px;
+}
+
+/* 边距工具类 */
+.mr-auto {
+    margin-right: auto;
+}
+
+.pb-0 {
+    padding-bottom: 0;
+}
+
+/* Textarea样式 */
+.textarea-mono {
+    width: 100%;
+    font-family: monospace;
+}
+
+.textarea-mono-gray {
+    width: 100%;
+    font-family: monospace;
+    background: #f9fafb;
+}
+
+/* 模态框尺寸 */
+.modal-sm {
+    max-width: 500px;
+}
+
+/* 背景色 */
+.bg-gray-light {
+    background: #f5f5f5;
+}
+
+/* 辅助信息框 */
+.helper-box {
+    padding: 12px;
+    background: #f5f7fb;
+    border-radius: 8px;
+    line-height: 1.6;
+}
+
+.marker-text {
+    font-size: 16px;
+    margin-top: 4px;
+    color: #1e80ff;
+    font-weight: 600;
+}
+
+/* 标签提示文字 */
+.label-hint {
+    color: #666;
+    display: block;
+    margin-bottom: 5px;
+    font-size: 12px;
+}
+
+/* 货架位置输入组 */
+.shelf-input-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.shelf-segment {
+    width: 60px;
+    text-align: center;
+    font-size: 16px;
+}
+
+.shelf-segment-modal {
+    width: 60px;
+    text-align: center;
+    font-size: 16px;
+}
+
+.shelf-separator {
+    color: #666;
+    font-weight: bold;
+}
+
+/* 禁用状态 */
+input:disabled {
+    background: #f5f5f5;
+    cursor: not-allowed;
+}
+
+/* 复选框样式 */
+input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+/* === 显示/隐藏工具类 === */
+.hidden {
+    display: none;
+}
+
+/* === 表格列宽工具类 === */
+.w-120 {
+    width: 120px;
+}
+
+.w-200 {
+    width: 200px;
+}
+
+/* === Flex布局工具类 === */
+.flex-1 {
+    flex: 1;
+}
+
+.flex-align-center-gap {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+}
+
+/* === 网格工具类 === */
+.grid-col-span-2 {
+    grid-column: span 2;
+}
+
+/* === 显示框样式 === */
+.display-box {
+    padding: 10px;
+    background: #f5f5f5;
+    border-radius: 4px;
+}
+
+/* === 最大宽度工具类 === */
+.max-w-300 {
+    max-width: 300px;
+}
+
+.max-w-400 {
+    max-width: 400px;
+}
+
+.flex-1-max-400 {
+    flex: 1;
+    max-width: 400px;
+}
+
+/* === 边距工具类 === */
+.mt-3 {
+    margin-top: 12px;
+}
+
+.mt-15 {
+    margin-top: 15px;
+}
+
+.mt-20 {
+    margin-top: 20px;
+}
+
+.mt-30 {
+    margin-top: 30px;
+}
+
+.mt-40 {
+    margin-top: 40px;
+}
+
+.mb-3 {
+    margin-bottom: 12px;
+}
+
+.mb-15 {
+    margin-bottom: 15px;
+}
+
+.mt-30-mb-15 {
+    margin-top: 30px;
+    margin-bottom: 15px;
+}
+
+.mt-40-mb-15 {
+    margin-top: 40px;
+    margin-bottom: 15px;
+}
+
+/* === 响应式设计 === */
+@media (max-width: 768px) {
+    .layout {
+        flex-direction: column;
+    }
+
+    aside {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid #e0e0e0;
+    }
+
+    .content {
+        padding: 16px;
+    }
+
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .filters {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .filters input,
+    .filters select {
+        width: 100%;
+    }
+
+    .modal {
+        width: 95%;
+    }
+}

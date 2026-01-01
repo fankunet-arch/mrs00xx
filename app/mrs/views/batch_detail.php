@@ -39,12 +39,12 @@
                                     <th>SKU</th>
                                     <th>规格</th>
                                     <th>入库系数</th>
-                                    <th style="width: 120px;">确认箱数</th>
-                                    <th style="width: 120px;">确认散件</th>
+                                    <th class="w-120">确认箱数</th>
+                                    <th class="w-120">确认散件</th>
                                     <th>系统小计</th>
                                     <th>原始记录小计</th>
                                     <th>差异</th>
-                                    <th style="width: 200px;">操作</th>
+                                    <th class="w-200">操作</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -128,14 +128,14 @@
                                             <?php else: ?>
                                                 <button class="btn btn-primary btn-sm btn-confirm">确认</button>
                                                 <button class="btn btn-danger btn-sm btn-delete">删除</button>
-                                                <span class="text-muted status-text" style="display: none;"></span>
+                                                <span class="text-muted status-text hidden"></span>
                                             <?php endif; ?>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
                             </tbody>
                         </table>
-                        <div class="alert alert-warning" id="warning-message" style="display:none;">
+                        <div class="alert alert-warning hidden" id="warning-message">
                             <strong>注意:</strong> 所有条目处理完毕后，如果批次中不再有任何待处理的原始记录，批次状态将自动更新为 "Confirmed"。
                         </div>
                     <?php endif; ?>

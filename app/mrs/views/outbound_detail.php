@@ -73,7 +73,7 @@
                         <div><?php echo date('Y-m-d H:i', strtotime($outbound['created_at'])); ?></div>
                     </div>
                     <?php if ($outbound['remark']): ?>
-                        <div class="info-item" style="grid-column: span 2;">
+                        <div class="info-item grid-col-span-2">
                             <label>备注</label>
                             <div><?php echo htmlspecialchars($outbound['remark']); ?></div>
                         </div>

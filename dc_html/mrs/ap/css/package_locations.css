@@ -1,0 +1,352 @@
+/**
+ * Package Locations Page Styles
+ * 文件路径: dc_html/mrs/ap/css/package_locations.css
+ */
+
+/* Filters Section */
+.filters {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.filters input,
+.filters select,
+.filters button {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.filters input {
+    width: 150px;
+}
+
+.filters button {
+    background: #007bff;
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.filters button:hover {
+    background: #0056b3;
+}
+
+.filters button.secondary {
+    background: #6c757d;
+}
+
+.filters button.secondary:hover {
+    background: #545b62;
+}
+
+/* Action Buttons */
+.action-buttons {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.action-buttons button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 14px;
+}
+
+.action-buttons button.primary {
+    background: #28a745;
+    color: white;
+}
+
+.action-buttons button.primary:hover {
+    background: #218838;
+}
+
+.action-buttons button.secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.action-buttons button.secondary:hover {
+    background: #545b62;
+}
+
+/* Table */
+.table-responsive {
+    overflow-x: auto;
+    margin-bottom: 20px;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+}
+
+.data-table th,
+.data-table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.data-table th {
+    background: #f8f9fa;
+    font-weight: 600;
+    color: #333;
+}
+
+.data-table tr:hover {
+    background: #f8f9fa;
+}
+
+.data-table td button {
+    padding: 5px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.data-table td button.edit {
+    background: #007bff;
+    color: white;
+}
+
+.data-table td button.edit:hover {
+    background: #0056b3;
+}
+
+/* Table specific column widths */
+.data-table th.col-checkbox {
+    width: 40px;
+}
+
+/* Empty state */
+.empty-state {
+    text-align: center;
+    padding: 40px;
+    color: #999;
+}
+
+/* Pagination */
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.pagination button {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    background: white;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+.pagination button:hover:not(:disabled) {
+    background: #007bff;
+    color: white;
+}
+
+.pagination button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.pagination span {
+    padding: 8px 12px;
+    color: #666;
+}
+
+/* Badge */
+.badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.badge.in-stock {
+    background: #d4edda;
+    color: #155724;
+}
+
+.badge.shipped {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+/* Modal Overlay */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 9999;
+}
+
+.modal-overlay.active {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Modal */
+.modal {
+    background: white;
+    border-radius: 8px;
+    padding: 24px;
+    max-width: 500px;
+    width: 90%;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 20px;
+    color: #333;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #666;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+}
+
+.modal-close:hover {
+    color: #000;
+}
+
+/* Form */
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: #333;
+}
+
+.form-group small {
+    display: block;
+    margin-top: 4px;
+    color: #666;
+    font-size: 13px;
+}
+
+.form-group input[type="text"],
+.form-group input[type="number"] {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.form-group input:disabled {
+    background: #f5f5f5;
+    cursor: not-allowed;
+}
+
+/* Disabled input style variant */
+.form-group input.disabled-muted {
+    background: #f5f5f5;
+    color: #666;
+}
+
+/* Shelf Location Inputs */
+.shelf-inputs {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.shelf-inputs input {
+    width: 60px;
+    text-align: center;
+    font-size: 16px;
+    padding: 10px;
+}
+
+.shelf-inputs span {
+    font-weight: bold;
+    color: #666;
+}
+
+/* Clear location button */
+.btn-clear-location {
+    margin-left: 10px;
+    padding: 8px 12px;
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.btn-clear-location:hover {
+    background: #c82333;
+}
+
+/* Modal Actions */
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 24px;
+}
+
+.modal-actions button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.modal-actions button[type="submit"] {
+    background: #007bff;
+    color: white;
+}
+
+.modal-actions button[type="submit"]:hover {
+    background: #0056b3;
+}
+
+.modal-actions button[type="button"] {
+    background: #6c757d;
+    color: white;
+}
+
+.modal-actions button[type="button"]:hover {
+    background: #545b62;
+}

@@ -1,0 +1,140 @@
+/**
+ * Batch Print Styles
+ * 批次箱贴打印页面样式
+ * 文件路径: dc_html/mrs/ap/css/batch_print.css
+ */
+
+/* === Page Layout === */
+body {
+    background: #f5f5f5;
+}
+
+/* === Actions === */
+.print-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.print-actions .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* === Batch Form === */
+.batch-form {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.batch-summary {
+    margin: 12px 0 20px;
+    padding: 12px;
+    border-radius: 6px;
+    background: #e8f5e9;
+    color: #1b5e20;
+}
+
+/* === Print Canvas === */
+.print-canvas {
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    padding: 18px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+}
+
+/* === Label Grid === */
+.label-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(60mm, 1fr));
+    gap: 8mm 6mm;
+}
+
+/* === Label Card === */
+.label-card {
+    border: 1.6px solid #111;
+    border-radius: 6px;
+    padding: 6mm 5mm;
+    min-height: 45mm;
+    background: white;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    page-break-inside: avoid;
+}
+
+.label-title {
+    font-size: 42pt;
+    font-weight: 800;
+    text-align: center;
+    line-height: 1.1;
+    word-break: break-all;
+    white-space: nowrap;
+}
+
+.label-meta {
+    margin-top: 4mm;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 1.5mm 3mm;
+    font-size: 24pt;
+    font-weight: 800;
+    line-height: 1.05;
+    white-space: nowrap;
+}
+
+.label-meta span {
+    white-space: nowrap;
+}
+
+.label-spec {
+    margin-top: 2mm;
+    font-size: 14pt;
+    text-align: right;
+    color: #333;
+}
+
+/* === Text Utilities === */
+.text-muted {
+    color: #666;
+}
+
+/* === Print Media Queries === */
+@media print {
+    body {
+        background: white;
+    }
+
+    .sidebar,
+    .page-header,
+    .info-box,
+    .batch-form,
+    .batch-summary,
+    .message,
+    .print-actions button:not(.print-only) {
+        display: none !important;
+    }
+
+    .main-content {
+        margin: 0;
+        padding: 0;
+        width: auto;
+    }
+
+    .content-wrapper {
+        box-shadow: none;
+        border: none;
+        padding: 0;
+    }
+
+    .print-canvas {
+        border: none;
+        box-shadow: none;
+        padding: 0;
+    }
+}

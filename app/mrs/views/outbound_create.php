@@ -54,23 +54,23 @@
 
                         <div class="form-group">
                             <label>箱数</label>
-                            <div style="display: flex; gap: 5px; align-items: center;">
-                                <input type="number" name="case_qty" id="case-qty" step="0.01" min="0" value="0" placeholder="箱数" style="flex: 1;">
-                                <span id="case-unit-label" style="color: var(--muted);"></span>
+                            <div class="flex-align-center-gap">
+                                <input type="number" name="case_qty" id="case-qty" step="0.01" min="0" value="0" placeholder="箱数" class="flex-1">
+                                <span id="case-unit-label" class="muted"></span>
                             </div>
                         </div>
 
                         <div class="form-group">
                             <label>散件数</label>
-                            <div style="display: flex; gap: 5px; align-items: center;">
-                                <input type="number" name="single_qty" id="single-qty" step="0.01" min="0" value="0" placeholder="散件数" style="flex: 1;">
-                                <span id="single-unit-label" style="color: var(--muted);"></span>
+                            <div class="flex-align-center-gap">
+                                <input type="number" name="single_qty" id="single-qty" step="0.01" min="0" value="0" placeholder="散件数" class="flex-1">
+                                <span id="single-unit-label" class="muted"></span>
                             </div>
                         </div>
 
                         <div class="form-group">
                             <label>小计</label>
-                            <div style="padding: 10px; background: #f5f5f5; border-radius: 4px;">
+                            <div class="display-box">
                                 <strong id="total-display">-</strong>
                             </div>
                         </div>

@@ -25,17 +25,17 @@ if (!defined('EXPRESS_ENTRY')) {
     </header>
 
     <div class="content-wrapper">
-        <form id="content-search-form" class="form-inline" style="margin-bottom: 15px;">
-            <div class="form-group" style="flex: 1;">
-                <label for="keyword" style="margin-right: 8px;">内容备注关键词:</label>
-                <input type="text" id="keyword" class="form-control" placeholder="例如：杯子、吸管" style="width: 100%;">
+        <form id="content-search-form" class="form-inline mb-15">
+            <div class="form-group">
+                <label for="keyword" class="mr-8">内容备注关键词:</label>
+                <input type="text" id="keyword" class="form-control w-100" placeholder="例如：杯子、吸管">
             </div>
-            <button type="submit" class="btn btn-primary" style="margin-left: 10px;">搜索</button>
+            <button type="submit" class="btn btn-primary ml-10">搜索</button>
         </form>
 
-        <div id="search-message" class="message" style="display: none;"></div>
+        <div id="search-message" class="message d-none"></div>
 
-        <table class="data-table" id="search-result-table" style="display: none;">
+        <table class="data-table d-none" id="search-result-table">
             <thead>
             <tr>
                 <th>内容备注</th>

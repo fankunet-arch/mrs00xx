@@ -19,7 +19,7 @@
                 <div class="material-wrapper">
                     <label class="field-label">物料 / SKU</label>
                     <input type="text" id="material-input" placeholder="输入物料名称或编码..." autocomplete="off">
-                    <div class="candidate-list" id="candidate-list" style="display: none;"></div>
+                    <div class="candidate-list hidden" id="candidate-list"></div>
                 </div>
 
                 <div class="smart-grid">

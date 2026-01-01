@@ -17,7 +17,53 @@ body {
     color: #333;
     background-color: #f5f5f5;
     display: flex;
+    flex-direction: column;
     min-height: 100vh;
+}
+
+/* 页面头部 */
+header {
+    background-color: #1e3a8a;
+    color: white;
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+header .title {
+    font-size: 18px;
+    font-weight: 600;
+}
+
+header .user {
+    font-size: 14px;
+}
+
+header .user a,
+header a.logout-link {
+    color: #fff;
+    text-decoration: none;
+    transition: opacity 0.2s;
+}
+
+header .user a:hover,
+header a.logout-link:hover {
+    opacity: 0.8;
+}
+
+/* 布局容器 */
+.layout {
+    display: flex;
+    flex: 1;
+}
+
+/* 主内容区域 */
+.content {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
 }
 
 /* 侧边栏 */
@@ -26,8 +72,7 @@ body {
     background-color: #1e3a8a;
     color: white;
     padding: 20px 0;
-    position: fixed;
-    height: 100vh;
+    height: 100%;
     overflow-y: auto;
 }
 
@@ -107,6 +152,89 @@ body {
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
+/* 卡片样式 */
+.card {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.card h3 {
+    font-size: 18px;
+    margin-bottom: 10px;
+    color: #1e3a8a;
+}
+
+.card h4 {
+    font-size: 16px;
+    margin-bottom: 8px;
+    color: #374151;
+}
+
+/* 灰色文字 */
+.muted {
+    color: #6c757d;
+}
+
+/* Flex布局辅助类 */
+.flex-between {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.flex-between-start {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.flex-wrap-gap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.grid-responsive {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 16px;
+}
+
+/* 响应式表格 */
+.table-responsive {
+    overflow-x: auto;
+}
+
+.table-responsive table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.table-responsive thead {
+    background-color: #f8f9fa;
+}
+
+.table-responsive th {
+    padding: 12px;
+    text-align: left;
+    font-weight: 600;
+    color: #495057;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.table-responsive td {
+    padding: 12px;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.table-responsive tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
 /* 表格样式 */
 .data-table {
     width: 100%;
@@ -143,6 +271,10 @@ body {
     text-align: center;
 }
 
+.text-right {
+    text-align: right;
+}
+
 /* 徽章 */
 .badge {
     display: inline-block;
@@ -169,7 +301,17 @@ body {
 }
 
 /* 按钮 */
-.btn {
+.btn,
+button.primary,
+a.primary,
+button.secondary,
+a.secondary,
+button.success,
+a.success,
+button.danger,
+a.danger,
+button.text,
+a.text {
     padding: 8px 16px;
     font-size: 14px;
     border: none;
@@ -181,40 +323,67 @@ body {
     font-weight: 500;
 }
 
-.btn-primary {
+.btn-primary,
+button.primary,
+a.primary {
     background-color: #2563eb;
     color: white;
 }
 
-.btn-primary:hover {
+.btn-primary:hover,
+button.primary:hover,
+a.primary:hover {
     background-color: #1d4ed8;
 }
 
-.btn-secondary {
+.btn-secondary,
+button.secondary,
+a.secondary {
     background-color: #64748b;
     color: white;
 }
 
-.btn-secondary:hover {
+.btn-secondary:hover,
+button.secondary:hover,
+a.secondary:hover {
     background-color: #475569;
 }
 
-.btn-success {
+.btn-success,
+button.success,
+a.success {
     background-color: #22c55e;
     color: white;
 }
 
-.btn-success:hover {
+.btn-success:hover,
+button.success:hover,
+a.success:hover {
     background-color: #16a34a;
 }
 
-.btn-danger {
+.btn-danger,
+button.danger,
+a.danger {
     background-color: #ef4444;
     color: white;
 }
 
-.btn-danger:hover {
+.btn-danger:hover,
+button.danger:hover,
+a.danger:hover {
     background-color: #dc2626;
+}
+
+button.text,
+a.text {
+    background-color: transparent;
+    color: #2563eb;
+}
+
+button.text:hover,
+a.text:hover {
+    background-color: rgba(37, 99, 235, 0.1);
 }
 
 .btn-sm {
@@ -319,12 +488,21 @@ body {
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 
-.stat-card.stat-success {
+.stat-card.stat-success,
+.stat-card.stat-verified {
     background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
 }
 
 .stat-card.stat-warning {
     background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+}
+
+.stat-card.stat-counted {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+}
+
+.stat-card.stat-adjusted {
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
 }
 
 .stat-number {
@@ -372,6 +550,70 @@ input[type="checkbox"] {
     border-radius: 4px;
 }
 
+/* 辅助类 - Margin */
+.m-0 { margin: 0; }
+.mt-0 { margin-top: 0; }
+.mt-8 { margin-top: 8px; }
+.mt-10 { margin-top: 10px; }
+.mt-12 { margin-top: 12px; }
+.mt-18 { margin-top: 18px; }
+.mt-20 { margin-top: 20px; }
+.mt-30 { margin-top: 30px; }
+.mb-8 { margin-bottom: 8px; }
+.mb-10 { margin-bottom: 10px; }
+.mb-12 { margin-bottom: 12px; }
+.mr-10 { margin-right: 10px; }
+.ml-8 { margin-left: 8px; }
+
+/* 辅助类 - 宽度 */
+.w-auto { width: auto; }
+.min-w-180 { min-width: 180px; }
+
+/* 辅助类 - 字体 */
+.fw-500 { font-weight: 500; }
+.fw-bold { font-weight: bold; }
+
+/* 辅助类 - 颜色 */
+.text-danger-bold {
+    color: #dc3545;
+    font-weight: bold;
+}
+
+.text-muted-light {
+    color: #666;
+}
+
+.text-muted-lighter {
+    color: #999;
+}
+
+/* 辅助类 - Flex布局 */
+.flex-center {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.flex-gap-10 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.flex-column-gap-4 {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+/* 辅助类 - 产品项徽章 */
+.product-item-badge {
+    padding: 4px 8px;
+    background: #f8f9fa;
+    border-radius: 4px;
+    font-size: 13px;
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
     .sidebar {
@@ -407,4 +649,322 @@ input[type="checkbox"] {
     .main-content {
         margin-left: 0;
     }
+}
+
+/* ============================================
+   Additional Utility Classes for Outbound Page
+   ============================================ */
+
+/* Text Size Utilities */
+.text-xs {
+    font-size: 12px;
+}
+
+.text-sm {
+    font-size: 13px;
+}
+
+.text-base {
+    font-size: 14px;
+}
+
+.text-lg {
+    font-size: 18px;
+}
+
+/* Color Utilities */
+.text-red {
+    color: red;
+}
+
+.text-primary {
+    color: #1976d2;
+}
+
+/* Flex Utilities */
+.flex {
+    display: flex;
+}
+
+.flex-end {
+    align-items: flex-end;
+}
+
+.flex-1 {
+    flex: 1;
+}
+
+.flex-fixed-150 {
+    flex: 0 0 150px;
+}
+
+.gap-10 {
+    gap: 10px;
+}
+
+/* Height Utilities */
+.h-38 {
+    height: 38px;
+}
+
+/* Padding Utilities */
+.pt-30 {
+    padding-top: 30px;
+}
+
+.p-8 {
+    padding: 8px;
+}
+
+/* Border Utilities */
+.border-t-2 {
+    border-top: 2px solid #e9ecef;
+}
+
+/* Background Utilities */
+.bg-blue-light {
+    background: #e3f2fd;
+}
+
+/* Margin Utilities (additional) */
+.mb-15 {
+    margin-bottom: 15px;
+}
+
+.ml-20 {
+    margin-left: 20px;
+}
+
+/* Bootstrap-like Grid System */
+.container-fluid {
+    width: 100%;
+    padding-right: 15px;
+    padding-left: 15px;
+    margin-right: auto;
+    margin-left: auto;
+}
+
+.row {
+    display: flex;
+    flex-wrap: wrap;
+    margin-right: -15px;
+    margin-left: -15px;
+}
+
+.col-lg-12 {
+    flex: 0 0 100%;
+    max-width: 100%;
+    padding-right: 15px;
+    padding-left: 15px;
+}
+
+/* Card Components */
+.card-header {
+    padding: 15px 20px;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+    border-radius: 8px 8px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.card-title {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #1e3a8a;
+}
+
+.card-body {
+    padding: 20px;
+}
+
+/* Float Utilities */
+.float-right {
+    float: right;
+}
+
+.float-left {
+    float: left;
+}
+
+/* Table Variants */
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1rem;
+}
+
+.table th,
+.table td {
+    padding: 12px;
+    vertical-align: top;
+}
+
+.table thead th {
+    vertical-align: bottom;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.table tbody + tbody {
+    border-top: 2px solid #dee2e6;
+}
+
+.table-bordered {
+    border: 1px solid #dee2e6;
+}
+
+.table-bordered th,
+.table-bordered td {
+    border: 1px solid #dee2e6;
+}
+
+.table-bordered thead th,
+.table-bordered thead td {
+    border-bottom-width: 2px;
+}
+
+.table-hover tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+/* Additional Badge Variants */
+.badge-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+.badge-warning {
+    background-color: #fbbf24;
+    color: #1f2937;
+}
+
+.badge-info {
+    background-color: #3b82f6;
+    color: white;
+}
+
+.badge-success {
+    background-color: #22c55e;
+    color: white;
+}
+
+/* Text Utilities */
+.text-dark {
+    color: #1f2937;
+}
+
+.text-gray {
+    color: #666;
+}
+
+.text-orange-dark {
+    color: #e65100;
+}
+
+/* Display Utilities */
+.hidden,
+.d-none {
+    display: none;
+}
+
+.d-block {
+    display: block;
+}
+
+/* Margin Utilities (additional) */
+.mt-15 {
+    margin-top: 15px;
+}
+
+.ml-30 {
+    margin-left: 30px;
+}
+
+/* Info and Warning Boxes */
+.info-box {
+    background: #e8f5e9;
+    border-left: 4px solid #4caf50;
+    padding: 12px;
+    margin-bottom: 20px;
+    border-radius: 4px;
+}
+
+.warning-box {
+    background: #fff3e0;
+    border-left: 4px solid #ff9800;
+    padding: 12px;
+    margin-bottom: 20px;
+    border-radius: 4px;
+}
+
+/* Shelf Location Input Styles (for inbound split page) */
+.shelf-location-box {
+    margin: 15px 0;
+    padding: 12px;
+    background: #fff3e0;
+    border-left: 4px solid #ff9800;
+    border-radius: 4px;
+}
+
+.shelf-location-label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+.shelf-hint-text {
+    color: #666;
+    font-weight: normal;
+    margin-left: 10px;
+}
+
+.shelf-input-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.shelf-segment-input {
+    width: 60px;
+    text-align: center;
+    font-size: 16px;
+}
+
+.shelf-separator {
+    color: #666;
+    font-weight: bold;
+}
+
+.shelf-location-hint {
+    color: #666;
+    display: block;
+    margin-top: 5px;
+}
+
+/* === 最大宽度工具类 === */
+.max-w-300 {
+    max-width: 300px;
+}
+
+.max-w-400 {
+    max-width: 400px;
+}
+
+/* === Flex布局工具类 === */
+.flex-1-max-400 {
+    flex: 1;
+    max-width: 400px;
+}
+
+/* === 边距工具类 === */
+.mt-30-mb-15 {
+    margin-top: 30px;
+    margin-bottom: 15px;
+}
+
+.mt-40-mb-15 {
+    margin-top: 40px;
+    margin-bottom: 15px;
 }

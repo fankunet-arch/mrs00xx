@@ -28,9 +28,9 @@ function get_sort_url($column, $current_sort, $current_dir) {
 // 辅助函数：生成排序图标
 function get_sort_icon($column, $current_sort, $current_dir) {
     if ($column !== $current_sort) {
-        return '<span style="color: #ccc;">⇅</span>';
+        return '<span class="sort-icon-neutral">⇅</span>';
     }
-    return $current_dir === 'asc' ? '<span style="color: #007bff;">↑</span>' : '<span style="color: #007bff;">↓</span>';
+    return $current_dir === 'asc' ? '<span class="sort-icon-active">↑</span>' : '<span class="sort-icon-active">↓</span>';
 }
 ?>
 <!DOCTYPE html>
@@ -41,210 +41,7 @@ function get_sort_icon($column, $current_sort, $current_dir) {
     <title>库存总览 - MRS 系统</title>
     <link rel="stylesheet" href="/mrs/ap/css/backend.css">
     <link rel="stylesheet" href="/mrs/ap/css/modal.css">
-    <style>
-        .data-table thead th a {
-            display: inline-block;
-            width: 100%;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-        .data-table thead th a:hover {
-            background-color: rgba(0, 123, 255, 0.05);
-        }
-
-        /* 箱子搜索模态框样式 */
-        .search-modal-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 9999;
-            animation: fadeIn 0.2s;
-        }
-
-        .search-modal {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-            width: 90%;
-            max-width: 600px;
-            max-height: 80vh;
-            overflow: hidden;
-            animation: slideDown 0.3s;
-        }
-
-        .search-modal-header {
-            padding: 20px 24px;
-            border-bottom: 1px solid #e9ecef;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .search-modal-header h3 {
-            margin: 0;
-            font-size: 18px;
-            color: #333;
-        }
-
-        .search-modal-close {
-            background: none;
-            border: none;
-            font-size: 28px;
-            color: #6c757d;
-            cursor: pointer;
-            padding: 0;
-            width: 32px;
-            height: 32px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 4px;
-            transition: background 0.2s;
-        }
-
-        .search-modal-close:hover {
-            background: #f1f3f5;
-        }
-
-        .search-modal-body {
-            padding: 24px;
-        }
-
-        .search-input-wrapper {
-            position: relative;
-            margin-bottom: 16px;
-        }
-
-        .search-input {
-            width: 100%;
-            padding: 14px 48px 14px 16px;
-            font-size: 16px;
-            border: 2px solid #dee2e6;
-            border-radius: 8px;
-            transition: all 0.2s;
-        }
-
-        .search-input:focus {
-            outline: none;
-            border-color: #007bff;
-            box-shadow: 0 0 0 0.2rem rgba(0,123,255,.15);
-        }
-
-        .search-input-icon {
-            position: absolute;
-            right: 16px;
-            top: 50%;
-            transform: translateY(-50%);
-            font-size: 20px;
-            color: #adb5bd;
-        }
-
-        .search-results-container {
-            max-height: 400px;
-            overflow-y: auto;
-        }
-
-        .search-result-item {
-            padding: 14px 16px;
-            border: 1px solid #e9ecef;
-            border-radius: 8px;
-            margin-bottom: 10px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .search-result-item:hover {
-            background: #f8f9fa;
-            border-color: #007bff;
-            transform: translateY(-1px);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-
-        .search-result-main {
-            display: flex;
-            align-items: center;
-            margin-bottom: 6px;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
-
-        .search-result-badge {
-            display: inline-flex;
-            align-items: center;
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 13px;
-            font-weight: 500;
-        }
-
-        .badge-box {
-            background: #e7f3ff;
-            color: #0066cc;
-        }
-
-        .badge-tracking {
-            background: #f0f0f0;
-            color: #495057;
-        }
-
-        .search-result-details {
-            font-size: 13px;
-            color: #6c757d;
-            line-height: 1.6;
-        }
-
-        .search-empty {
-            padding: 40px 20px;
-            text-align: center;
-            color: #adb5bd;
-        }
-
-        .search-empty-icon {
-            font-size: 48px;
-            margin-bottom: 12px;
-        }
-
-        .search-hint {
-            font-size: 13px;
-            color: #adb5bd;
-            margin-top: 8px;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        @keyframes slideDown {
-            from {
-                opacity: 0;
-                transform: translate(-50%, -60%);
-            }
-            to {
-                opacity: 1;
-                transform: translate(-50%, -50%);
-            }
-        }
-
-        .btn-info {
-            background-color: #17a2b8;
-            border-color: #17a2b8;
-            color: white;
-        }
-
-        .btn-info:hover {
-            background-color: #138496;
-            border-color: #117a8b;
-        }
-    </style>
+    <link rel="stylesheet" href="/mrs/ap/css/inventory_list.css">
 </head>
 <body>
     <?php include MRS_VIEW_PATH . '/shared/sidebar.php'; ?>
@@ -253,7 +50,7 @@ function get_sort_icon($column, $current_sort, $current_dir) {
         <div class="page-header">
             <h1>库存总览</h1>
             <div class="header-actions">
-                <button onclick="openSearchModal()" class="btn btn-info" style="margin-right: 10px;">
+                <button onclick="openSearchModal()" class="btn btn-info btn-search">
                     🔍 搜索箱子
                 </button>
                 <a href="/mrs/ap/index.php?action=batch_print" class="btn btn-secondary">箱贴打印</a>
@@ -274,7 +71,7 @@ function get_sort_icon($column, $current_sort, $current_dir) {
                 </div>
             </div>
 
-            <h2 style="margin-bottom: 15px;">库存汇总</h2>
+            <h2 class="mb-12">库存汇总</h2>
 
             <?php if (empty($inventory)): ?>
                 <div class="empty-state">
@@ -287,22 +84,22 @@ function get_sort_icon($column, $current_sort, $current_dir) {
                     <thead>
                         <tr>
                             <th>
-                                <a href="<?= get_sort_url('sku_name', $sort_by, $sort_dir) ?>" style="color: inherit; text-decoration: none;">
+                                <a href="<?= get_sort_url('sku_name', $sort_by, $sort_dir) ?>">
                                     物料名称 <?= get_sort_icon('sku_name', $sort_by, $sort_dir) ?>
                                 </a>
                             </th>
                             <th class="text-center">
-                                <a href="<?= get_sort_url('total_boxes', $sort_by, $sort_dir) ?>" style="color: inherit; text-decoration: none;">
+                                <a href="<?= get_sort_url('total_boxes', $sort_by, $sort_dir) ?>">
                                     在库数量 <?= get_sort_icon('total_boxes', $sort_by, $sort_dir) ?>
                                 </a>
                             </th>
                             <th class="text-center">
-                                <a href="<?= get_sort_url('total_quantity', $sort_by, $sort_dir) ?>" style="color: inherit; text-decoration: none;">
+                                <a href="<?= get_sort_url('total_quantity', $sort_by, $sort_dir) ?>">
                                     数量 <?= get_sort_icon('total_quantity', $sort_by, $sort_dir) ?>
                                 </a>
                             </th>
                             <th class="text-center">
-                                <a href="<?= get_sort_url('nearest_expiry_date', $sort_by, $sort_dir) ?>" style="color: inherit; text-decoration: none;">
+                                <a href="<?= get_sort_url('nearest_expiry_date', $sort_by, $sort_dir) ?>">
                                     最近到期 <?= get_sort_icon('nearest_expiry_date', $sort_by, $sort_dir) ?>
                                 </a>
                             </th>
@@ -332,13 +129,13 @@ function get_sort_icon($column, $current_sort, $current_dir) {
                                         // 根据到期天数显示不同颜色
                                         $color_class = '';
                                         if ($days_to_expiry < 0) {
-                                            $color_class = 'style="color: #999; text-decoration: line-through;"'; // 已过期：灰色删除线
+                                            $color_class = 'class="expiry-expired"'; // 已过期：灰色删除线
                                         } elseif ($days_to_expiry <= 7) {
-                                            $color_class = 'style="color: #dc3545; font-weight: bold;"'; // 7天内：红色加粗
+                                            $color_class = 'class="expiry-urgent"'; // 7天内：红色加粗
                                         } elseif ($days_to_expiry <= 30) {
-                                            $color_class = 'style="color: #ff9800; font-weight: bold;"'; // 30天内：橙色加粗
+                                            $color_class = 'class="expiry-warning"'; // 30天内：橙色加粗
                                         } elseif ($days_to_expiry <= 90) {
-                                            $color_class = 'style="color: #ffc107;"'; // 90天内：黄色
+                                            $color_class = 'class="expiry-caution"'; // 90天内：黄色
                                         }
                                         ?>
                                         <span <?= $color_class ?>>
@@ -350,7 +147,7 @@ function get_sort_icon($column, $current_sort, $current_dir) {
                                             <?php endif; ?>
                                         </span>
                                     <?php else: ?>
-                                        <span style="color: #999;">-</span>
+                                        <span class="expiry-none">-</span>
                                     <?php endif; ?>
                                 </td>
                                 <td class="text-center">
@@ -428,23 +225,23 @@ function get_sort_icon($column, $current_sort, $current_dir) {
             const content = `
                 <div class="modal-section">
                     <div class="form-group">
-                        <label for="package-select">选择出库包裹 <span style="color: red;">*</span></label>
+                        <label for="package-select">选择出库包裹 <span class="required">*</span></label>
                         <select id="package-select" class="form-control">${optionsHtml}</select>
                     </div>
 
                     <div class="form-group">
-                        <label for="outbound-date">出库日期 <span style="color: red;">*</span></label>
+                        <label for="outbound-date">出库日期 <span class="required">*</span></label>
                         <input type="date" id="outbound-date" class="form-control" value="${today}" required>
                     </div>
 
                     <div class="form-group">
-                        <label for="outbound-qty">出货数量 <span style="color: red;">*</span></label>
+                        <label for="outbound-qty">出货数量 <span class="required">*</span></label>
                         <input type="number" id="outbound-qty" class="form-control" min="0.01" step="0.01" max="${firstQty}" required>
-                        <small id="available-tip" style="color: #666;">可出货数量：${firstQty} 件</small>
+                        <small id="available-tip" class="form-text">可出货数量：${firstQty} 件</small>
                     </div>
 
                     <div class="form-group">
-                        <label for="destination">目的地（门店） <span style="color: red;">*</span></label>
+                        <label for="destination">目的地（门店） <span class="required">*</span></label>
                         <input type="text" id="destination" class="form-control" placeholder="请输入门店名称" required>
                     </div>
 

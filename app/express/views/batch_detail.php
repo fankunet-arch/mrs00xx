@@ -67,22 +67,7 @@ $content_summary = express_get_content_summary($pdo, $batch_id);
     <title>批次详情 - <?= htmlspecialchars($batch['batch_name']) ?></title>
     <link rel="stylesheet" href="../css/backend.css">
     <link rel="stylesheet" href="css/modal.css">
-    <style>
-        /* [UX优化] 让日期输入框点击任意位置都能弹出选择面板 */
-        /* 通过将选择器指示器(小图标)透明并铺满整个输入框来实现 */
-        input[type="date"] {
-            position: relative;
-        }
-        input[type="date"]::-webkit-calendar-picker-indicator {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            opacity: 0;
-            cursor: pointer;
-        }
-    </style>
+    <link rel="stylesheet" href="../css/batch_detail.css">
 </head>
 <body>
     <?php include EXPRESS_VIEW_PATH . '/shared/sidebar.php'; ?>
@@ -156,7 +141,7 @@ $content_summary = express_get_content_summary($pdo, $batch_id);
                         <label for="tracking_numbers">快递单号列表（每行一个）:</label>
                         <textarea id="tracking_numbers" class="form-control" rows="10"
                                   placeholder="111111&#10;222222|2025-12-31|50&#10;333333||30&#10;444444|2026-01-15"></textarea>
-                        <small class="form-text" style="line-height: 1.6;">
+                        <small class="form-text import-instructions">
                             <strong>支持两种导入格式：</strong><br>
                             1️⃣ <strong>仅单号</strong>：111111<br>
                             2️⃣ <strong>含附加信息</strong>：单号|有效期|数量（用 | 分隔）<br>
@@ -168,37 +153,37 @@ $content_summary = express_get_content_summary($pdo, $batch_id);
                     </div>
                     <button type="submit" class="btn btn-primary">批量导入</button>
                 </form>
-                <div id="import-message" class="message" style="display: none; margin-top: 15px;"></div>
+                <div id="import-message" class="message d-none mt-15"></div>
             </div>
 
-            <div class="bulk-import-section" style="margin-top: 30px; background-color: #f8f9fa; padding: 20px; border-radius: 5px; border: 2px dashed #28a745;">
-                <h2 style="color: #28a745;">📦 添加自定义包裹（拆分箱子功能）</h2>
-                <p class="form-text" style="margin-bottom: 15px; color: #666;">
+            <div class="bulk-import-section custom-package-section">
+                <h2>📦 添加自定义包裹（拆分箱子功能）</h2>
+                <p class="form-text">
                     用于添加拆分后的箱子。系统会自动生成虚拟快递单号（格式：CUSTOM-批次ID-序号），您可以打印标签并贴在箱子上。
                 </p>
                 <form id="custom-package-form">
                     <div class="form-group">
                         <label for="custom_count">要添加的箱子数量:</label>
-                        <input type="number" id="custom_count" class="form-control"
-                               min="1" max="100" value="1" style="width: 200px;">
+                        <input type="number" id="custom_count" class="form-control w-200"
+                               min="1" max="100" value="1">
                         <small class="form-text">
                             一次最多添加100个自定义包裹
                         </small>
                     </div>
                     <button type="submit" class="btn btn-success">添加自定义包裹</button>
                 </form>
-                <div id="custom-message" class="message" style="display: none; margin-top: 15px;"></div>
+                <div id="custom-message" class="message d-none mt-15"></div>
             </div>
 
             <div class="packages-section">
-                <div class="section-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                    <h2 style="margin: 0;">包裹列表 (共 <?= count($packages) ?> 个)</h2>
+                <div class="section-header-full">
+                    <h2>包裹列表 (共 <?= count($packages) ?> 个)</h2>
                     <button id="toggle-time-columns" class="btn btn-sm btn-secondary" onclick="toggleTimeColumns()">
                         <span id="toggle-time-text">显示更多时间</span>
                     </button>
                 </div>
-                <div id="update-message" class="message" style="display: none;"></div>
-                <div style="overflow-x: auto;">
+                <div id="update-message" class="message d-none"></div>
+                <div class="table-scroll-wrapper">
                     <table class="data-table">
                         <thead>
                             <tr>
@@ -210,9 +195,9 @@ $content_summary = express_get_content_summary($pdo, $batch_id);
                                 <th>数量</th>
                                 <th>调整备注</th>
                                 <th class="time-col-default">创建时间</th>
-                                <th class="time-col-extra" style="display: none;">核实时间</th>
+                                <th class="time-col-extra">核实时间</th>
                                 <th class="time-col-default">清点时间</th>
-                                <th class="time-col-extra" style="display: none;">调整时间</th>
+                                <th class="time-col-extra">调整时间</th>
                                 <th>操作</th>
                             </tr>
                         </thead>
@@ -231,7 +216,7 @@ $content_summary = express_get_content_summary($pdo, $batch_id);
                                             if (mb_strlen($tracking) >= 4) {
                                                 $prefix = mb_substr($tracking, 0, -4);
                                                 $suffix = mb_substr($tracking, -4);
-                                                echo $prefix . '<span style="color: #dc3545; font-weight: bold;">' . $suffix . '</span>';
+                                                echo $prefix . '<span class="tracking-tail-highlight">' . $suffix . '</span>';
                                             } else {
                                                 echo $tracking;
                                             }
@@ -254,10 +239,10 @@ $content_summary = express_get_content_summary($pdo, $batch_id);
                                             <?php if (!empty($package['items']) && is_array($package['items'])): ?>
                                                 <?php foreach ($package['items'] as $index => $item): ?>
                                                     <?php if ($index > 0) echo '<br>'; ?>
-                                                    <span style="color: #333;">
+                                                    <span class="content-item-text">
                                                         <?= htmlspecialchars($item['product_name'] ?? '') ?>
                                                         <?php if (!empty($item['quantity'])): ?>
-                                                            <small style="color: #666;"> ×<?= htmlspecialchars($item['quantity']) ?></small>
+                                                            <small class="content-item-quantity"> ×<?= htmlspecialchars($item['quantity']) ?></small>
                                                         <?php endif; ?>
                                                     </span>
                                                 <?php endforeach; ?>
@@ -287,9 +272,9 @@ $content_summary = express_get_content_summary($pdo, $batch_id);
                                         </td>
                                         <td><?= htmlspecialchars($package['adjustment_note'] ?? '-') ?></td>
                                         <td class="time-col-default"><?= $package['created_at'] ? date('m-d H:i', strtotime($package['created_at'])) : '-' ?></td>
-                                        <td class="time-col-extra" style="display: none;"><?= $package['verified_at'] ? date('m-d H:i', strtotime($package['verified_at'])) : '-' ?></td>
+                                        <td class="time-col-extra"><?= $package['verified_at'] ? date('m-d H:i', strtotime($package['verified_at'])) : '-' ?></td>
                                         <td class="time-col-default"><?= $package['counted_at'] ? date('m-d H:i', strtotime($package['counted_at'])) : '-' ?></td>
-                                        <td class="time-col-extra" style="display: none;"><?= $package['adjusted_at'] ? date('m-d H:i', strtotime($package['adjusted_at'])) : '-' ?></td>
+                                        <td class="time-col-extra"><?= $package['adjusted_at'] ? date('m-d H:i', strtotime($package['adjusted_at'])) : '-' ?></td>
                                         <td>
                                             <button class="btn btn-sm btn-primary btn-edit-content"
                                                     data-package-id="<?= $package['package_id'] ?>"
@@ -308,7 +293,7 @@ $content_summary = express_get_content_summary($pdo, $batch_id);
                 </div>
             </div>
 
-            <div class="packages-section" style="margin-top: 20px;">
+            <div class="packages-section mt-30">
                 <div class="section-header">
                     <h2>批次内物品内容统计</h2>
                     <a href="/express/exp/index.php?action=batch_print&batch_id=<?= $batch_id ?>" target="_blank" class="btn btn-highlight">打印标签预览</a>
@@ -316,8 +301,8 @@ $content_summary = express_get_content_summary($pdo, $batch_id);
                 <table class="data-table">
                     <thead>
                     <tr>
-                        <th style="width: 70%;">内容备注</th>
-                        <th style="width: 30%;">数量（单）</th>
+                        <th class="col-width-70">内容备注</th>
+                        <th class="col-width-30">数量（单）</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -502,36 +487,36 @@ $content_summary = express_get_content_summary($pdo, $batch_id);
 
                 // 使用模态框输入 - 多产品支持
                 const formHtml = `
-                    <form id="contentNoteForm" style="padding: 20px;">
-                        <div style="background: #f0f4ff; border: 1px solid #d0ddff; border-radius: 6px; padding: 12px; margin-bottom: 16px;">
-                            <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; font-size: 13px;">
-                                <span style="color: #666; font-weight: 500;">包裹ID:</span>
-                                <span style="color: #333; font-weight: 600;">#${packageId}</span>
-                                <span style="color: #666; font-weight: 500;">快递单号:</span>
-                                <span style="color: #333; font-weight: 600;">${trackingNumber || '-'}</span>
+                    <form id="contentNoteForm" class="form-padding">
+                        <div class="package-info-box">
+                            <div class="package-info-grid">
+                                <span class="package-info-label">包裹ID:</span>
+                                <span class="package-info-value">#${packageId}</span>
+                                <span class="package-info-label">快递单号:</span>
+                                <span class="package-info-value">${trackingNumber || '-'}</span>
                             </div>
                         </div>
-                        <div class="modal-form-group" style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; padding: 12px; margin-bottom: 16px;">
-                            <label style="display: flex; align-items: center; cursor: pointer; margin: 0;">
+                        <div class="skip-inbound-box">
+                            <label class="skip-inbound-label">
                                 <input type="checkbox" id="skip_inbound" name="skip_inbound" value="1"
-                                       style="width: 18px; height: 18px; margin-right: 8px; cursor: pointer;">
-                                <span style="font-weight: 600; color: #856404;">
+                                       class="skip-inbound-checkbox">
+                                <span class="skip-inbound-text">
                                     此包裹不入库（设备/损坏等）
                                 </span>
                             </label>
-                            <div style="font-size: 12px; color: #856404; margin-top: 6px; margin-left: 26px;">
+                            <div class="skip-inbound-hint">
                                 勾选后此包裹将不会出现在MRS入库清单中
                             </div>
                         </div>
                         <div class="modal-form-group">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                                <label class="modal-form-label" style="margin: 0;">产品信息</label>
+                            <div class="product-info-header">
+                                <label class="modal-form-label">产品信息</label>
                                 <button type="button" class="modal-btn modal-btn-secondary"
-                                        onclick="addProductItem()" style="padding: 4px 12px; font-size: 13px;">
+                                        onclick="addProductItem()">
                                     + 添加产品
                                 </button>
                             </div>
-                            <div id="products-container" style="max-height: 400px; overflow-y: auto;">
+                            <div id="products-container" class="products-container">
                                 <!-- 产品项将动态添加到这里 -->
                             </div>
                         </div>
@@ -591,27 +576,27 @@ $content_summary = express_get_content_summary($pdo, $batch_id);
         const expiryDate = existingItem?.expiry_date || '';
 
         const itemHtml = `
-            <div class="product-item" data-item-id="${itemId}" style="border: 1px solid #ddd; padding: 12px; margin-bottom: 10px; border-radius: 4px; background: #f9f9f9;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                    <strong style="font-size: 14px;">产品 #<span class="product-number">${container.children.length + 1}</span></strong>
+            <div class="product-item" data-item-id="${itemId}">
+                <div class="product-item-header">
+                    <strong>产品 #<span class="product-number">${container.children.length + 1}</span></strong>
                     <button type="button" class="modal-btn modal-btn-secondary"
-                            onclick="removeProductItem(${itemId})" style="padding: 2px 8px; font-size: 12px;">
+                            onclick="removeProductItem(${itemId})">
                         删除
                     </button>
                 </div>
-                <div style="margin-bottom: 8px;">
-                    <label style="display: block; margin-bottom: 4px; font-size: 13px; color: #666;">产品名称 *</label>
-                    <input type="text" class="modal-form-control product-name"
-                           value="${productName}" placeholder="如：香蕉、苹果等" style="width: 100%;">
+                <div class="product-item-field">
+                    <label>产品名称 *</label>
+                    <input type="text" class="modal-form-control product-name w-full"
+                           value="${productName}" placeholder="如：香蕉、苹果等">
                 </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                <div class="product-item-grid">
                     <div>
-                        <label style="display: block; margin-bottom: 4px; font-size: 13px; color: #666;">数量（选填）</label>
+                        <label>数量（选填）</label>
                         <input type="number" class="modal-form-control product-quantity"
                                value="${quantity}" placeholder="数量" min="1" step="1">
                     </div>
                     <div>
-                        <label style="display: block; margin-bottom: 4px; font-size: 13px; color: #666;">保质期（选填）</label>
+                        <label>保质期（选填）</label>
                         <input type="date" class="modal-form-control product-expiry"
                                value="${expiryDate}">
                     </div>

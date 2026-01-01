@@ -21,7 +21,7 @@ if (!defined('MRS_ENTRY')) {
 <body>
   <header>
     <div class="title">MRS 物料收发管理系统 - 后台管理</div>
-    <div class="user">当前用户：<?php echo htmlspecialchars($current_user); ?> | <a href="/mrs/be/index.php?action=logout" style="color: #fff;">登出</a></div>
+    <div class="user">当前用户：<?php echo htmlspecialchars($current_user); ?> | <a href="/mrs/be/index.php?action=logout" class="link-white">登出</a></div>
   </header>
 
   <div class="layout">
@@ -247,17 +247,17 @@ if (!defined('MRS_ENTRY')) {
         <div class="card">
           <div class="flex-between">
             <div class="filters">
-              <input type="text" id="location-filter-box" placeholder="箱号" style="width: 120px;" />
-              <input type="text" id="location-filter-location" placeholder="货架位置" style="width: 120px;" />
-              <input type="text" id="location-filter-batch" placeholder="批次" style="width: 120px;" />
-              <select id="location-filter-status" style="width: 120px;">
+              <input type="text" id="location-filter-box" placeholder="箱号" class="w-120" />
+              <input type="text" id="location-filter-location" placeholder="货架位置" class="w-120" />
+              <input type="text" id="location-filter-batch" placeholder="批次" class="w-120" />
+              <select id="location-filter-status" class="w-120">
                 <option value="">全部状态</option>
                 <option value="in_stock">在库</option>
                 <option value="shipped">已出库</option>
               </select>
               <button class="secondary" data-action="searchLocations">搜索</button>
             </div>
-            <div style="display: flex; gap: 10px;">
+            <div class="flex-gap-10">
               <button data-action="batchUpdateLocation">批量修改位置</button>
               <button class="secondary" data-action="exportLocations">导出</button>
             </div>
@@ -266,7 +266,7 @@ if (!defined('MRS_ENTRY')) {
             <table id="locations-table">
               <thead>
                 <tr>
-                  <th style="width: 40px;"><input type="checkbox" id="select-all-locations" /></th>
+                  <th class="w-40"><input type="checkbox" id="select-all-locations" /></th>
                   <th>箱号</th>
                   <th>批次名称</th>
                   <th>快递单号</th>
@@ -423,10 +423,10 @@ if (!defined('MRS_ENTRY')) {
       </div>
       <div class="modal-body">
         <p class="muted small mb-2">请粘贴 AI 识别后的文本。格式：[品名] | [箱规] | [单位] | [品类]</p>
-        <textarea id="import-sku-text" rows="10" placeholder="90-700注塑细磨砂杯 | 500 | 箱 | 包材&#10;茉莉银毫 | 500g/30包 | 箱 | 茶叶" style="width: 100%; font-family: monospace;"></textarea>
+        <textarea id="import-sku-text" rows="10" placeholder="90-700注塑细磨砂杯 | 500 | 箱 | 包材&#10;茉莉银毫 | 500g/30包 | 箱 | 茶叶" class="textarea-mono"></textarea>
       </div>
       <div class="modal-actions">
-        <button type="button" class="light-success" style="margin-right: auto;" data-action="showAiPromptHelper">💡 获取 AI 提示词</button>
+        <button type="button" class="light-success mr-auto" data-action="showAiPromptHelper">💡 获取 AI 提示词</button>
         <button type="button" class="text" data-action="closeModal" data-modal-id="modal-import-sku">取消</button>
         <button class="primary" data-action="importSkus">开始导入</button>
       </div>
@@ -441,7 +441,7 @@ if (!defined('MRS_ENTRY')) {
         <button class="text" data-action="closeAiPromptHelper">×</button>
       </div>
       <div class="modal-body">
-        <textarea id="ai-prompt-text" rows="10" readonly style="width: 100%; font-family: monospace; background: #f9fafb;"></textarea>
+        <textarea id="ai-prompt-text" rows="10" readonly class="textarea-mono-gray"></textarea>
       </div>
       <div class="modal-actions">
         <button type="button" class="text" data-action="closeAiPromptHelper">返回</button>
@@ -562,7 +562,7 @@ if (!defined('MRS_ENTRY')) {
       </div>
       <form id="form-outbound">
         <input type="hidden" name="outbound_order_id" id="outbound-id" />
-        <div class="modal-body" style="padding-bottom: 0;">
+        <div class="modal-body pb-0">
           <div class="form-grid">
             <div class="form-group">
               <label>出库日期 *</label>
@@ -592,11 +592,11 @@ if (!defined('MRS_ENTRY')) {
             <table id="outbound-items-table">
               <thead>
                 <tr>
-                  <th style="width: 30%">物料</th>
-                  <th style="width: 20%">库存参考</th>
-                  <th style="width: 20%">箱数</th>
-                  <th style="width: 20%">散数</th>
-                  <th style="width: 10%">操作</th>
+                  <th class="col-w-30">物料</th>
+                  <th class="col-w-20">库存参考</th>
+                  <th class="col-w-20">箱数</th>
+                  <th class="col-w-20">散数</th>
+                  <th class="col-w-10">操作</th>
                 </tr>
               </thead>
               <tbody id="outbound-items-body">
@@ -808,9 +808,9 @@ if (!defined('MRS_ENTRY')) {
           </div>
           <div class="form-group">
             <label>智能辅助计算</label>
-            <div id="edit-raw-record-helper" style="padding: 12px; background: #f5f7fb; border-radius: 8px; line-height: 1.6;">
+            <div id="edit-raw-record-helper" class="helper-box">
               <div>平均每箱：<strong id="edit-raw-record-average">--</strong></div>
-              <div style="font-size: 16px; margin-top: 4px; color: #1e80ff; font-weight: 600;">请在箱上标记：<span id="edit-raw-record-marker">--</span></div>
+              <div class="marker-text">请在箱上标记：<span id="edit-raw-record-marker">--</span></div>
             </div>
           </div>
         </div>
@@ -843,7 +843,7 @@ if (!defined('MRS_ENTRY')) {
           </div>
           <div class="form-group">
             <label>动态系数预览</label>
-            <div id="correction-helper" style="padding: 12px; background: #f5f7fb; border-radius: 8px; line-height: 1.6;">
+            <div id="correction-helper" class="helper-box">
               平均每箱：<strong id="correction-average">--</strong>
             </div>
           </div>
@@ -878,7 +878,7 @@ if (!defined('MRS_ENTRY')) {
 
   <!-- 模态框: 修改箱子位置 (单个) -->
   <div class="modal-backdrop" id="modal-update-location">
-    <div class="modal" style="max-width: 500px;">
+    <div class="modal modal-sm">
       <div class="modal-header">
         <h3>修改箱子位置</h3>
         <button class="text" data-action="closeModal" data-modal-id="modal-update-location">×</button>
@@ -887,25 +887,25 @@ if (!defined('MRS_ENTRY')) {
         <input type="hidden" id="update-ledger-id" />
         <div class="form-group">
           <label>箱号</label>
-          <input type="text" id="update-box-number" disabled style="background: #f5f5f5;" />
+          <input type="text" id="update-box-number" disabled class="bg-gray-light" />
         </div>
         <div class="form-group">
           <label>批次名称</label>
-          <input type="text" id="update-batch-name" disabled style="background: #f5f5f5;" />
+          <input type="text" id="update-batch-name" disabled class="bg-gray-light" />
         </div>
         <div class="form-group">
           <label>当前位置</label>
-          <input type="text" id="update-current-location" disabled style="background: #f5f5f5;" />
+          <input type="text" id="update-current-location" disabled class="bg-gray-light" />
         </div>
         <div class="form-group">
           <label>新位置 *</label>
-          <small style="color: #666; display: block; margin-bottom: 5px;">格式: 排号-架号-层号 (每段2位数字)</small>
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <input type="text" id="update-row" class="shelf-segment-modal" placeholder="排" maxlength="2" autocomplete="off" style="width: 60px; text-align: center; font-size: 16px;">
-            <span style="color: #666; font-weight: bold;">-</span>
-            <input type="text" id="update-rack" class="shelf-segment-modal" placeholder="架" maxlength="2" autocomplete="off" style="width: 60px; text-align: center; font-size: 16px;">
-            <span style="color: #666; font-weight: bold;">-</span>
-            <input type="text" id="update-level" class="shelf-segment-modal" placeholder="层" maxlength="2" autocomplete="off" style="width: 60px; text-align: center; font-size: 16px;">
+          <small class="label-hint">格式: 排号-架号-层号 (每段2位数字)</small>
+          <div class="shelf-input-group">
+            <input type="text" id="update-row" class="shelf-segment-modal" placeholder="排" maxlength="2" autocomplete="off">
+            <span class="shelf-separator">-</span>
+            <input type="text" id="update-rack" class="shelf-segment-modal" placeholder="架" maxlength="2" autocomplete="off">
+            <span class="shelf-separator">-</span>
+            <input type="text" id="update-level" class="shelf-segment-modal" placeholder="层" maxlength="2" autocomplete="off">
             <input type="hidden" id="update-new-location" />
           </div>
         </div>
@@ -919,7 +919,7 @@ if (!defined('MRS_ENTRY')) {
 
   <!-- 模态框: 批量修改箱子位置 -->
   <div class="modal-backdrop" id="modal-batch-update-location">
-    <div class="modal" style="max-width: 500px;">
+    <div class="modal modal-sm">
       <div class="modal-header">
         <h3>批量修改箱子位置</h3>
         <button class="text" data-action="closeModal" data-modal-id="modal-batch-update-location">×</button>
@@ -927,17 +927,17 @@ if (!defined('MRS_ENTRY')) {
       <form id="form-batch-update-location">
         <div class="form-group">
           <label>已选择箱子数量</label>
-          <input type="text" id="batch-selected-count" disabled style="background: #f5f5f5;" />
+          <input type="text" id="batch-selected-count" disabled class="bg-gray-light" />
         </div>
         <div class="form-group">
           <label>新位置 *</label>
-          <small style="color: #666; display: block; margin-bottom: 5px;">格式: 排号-架号-层号 (每段2位数字)</small>
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <input type="text" id="batch-row" class="shelf-segment-modal" placeholder="排" maxlength="2" autocomplete="off" style="width: 60px; text-align: center; font-size: 16px;">
-            <span style="color: #666; font-weight: bold;">-</span>
-            <input type="text" id="batch-rack" class="shelf-segment-modal" placeholder="架" maxlength="2" autocomplete="off" style="width: 60px; text-align: center; font-size: 16px;">
-            <span style="color: #666; font-weight: bold;">-</span>
-            <input type="text" id="batch-level" class="shelf-segment-modal" placeholder="层" maxlength="2" autocomplete="off" style="width: 60px; text-align: center; font-size: 16px;">
+          <small class="label-hint">格式: 排号-架号-层号 (每段2位数字)</small>
+          <div class="shelf-input-group">
+            <input type="text" id="batch-row" class="shelf-segment-modal" placeholder="排" maxlength="2" autocomplete="off">
+            <span class="shelf-separator">-</span>
+            <input type="text" id="batch-rack" class="shelf-segment-modal" placeholder="架" maxlength="2" autocomplete="off">
+            <span class="shelf-separator">-</span>
+            <input type="text" id="batch-level" class="shelf-segment-modal" placeholder="层" maxlength="2" autocomplete="off">
             <input type="hidden" id="batch-new-location" />
           </div>
         </div>

@@ -44,11 +44,11 @@ if (($_GET['format'] ?? '') === 'json') {
 function format_tracking_number($tracking_number) {
     $tracking_number = htmlspecialchars($tracking_number);
     if (strlen($tracking_number) <= 4) {
-        return '<span style="color: #dc3545; font-weight: bold;">' . $tracking_number . '</span>';
+        return '<span class="tracking-tail">' . $tracking_number . '</span>';
     }
     $prefix = substr($tracking_number, 0, -4);
     $tail = substr($tracking_number, -4);
-    return $prefix . '<span style="color: #dc3545; font-weight: bold;">' . $tail . '</span>';
+    return $prefix . '<span class="tracking-tail">' . $tail . '</span>';
 }
 ?>
 <!DOCTYPE html>
@@ -59,32 +59,7 @@ function format_tracking_number($tracking_number) {
     <title>出库核销 - MRS 系统</title>
     <link rel="stylesheet" href="/mrs/ap/css/backend.css">
     <link rel="stylesheet" href="/mrs/ap/css/modal.css">
-    <style>
-        .checkbox-cell {
-            width: 40px;
-            text-align: center;
-        }
-        tr.selected {
-            background-color: #dbeafe !important;
-        }
-        .destination-section {
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 6px;
-            margin: 20px 0;
-        }
-        .destination-group {
-            display: grid;
-            grid-template-columns: 1fr 2fr;
-            gap: 15px;
-            align-items: start;
-        }
-        @media (max-width: 768px) {
-            .destination-group {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="/mrs/ap/css/outbound.css">
 </head>
 <body>
     <?php include MRS_VIEW_PATH . '/shared/sidebar.php'; ?>
@@ -117,11 +92,11 @@ function format_tracking_number($tracking_number) {
             </div>
 
             <!-- 快速搜索 -->
-            <div class="form-group" style="margin-top: 30px; padding-top: 30px; border-top: 2px solid #e9ecef;">
+            <div class="form-group search-section-divider">
                 <label>方式2: 快速搜索</label>
-                <div style="display: flex; gap: 10px; align-items: flex-end;">
-                    <div style="flex: 0 0 150px;">
-                        <label for="search_type" style="font-size: 12px; color: #666;">搜索类型</label>
+                <div class="search-controls">
+                    <div class="search-type-wrapper">
+                        <label for="search_type" class="search-label">搜索类型</label>
                         <select id="search_type" class="form-control">
                             <option value="content_note" <?= $search_type === 'content_note' ? 'selected' : '' ?>>品名</option>
                             <option value="box_number" <?= $search_type === 'box_number' ? 'selected' : '' ?>>箱号</option>
@@ -129,21 +104,21 @@ function format_tracking_number($tracking_number) {
                             <option value="batch_name" <?= $search_type === 'batch_name' ? 'selected' : '' ?>>批次号</option>
                         </select>
                     </div>
-                    <div style="flex: 1;">
-                        <label for="search_value" style="font-size: 12px; color: #666;">搜索内容</label>
+                    <div class="search-input-wrapper">
+                        <label for="search_value" class="search-label">搜索内容</label>
                         <input type="text" id="search_value" class="form-control"
                                placeholder="输入搜索内容..."
                                value="<?= htmlspecialchars($search_value) ?>">
                     </div>
-                    <button type="button" class="btn btn-primary" onclick="performSearch()" style="height: 38px;">
+                    <button type="button" class="btn btn-primary search-btn-height" onclick="performSearch()">
                         🔍 搜索
                     </button>
-                    <button type="button" class="btn btn-secondary" onclick="clearSearch()" style="height: 38px;">
+                    <button type="button" class="btn btn-secondary search-btn-height" onclick="clearSearch()">
                         清除
                     </button>
                 </div>
                 <?php if ($search_mode): ?>
-                    <div style="margin-top: 10px; padding: 8px; background: #e3f2fd; border-radius: 4px; font-size: 14px;">
+                    <div class="search-result-info">
                         📌 当前搜索: <strong><?= ['content_note'=>'品名', 'box_number'=>'箱号', 'tracking_tail'=>'快递单尾号', 'batch_name'=>'批次号'][$search_type] ?></strong> = "<?= htmlspecialchars($search_value) ?>" (找到 <?= count($packages) ?> 个结果)
                     </div>
                 <?php endif; ?>
@@ -151,19 +126,19 @@ function format_tracking_number($tracking_number) {
 
             <?php if (!empty($packages)): ?>
                 <!-- 步骤2: 选择包裹 -->
-                <h3 style="margin-top: 30px; margin-bottom: 15px;">步骤2: 选择要出库的包裹</h3>
+                <h3 class="section-header">步骤2: 选择要出库的包裹</h3>
 
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+                <div class="package-selection-toolbar">
                     <div>
                         <button type="button" class="btn btn-sm btn-secondary" onclick="selectAll()">全选</button>
                         <button type="button" class="btn btn-sm btn-secondary" onclick="selectNone()">取消全选</button>
-                        <span style="margin-left: 20px; color: #666;">
+                        <span class="selection-count">
                             已选择: <strong id="selectedCount">0</strong> 箱
                         </span>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                        <label for="sort-select-outbound" style="margin: 0; font-weight: 500;">排序方式:</label>
-                        <select id="sort-select-outbound" class="form-control" style="width: auto; min-width: 180px;" onchange="changeSortOrder(this.value)">
+                    <div class="sort-controls">
+                        <label for="sort-select-outbound" class="sort-label">排序方式:</label>
+                        <select id="sort-select-outbound" class="form-control sort-select" onchange="changeSortOrder(this.value)">
                             <option value="fifo" <?= $order_by === 'fifo' ? 'selected' : '' ?>>入库时间↑ (先进先出)</option>
                             <option value="inbound_time_desc" <?= $order_by === 'inbound_time_desc' ? 'selected' : '' ?>>入库时间↓ (后进先出)</option>
                             <option value="expiry_date_asc" <?= $order_by === 'expiry_date_asc' ? 'selected' : '' ?>>有效期↑ (最早到期)</option>
@@ -204,15 +179,15 @@ function format_tracking_number($tracking_number) {
                                     <td><?= htmlspecialchars($pkg['box_number']) ?></td>
                                     <td>
                                         <?php if (!empty($pkg['items']) && is_array($pkg['items'])): ?>
-                                            <div style="display: flex; flex-direction: column; gap: 4px;">
+                                            <div class="product-items">
                                                 <?php foreach ($pkg['items'] as $item): ?>
-                                                    <div style="padding: 4px 8px; background: #f8f9fa; border-radius: 4px; font-size: 13px;">
+                                                    <div class="product-item">
                                                         <strong><?= htmlspecialchars($item['product_name']) ?></strong>
                                                         <?php if (!empty($item['quantity'])): ?>
                                                             × <?= htmlspecialchars($item['quantity']) ?>
                                                         <?php endif; ?>
                                                         <?php if (!empty($item['expiry_date'])): ?>
-                                                            <span style="color: #666; margin-left: 8px;">
+                                                            <span class="product-expiry">
                                                                 <?= htmlspecialchars($item['expiry_date']) ?>
                                                             </span>
                                                         <?php endif; ?>
@@ -220,7 +195,7 @@ function format_tracking_number($tracking_number) {
                                                 <?php endforeach; ?>
                                             </div>
                                         <?php else: ?>
-                                            <span style="color: #999;">-</span>
+                                            <span class="product-empty">-</span>
                                         <?php endif; ?>
                                     </td>
                                     <td><?= htmlspecialchars($pkg['spec_info']) ?></td>
@@ -237,9 +212,9 @@ function format_tracking_number($tracking_number) {
 
                     <!-- 去向选择 -->
                     <div class="destination-section">
-                        <h3 style="margin-top: 0; margin-bottom: 15px;">步骤3: 选择出库去向</h3>
+                        <h3 class="section-header mt-0">步骤3: 选择出库去向</h3>
                         <div class="destination-group">
-                            <div class="form-group" style="margin: 0;">
+                            <div class="form-group-no-margin">
                                 <label for="destination_select">出库去向 *</label>
                                 <select id="destination_select" class="form-control" required>
                                     <option value="">-- 请选择去向 --</option>
@@ -263,7 +238,7 @@ function format_tracking_number($tracking_number) {
                                     <?php endforeach; ?>
                                 </select>
                             </div>
-                            <div class="form-group" style="margin: 0;">
+                            <div class="form-group-no-margin">
                                 <label for="destination_note">去向备注（可选）</label>
                                 <input type="text" id="destination_note" class="form-control"
                                        placeholder="如：退货单号、调拨单号等">
@@ -441,25 +416,25 @@ function format_tracking_number($tracking_number) {
 
         const content = `
             <div class="modal-section">
-                <div style="background: #e3f2fd; padding: 12px; border-radius: 4px; margin-bottom: 20px;">
+                <div class="modal-info-box">
                     <strong>商品名称：</strong>${productName}<br>
-                    <strong>当前库存：</strong><span style="color: #1976d2; font-size: 18px; font-weight: bold;">${availableQty}</span> 件
+                    <strong>当前库存：</strong><span class="modal-highlight-value">${availableQty}</span> 件
                 </div>
 
                 <div class="form-group">
-                    <label for="outbound-date">出库日期 <span style="color: red;">*</span></label>
+                    <label for="outbound-date">出库日期 <span class="field-required">*</span></label>
                     <input type="date" id="outbound-date" class="form-control" value="${today}" required>
                 </div>
 
                 <div class="form-group">
-                    <label for="outbound-qty">出货数量 <span style="color: red;">*</span></label>
+                    <label for="outbound-qty">出货数量 <span class="field-required">*</span></label>
                     <input type="number" id="outbound-qty" class="form-control"
                            placeholder="请输入出货数量" min="0.01" step="0.01" max="${availableQty}" required>
-                    <small style="color: #666;">可出货数量：${availableQty} 件</small>
+                    <small class="field-hint">可出货数量：${availableQty} 件</small>
                 </div>
 
                 <div class="form-group">
-                    <label for="destination">目的地（门店） <span style="color: red;">*</span></label>
+                    <label for="destination">目的地（门店） <span class="field-required">*</span></label>
                     <input type="text" id="destination" class="form-control"
                            placeholder="请输入门店名称" required>
                 </div>

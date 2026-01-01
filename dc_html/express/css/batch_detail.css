@@ -1,0 +1,272 @@
+/**
+ * Express Package Management System - Batch Detail CSS
+ * 文件路径: dc_html/express/css/batch_detail.css
+ */
+
+/* [UX优化] 让日期输入框点击任意位置都能弹出选择面板 */
+/* 通过将选择器指示器(小图标)透明并铺满整个输入框来实现 */
+input[type="date"] {
+    position: relative;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+}
+
+/* 自定义包裹区域样式 */
+.custom-package-section {
+    margin-top: 30px;
+    background-color: #f8f9fa;
+    padding: 20px;
+    border-radius: 5px;
+    border: 2px dashed #28a745;
+}
+
+.custom-package-section h2 {
+    color: #28a745;
+}
+
+.custom-package-section .form-text {
+    margin-bottom: 15px;
+    color: #666;
+}
+
+/* Section header完整样式 */
+.section-header-full {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.section-header-full h2 {
+    margin: 0;
+}
+
+/* 快递单号后4位高亮 */
+.tracking-tail-highlight {
+    color: #dc3545;
+    font-weight: bold;
+}
+
+/* 行高实用类 */
+.line-height-1-6 {
+    line-height: 1.6;
+}
+
+/* 时间列样式 */
+.time-col-default {
+    /* 默认显示 */
+}
+
+.time-col-extra {
+    display: none;
+}
+
+.time-col-extra.show {
+    display: table-cell;
+}
+
+/* 产品项容器 */
+.product-item {
+    border: 1px solid #ddd;
+    padding: 12px;
+    margin-bottom: 10px;
+    border-radius: 4px;
+    background: #f9f9f9;
+}
+
+.product-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.product-item-header strong {
+    font-size: 14px;
+}
+
+.product-item-field {
+    margin-bottom: 8px;
+}
+
+.product-item-field label {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 13px;
+    color: #666;
+}
+
+.product-item-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+/* 包裹信息框样式 */
+.package-info-box {
+    background: #f0f4ff;
+    border: 1px solid #d0ddff;
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 16px;
+}
+
+.package-info-grid {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 8px 16px;
+    font-size: 13px;
+}
+
+.package-info-label {
+    color: #666;
+    font-weight: 500;
+}
+
+.package-info-value {
+    color: #333;
+    font-weight: 600;
+}
+
+/* 不入库标记框 */
+.skip-inbound-box {
+    background: #fff3cd;
+    border: 1px solid #ffc107;
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 16px;
+}
+
+.skip-inbound-label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    margin: 0;
+}
+
+.skip-inbound-checkbox {
+    width: 18px;
+    height: 18px;
+    margin-right: 8px;
+    cursor: pointer;
+}
+
+.skip-inbound-text {
+    font-weight: 600;
+    color: #856404;
+}
+
+.skip-inbound-hint {
+    font-size: 12px;
+    color: #856404;
+    margin-top: 6px;
+    margin-left: 26px;
+}
+
+/* 产品容器滚动区域 */
+.products-container {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+/* 批量导入说明文本 */
+.import-instructions {
+    line-height: 1.6;
+}
+
+.import-instructions strong {
+    display: inline;
+}
+
+/* 模态框表单组 */
+.modal-form-group {
+    margin-bottom: 16px;
+}
+
+/* 产品信息头部 */
+.product-info-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.product-info-header .modal-form-label {
+    margin: 0;
+}
+
+.product-info-header button {
+    padding: 4px 12px;
+    font-size: 13px;
+}
+
+/* btn-success样式 */
+.btn-success {
+    background-color: #28a745;
+    color: white;
+}
+
+.btn-success:hover {
+    background-color: #218838;
+}
+
+/* Modal表单控件宽度 */
+.modal-form-control.w-full {
+    width: 100%;
+}
+
+/* 产品项删除按钮 */
+.product-item-header .modal-btn {
+    padding: 2px 8px;
+    font-size: 12px;
+}
+
+/* 产品项标题 */
+.product-item-header strong {
+    font-size: 14px;
+}
+
+/* 产品项字段label */
+.product-item-field label,
+.product-item-grid label {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 13px;
+    color: #666;
+}
+
+/* 横向滚动容器 */
+.table-scroll-wrapper {
+    overflow-x: auto;
+}
+
+/* 内容备注文本颜色 */
+.content-item-text {
+    color: #333;
+}
+
+.content-item-quantity {
+    color: #666;
+}
+
+/* 表单padding */
+.form-padding {
+    padding: 20px;
+}
+
+/* 表格列宽度 */
+.col-width-70 {
+    width: 70%;
+}
+
+.col-width-30 {
+    width: 30%;
+}

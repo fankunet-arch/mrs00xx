@@ -33,11 +33,11 @@ $skus = mrs_get_all_skus($pdo);
             </div>
 
             <!-- 添加物料表单 -->
-            <h3 style="margin-bottom: 15px;">添加新物料</h3>
+            <h3 class="mb-15">添加新物料</h3>
 
             <form id="skuForm" class="form-horizontal">
                 <div class="form-inline">
-                    <div class="form-group" style="flex: 1; max-width: 400px;">
+                    <div class="form-group flex-1-max-400">
                         <input type="text" id="sku_name" name="sku_name" class="form-control"
                                placeholder="输入物料名称,例如: 香蕉、苹果" required>
                     </div>
@@ -48,7 +48,7 @@ $skus = mrs_get_all_skus($pdo);
             <div id="resultMessage"></div>
 
             <!-- 物料列表 -->
-            <h3 style="margin-top: 40px; margin-bottom: 15px;">物料列表 (共 <?= count($skus) ?> 种)</h3>
+            <h3 class="mt-40-mb-15">物料列表 (共 <?= count($skus) ?> 种)</h3>
 
             <?php if (empty($skus)): ?>
                 <div class="empty-state">

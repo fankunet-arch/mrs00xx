@@ -85,7 +85,7 @@
                         </div>
                     </div>
 
-                    <div class="form-actions" style="margin-top: 20px;">
+                    <div class="form-actions mt-20">
                         <a href="/mrs/be/index.php?action=sku_list"><button type="button" class="secondary">取消</button></a>
                         <button type="submit" class="primary">保存</button>
                     </div>

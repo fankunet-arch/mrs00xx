@@ -39,130 +39,7 @@ function mrs_tracking_tail($tracking_number)
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>批次箱贴打印 - MRS 系统</title>
     <link rel="stylesheet" href="/mrs/ap/css/backend.css">
-    <style>
-        body {
-            background: #f5f5f5;
-        }
-
-        .print-actions {
-            display: flex;
-            gap: 10px;
-        }
-
-        .print-actions .btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .batch-form {
-            display: flex;
-            gap: 12px;
-            align-items: center;
-            margin-bottom: 16px;
-        }
-
-        .batch-summary {
-            margin: 12px 0 20px;
-            padding: 12px;
-            border-radius: 6px;
-            background: #e8f5e9;
-            color: #1b5e20;
-        }
-
-        .print-canvas {
-            background: white;
-            border: 1px solid #e0e0e0;
-            border-radius: 10px;
-            padding: 18px;
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
-        }
-
-        .label-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(60mm, 1fr));
-            gap: 8mm 6mm;
-        }
-
-        .label-card {
-            border: 1.6px solid #111;
-            border-radius: 6px;
-            padding: 6mm 5mm;
-            min-height: 45mm;
-            background: white;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            page-break-inside: avoid;
-        }
-
-        .label-title {
-            font-size: 42pt;
-            font-weight: 800;
-            text-align: center;
-            line-height: 1.1;
-            word-break: break-all;
-            white-space: nowrap;
-        }
-
-        .label-meta {
-            margin-top: 4mm;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            flex-wrap: nowrap;
-            gap: 1.5mm 3mm;
-            font-size: 24pt;
-            font-weight: 800;
-            line-height: 1.05;
-            white-space: nowrap;
-        }
-
-        .label-meta span {
-            white-space: nowrap;
-        }
-
-        .label-spec {
-            margin-top: 2mm;
-            font-size: 14pt;
-            text-align: right;
-            color: #333;
-        }
-
-        @media print {
-            body {
-                background: white;
-            }
-
-            .sidebar,
-            .page-header,
-            .info-box,
-            .batch-form,
-            .batch-summary,
-            .message,
-            .print-actions button:not(.print-only) {
-                display: none !important;
-            }
-
-            .main-content {
-                margin: 0;
-                padding: 0;
-                width: auto;
-            }
-
-            .content-wrapper {
-                box-shadow: none;
-                border: none;
-                padding: 0;
-            }
-
-            .print-canvas {
-                border: none;
-                box-shadow: none;
-                padding: 0;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="/mrs/ap/css/batch_print.css">
 </head>
 <body>
     <?php include MRS_VIEW_PATH . '/shared/sidebar.php'; ?>
@@ -187,7 +64,7 @@ function mrs_tracking_tail($tracking_number)
                 <div class="empty-state">
                     <div class="empty-state-icon">📦</div>
                     <div class="empty-state-text">暂无可打印的批次</div>
-                    <p style="color: #666;">请先完成入库，再回到此处打印箱贴。</p>
+                    <p class="text-muted">请先完成入库，再回到此处打印箱贴。</p>
                 </div>
             <?php else: ?>
                 <div class="batch-form">

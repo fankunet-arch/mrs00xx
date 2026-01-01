@@ -22,87 +22,7 @@ $destinations = mrs_get_destinations($pdo);
     <title>去向管理 - MRS 系统</title>
     <link rel="stylesheet" href="/mrs/ap/css/backend.css">
     <link rel="stylesheet" href="/mrs/ap/css/modal.css">
-    <style>
-        .destination-grid {
-            display: grid;
-            gap: 20px;
-            margin-top: 20px;
-        }
-
-        .type-section {
-            background: #fff;
-            border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        .type-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #e9ecef;
-        }
-
-        .type-title {
-            font-size: 18px;
-            font-weight: 600;
-            color: #1f2937;
-        }
-
-        .destination-list {
-            display: grid;
-            gap: 10px;
-        }
-
-        .destination-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px;
-            background: #f9fafb;
-            border-radius: 6px;
-            border: 1px solid #e5e7eb;
-            transition: all 0.2s;
-        }
-
-        .destination-item:hover {
-            background: #f3f4f6;
-            border-color: #d1d5db;
-        }
-
-        .destination-info {
-            flex: 1;
-        }
-
-        .destination-name {
-            font-weight: 500;
-            color: #1f2937;
-            margin-bottom: 4px;
-        }
-
-        .destination-details {
-            font-size: 13px;
-            color: #6b7280;
-        }
-
-        .destination-actions {
-            display: flex;
-            gap: 8px;
-        }
-
-        .btn-icon {
-            padding: 6px 12px;
-            font-size: 13px;
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 40px 20px;
-            color: #9ca3af;
-        }
-    </style>
+    <link rel="stylesheet" href="/mrs/ap/css/destination_manage.css">
 </head>
 <body>
     <?php include MRS_VIEW_PATH . '/shared/sidebar.php'; ?>
@@ -142,7 +62,7 @@ $destinations = mrs_get_destinations($pdo);
                             if (empty($type_destinations)):
                             ?>
                                 <div class="empty-state">
-                                    <div style="font-size: 32px; margin-bottom: 8px;">📦</div>
+                                    <div class="empty-state-icon">📦</div>
                                     <div>暂无去向</div>
                                 </div>
                             <?php else: ?>
@@ -152,7 +72,7 @@ $destinations = mrs_get_destinations($pdo);
                                             <div class="destination-name">
                                                 <?= htmlspecialchars($dest['destination_name']) ?>
                                                 <?php if ($dest['destination_code']): ?>
-                                                    <span style="color: #6b7280; font-size: 13px;">
+                                                    <span class="destination-code">
                                                         (<?= htmlspecialchars($dest['destination_code']) ?>)
                                                     </span>
                                                 <?php endif; ?>
@@ -200,7 +120,7 @@ $destinations = mrs_get_destinations($pdo);
         ).join('');
 
         const formHtml = `
-            <form id="destinationForm" style="padding: 20px;">
+            <form id="destinationForm" class="destination-form">
                 <div class="modal-form-group">
                     <label class="modal-form-label">去向类型 *</label>
                     <select name="type_code" class="modal-form-control" required>
@@ -257,7 +177,7 @@ $destinations = mrs_get_destinations($pdo);
         ).join('');
 
         const formHtml = `
-            <form id="destinationForm" style="padding: 20px;">
+            <form id="destinationForm" class="destination-form">
                 <input type="hidden" name="destination_id" value="${dest.destination_id}">
                 <div class="modal-form-group">
                     <label class="modal-form-label">去向类型 *</label>

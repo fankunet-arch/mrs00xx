@@ -1,0 +1,351 @@
+/**
+ * Inventory Detail Page Styles
+ * 文件路径: dc_html/mrs/ap/css/inventory_detail.css
+ */
+
+/* 编辑包裹表单样式 */
+.edit-package-form {
+    padding: 20px;
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.edit-package-info-box {
+    background: #f0f4ff;
+    border: 1px solid #d0ddff;
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 16px;
+}
+
+.edit-package-info-grid {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 8px 16px;
+    font-size: 13px;
+}
+
+.edit-package-info-label {
+    color: #666;
+    font-weight: 500;
+}
+
+.edit-package-info-value {
+    color: #333;
+    font-weight: 600;
+}
+
+.product-form-section {
+    margin-bottom: 15px;
+}
+
+.product-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.btn-add-product {
+    padding: 5px 12px;
+    font-size: 13px;
+}
+
+/* 产品项盒子样式 */
+.product-item-box {
+    border: 1px solid #ddd;
+    padding: 12px;
+    margin-bottom: 10px;
+    border-radius: 4px;
+    background: #f9f9f9;
+}
+
+.product-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.product-number-label {
+    color: #667eea;
+}
+
+.btn-remove-product {
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.product-field-mb-8 {
+    margin-bottom: 8px;
+}
+
+.product-field-label {
+    font-size: 13px;
+    color: #555;
+}
+
+.product-fields-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.product-field-mb-0 {
+    margin-bottom: 0;
+}
+
+/* 拆零出货表单样式 */
+.void-reason-form {
+    padding: 20px;
+}
+
+.outbound-info-box {
+    background: #e3f2fd;
+    padding: 12px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+}
+
+.outbound-qty-highlight {
+    color: #1976d2;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.required-mark {
+    color: red;
+}
+
+.help-text {
+    color: #666;
+}
+
+/* 产品搜索模态框样式 */
+.product-search-modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 9999;
+    animation: fadeIn 0.2s;
+}
+
+.product-search-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    width: 90%;
+    max-width: 600px;
+    max-height: 80vh;
+    overflow: hidden;
+    animation: slideDown 0.3s;
+}
+
+.product-search-modal-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid #e9ecef;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.product-search-modal-header h3 {
+    margin: 0;
+    font-size: 18px;
+    color: #333;
+}
+
+.product-search-modal-close {
+    background: none;
+    border: none;
+    font-size: 28px;
+    color: #6c757d;
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+
+.product-search-modal-close:hover {
+    background: #f1f3f5;
+}
+
+.product-search-modal-body {
+    padding: 24px;
+}
+
+.product-search-input-wrapper {
+    position: relative;
+    margin-bottom: 16px;
+}
+
+.product-search-input {
+    width: 100%;
+    padding: 14px 48px 14px 16px;
+    font-size: 16px;
+    border: 2px solid #dee2e6;
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+
+.product-search-input:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,.15);
+}
+
+.product-search-input-icon {
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 20px;
+    color: #adb5bd;
+}
+
+.product-search-results-container {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.product-search-result-item {
+    padding: 14px 16px;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.product-search-result-item:hover {
+    background: #f8f9fa;
+    border-color: #28a745;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.product-result-name {
+    font-weight: 600;
+    font-size: 15px;
+    color: #333;
+    margin-bottom: 4px;
+}
+
+.product-result-stats {
+    font-size: 13px;
+    color: #6c757d;
+}
+
+.product-result-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 500;
+    margin-left: 8px;
+}
+
+.badge-boxes {
+    background: #e7f3ff;
+    color: #0066cc;
+}
+
+.badge-qty {
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+
+.product-search-empty {
+    padding: 40px 20px;
+    text-align: center;
+    color: #adb5bd;
+}
+
+.product-search-empty-icon {
+    font-size: 48px;
+    margin-bottom: 12px;
+}
+
+.product-search-hint {
+    font-size: 13px;
+    color: #adb5bd;
+    margin-top: 8px;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -60%);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, -50%);
+    }
+}
+
+/* 产品名称自动完成样式 */
+.autocomplete-wrapper {
+    position: relative;
+}
+
+.autocomplete-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-top: none;
+    border-radius: 0 0 4px 4px;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1000;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    display: none;
+}
+
+.autocomplete-dropdown.show {
+    display: block;
+}
+
+.autocomplete-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.autocomplete-item:hover,
+.autocomplete-item.selected {
+    background: #f0f4ff;
+}
+
+.autocomplete-empty {
+    padding: 8px 12px;
+    color: #999;
+    text-align: center;
+    font-size: 13px;
+}

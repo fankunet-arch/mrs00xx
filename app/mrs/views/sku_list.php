@@ -70,7 +70,7 @@
     </div>
 
     <!-- 批量导入SKU模态框 -->
-    <div class="modal-backdrop" id="modal-import-sku" style="display: none;">
+    <div class="modal-backdrop hidden" id="modal-import-sku">
         <div class="modal">
             <div class="modal-header">
                 <h3>批量导入 SKU</h3>
@@ -78,10 +78,10 @@
             </div>
             <div class="modal-body">
                 <p class="muted small mb-2">请粘贴 AI 识别后的文本。格式：[品名] | [箱规] | [单位] | [品类]</p>
-                <textarea id="import-sku-text" rows="10" placeholder="90-700注塑细磨砂杯 | 500 | 箱 | 包材&#10;茉莉银毫 | 500g/30包 | 箱 | 茶叶" style="width: 100%; font-family: monospace;"></textarea>
+                <textarea id="import-sku-text" rows="10" placeholder="90-700注塑细磨砂杯 | 500 | 箱 | 包材&#10;茉莉银毫 | 500g/30包 | 箱 | 茶叶" class="textarea-mono"></textarea>
             </div>
             <div class="modal-actions">
-                <button type="button" class="light-success" style="margin-right: auto;" onclick="showAiPromptModal()">💡 获取 AI 提示词</button>
+                <button type="button" class="light-success mr-auto" onclick="showAiPromptModal()">💡 获取 AI 提示词</button>
                 <button type="button" class="text" onclick="closeModal('modal-import-sku')">取消</button>
                 <button class="primary" onclick="importSkus()">开始导入</button>
             </div>
@@ -89,14 +89,14 @@
     </div>
 
     <!-- AI提示词模态框 -->
-    <div class="modal-backdrop" id="modal-ai-prompt" style="display: none;">
+    <div class="modal-backdrop hidden" id="modal-ai-prompt">
         <div class="modal">
             <div class="modal-header">
                 <h3>AI 提示词模板</h3>
                 <button class="text" onclick="closeModal('modal-ai-prompt')">×</button>
             </div>
             <div class="modal-body">
-                <textarea id="ai-prompt-text" rows="12" readonly style="width: 100%; font-family: monospace; background: #f9fafb;">请帮我识别以下图片中的物料信息，并按照指定格式输出。
+                <textarea id="ai-prompt-text" rows="12" readonly class="textarea-mono-gray">请帮我识别以下图片中的物料信息，并按照指定格式输出。
 
 要求：
 1. 识别每一行物料的：品名、箱规、单位、品类

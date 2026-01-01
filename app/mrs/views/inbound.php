@@ -35,40 +35,14 @@ if (!empty($selected_batch)) {
     // 获取该批次中可入库的包裹（已清点但未入库）
     $available_packages = mrs_get_express_counted_packages($pdo, $selected_batch);
 }
+
+// 设置页面标题和CSS
+$page_title = '入库录入 - MRS 系统';
+$page_css = ['/mrs/ap/css/inbound.css'];
+
+// 包含页面头部
+include MRS_VIEW_PATH . '/shared/header.php';
 ?>
-<!DOCTYPE html>
-<html lang="zh">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>入库录入 - MRS 系统</title>
-    <link rel="stylesheet" href="/mrs/ap/css/backend.css">
-    <style>
-        .package-list {
-            margin-top: 20px;
-            max-height: 400px;
-            overflow-y: auto;
-        }
-        .package-item {
-            padding: 10px;
-            border: 1px solid #ddd;
-            margin-bottom: 5px;
-            background: #f9f9f9;
-            display: flex;
-            align-items: center;
-        }
-        .package-item input[type="checkbox"] {
-            margin-right: 10px;
-        }
-        .select-all-container {
-            margin: 15px 0;
-            padding: 10px;
-            background: #e3f2fd;
-            border-left: 4px solid #2196f3;
-        }
-    </style>
-</head>
-<body>
     <?php include MRS_VIEW_PATH . '/shared/sidebar.php'; ?>
 
     <div class="main-content">
@@ -105,7 +79,7 @@ if (!empty($selected_batch)) {
                         <?php endforeach; ?>
                     <?php endif; ?>
                 </select>
-                <small class="form-text" style="color: #666;">
+                <small class="form-text text-muted-light">
                     只显示有已清点且未全部入库的批次
                 </small>
             </div>
@@ -121,7 +95,7 @@ if (!empty($selected_batch)) {
                     <form id="inboundForm" class="form-horizontal">
                         <input type="hidden" name="batch_name" value="<?= htmlspecialchars($selected_batch) ?>">
 
-                        <h3 style="margin-top: 30px;">可入库包裹列表 (共 <?= count($available_packages) ?> 个)</h3>
+                        <h3 class="mt-30">可入库包裹列表 (共 <?= count($available_packages) ?> 个)</h3>
 
                         <div class="select-all-container">
                             <label>
@@ -143,20 +117,20 @@ if (!empty($selected_batch)) {
                                                'items' => $pkg['items'] ?? []
                                            ])) ?>"
                                            class="package-checkbox">
-                                    <div style="flex: 1;">
+                                    <div class="package-item-content">
                                         <strong>单号:</strong> <?= htmlspecialchars($pkg['tracking_number']) ?> |
                                         <strong>清点时间:</strong> <?= date('Y-m-d H:i', strtotime($pkg['counted_at'])) ?>
-                                        <div style="margin-top: 8px;">
+                                        <div class="mt-8">
                                             <?php if (!empty($pkg['items']) && is_array($pkg['items'])): ?>
                                                 <strong>产品:</strong>
                                                 <?php foreach ($pkg['items'] as $idx => $item): ?>
-                                                    <span style="display: inline-block; margin-right: 12px; padding: 2px 8px; background: #e8f5e9; border-radius: 4px; font-size: 12px;">
+                                                    <span class="product-tag">
                                                         <?= htmlspecialchars($item['product_name']) ?>
                                                         <?php if (!empty($item['quantity'])): ?>
                                                             ×<?= htmlspecialchars($item['quantity']) ?>
                                                         <?php endif; ?>
                                                         <?php if (!empty($item['expiry_date'])): ?>
-                                                            <span style="color: #666;">(<?= htmlspecialchars($item['expiry_date']) ?>)</span>
+                                                            <span class="expiry-date">(<?= htmlspecialchars($item['expiry_date']) ?>)</span>
                                                         <?php endif; ?>
                                                     </span>
                                                 <?php endforeach; ?>
@@ -169,7 +143,7 @@ if (!empty($selected_batch)) {
                             <?php endforeach; ?>
                         </div>
 
-                        <div class="form-group" style="margin-top: 20px;">
+                        <div class="form-group mt-20">
                             <label for="spec_info">规格信息（可选）</label>
                             <input type="text" id="spec_info" name="spec_info" class="form-control"
                                    placeholder="例如: 20斤">
@@ -188,67 +162,72 @@ if (!empty($selected_batch)) {
         </div>
     </div>
 
-    <script>
-    // 全选功能
-    document.getElementById('selectAll')?.addEventListener('change', function() {
-        const checkboxes = document.querySelectorAll('.package-checkbox');
-        checkboxes.forEach(cb => cb.checked = this.checked);
-    });
 
-    // 提交表单
-    document.getElementById('inboundForm')?.addEventListener('submit', function(e) {
-        e.preventDefault();
+<?php
+// 设置页面JavaScript
+$inline_js = <<<'JAVASCRIPT'
+// 全选功能
+document.getElementById('selectAll')?.addEventListener('change', function() {
+    const checkboxes = document.querySelectorAll('.package-checkbox');
+    checkboxes.forEach(cb => cb.checked = this.checked);
+});
 
-        const formData = new FormData(this);
-        const selectedPackages = formData.getAll('selected_packages[]');
+// 提交表单
+document.getElementById('inboundForm')?.addEventListener('submit', function(e) {
+    e.preventDefault();
 
-        if (selectedPackages.length === 0) {
-            document.getElementById('resultMessage').innerHTML =
-                '<div class="message error">请至少选择一个包裹</div>';
-            return;
-        }
+    const formData = new FormData(this);
+    const selectedPackages = formData.getAll('selected_packages[]');
 
-        // 解析选中的包裹数据
-        const packages = selectedPackages.map(p => JSON.parse(p));
+    if (selectedPackages.length === 0) {
+        document.getElementById('resultMessage').innerHTML =
+            '<div class="message error">请至少选择一个包裹</div>';
+        return;
+    }
 
-        const data = {
-            batch_name: formData.get('batch_name'),
-            packages: packages,
-            spec_info: formData.get('spec_info')
-        };
+    // 解析选中的包裹数据
+    const packages = selectedPackages.map(p => JSON.parse(p));
 
-        fetch('/mrs/ap/index.php?action=inbound_save', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(data)
-        })
-        .then(response => response.json())
-        .then(result => {
-            const messageDiv = document.getElementById('resultMessage');
+    const data = {
+        batch_name: formData.get('batch_name'),
+        packages: packages,
+        spec_info: formData.get('spec_info')
+    };
 
-            if (result.success) {
-                let msg = `<div class="message success">入库成功! 创建了 ${result.created} 个包裹记录。`;
-                if (result.errors && result.errors.length > 0) {
-                    msg += `<br>部分错误: ${result.errors.join(', ')}`;
-                }
-                msg += '</div>';
-                messageDiv.innerHTML = msg;
+    fetch('/mrs/ap/index.php?action=inbound_save', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        const messageDiv = document.getElementById('resultMessage');
 
-                // 2秒后刷新页面
-                setTimeout(() => {
-                    window.location.href = '/mrs/ap/index.php?action=inbound&batch=' + encodeURIComponent(data.batch_name);
-                }, 2000);
-            } else {
-                messageDiv.innerHTML = `<div class="message error">入库失败: ${result.message}</div>`;
+        if (result.success) {
+            let msg = `<div class="message success">入库成功! 创建了 ${result.created} 个包裹记录。`;
+            if (result.errors && result.errors.length > 0) {
+                msg += `<br>部分错误: ${result.errors.join(', ')}`;
             }
-        })
-        .catch(error => {
-            document.getElementById('resultMessage').innerHTML =
-                `<div class="message error">网络错误: ${error}</div>`;
-        });
+            msg += '</div>';
+            messageDiv.innerHTML = msg;
+
+            // 2秒后刷新页面
+            setTimeout(() => {
+                window.location.href = '/mrs/ap/index.php?action=inbound&batch=' + encodeURIComponent(data.batch_name);
+            }, 2000);
+        } else {
+            messageDiv.innerHTML = `<div class="message error">入库失败: ${result.message}</div>`;
+        }
+    })
+    .catch(error => {
+        document.getElementById('resultMessage').innerHTML =
+            `<div class="message error">网络错误: ${error}</div>`;
     });
-    </script>
-</body>
-</html>
+});
+JAVASCRIPT;
+
+// 包含页面尾部
+include MRS_VIEW_PATH . '/shared/footer.php';
+?>

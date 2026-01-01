@@ -45,7 +45,7 @@ if (!$batch) {
 
                 <div class="form-group">
                     <label>批次编号:</label>
-                    <input type="text" class="form-control" value="<?= htmlspecialchars($batch['batch_name']) ?>" readonly disabled style="background-color: #f5f5f5; cursor: not-allowed;">
+                    <input type="text" class="form-control" value="<?= htmlspecialchars($batch['batch_name']) ?>" readonly disabled>
                     <small class="form-text">批次编号不可修改</small>
                 </div>
 
@@ -69,7 +69,7 @@ if (!$batch) {
                 </div>
             </form>
 
-            <div id="message" class="message" style="display: none;"></div>
+            <div id="message" class="message d-none"></div>
         </div>
     </div>
 

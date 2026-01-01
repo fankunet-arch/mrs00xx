@@ -40,7 +40,7 @@ $outbound_data = mrs_get_unified_outbound_report($pdo, $start_date, $end_date);
 
         <div class="content-wrapper">
             <!-- 月份选择 -->
-            <div class="form-group" style="max-width: 300px;">
+            <div class="form-group max-w-300">
                 <label for="month_select">选择月份</label>
                 <input type="month" id="month_select" class="form-control"
                        value="<?= htmlspecialchars($month) ?>"
@@ -60,7 +60,7 @@ $outbound_data = mrs_get_unified_outbound_report($pdo, $start_date, $end_date);
             </div>
 
             <!-- 入库明细 -->
-            <h2 style="margin-top: 30px; margin-bottom: 15px;">入库明细（整合SKU系统+包裹台账）</h2>
+            <h2 class="mt-30-mb-15">入库明细（整合SKU系统+包裹台账）</h2>
 
             <?php if (empty($inbound_data)): ?>
                 <div class="empty-state">
@@ -96,7 +96,7 @@ $outbound_data = mrs_get_unified_outbound_report($pdo, $start_date, $end_date);
             <?php endif; ?>
 
             <!-- 出库明细 -->
-            <h2 style="margin-top: 40px; margin-bottom: 15px;">出库明细（整合SKU系统+包裹台账）</h2>
+            <h2 class="mt-40-mb-15">出库明细（整合SKU系统+包裹台账）</h2>
 
             <?php if (empty($outbound_data)): ?>
                 <div class="empty-state">

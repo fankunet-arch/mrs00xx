@@ -22,7 +22,7 @@ if (!defined('EXPRESS_ENTRY')) {
     <div class="main-content">
         <header class="page-header">
             <h1>创建新批次</h1>
-            <small style="color: #666;">批次编号将自动生成（000-999循环）</small>
+            <small class="text-muted">批次编号将自动生成（000-999循环）</small>
         </header>
 
         <div class="content-wrapper">
@@ -46,7 +46,7 @@ if (!defined('EXPRESS_ENTRY')) {
                 </div>
             </form>
 
-            <div id="message" class="message" style="display: none;"></div>
+            <div id="message" class="message d-none"></div>
         </div>
     </div>
 

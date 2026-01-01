@@ -1,49 +1,17 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <title>MRS 管理系统 - <?php echo htmlspecialchars($page_title); ?></title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="/mrs/css/backend.css">
-    <style>
-        .batch-table thead th.header-cell {
-            background: #f8fafc;
-            vertical-align: middle;
-            border-bottom: 2px solid #e5e7eb;
-            font-weight: 700;
-            color: #1f2937;
-        }
+<?php
+/**
+ * MRS 系统 - 批次列表页面
+ * 文件路径: app/mrs/views/batch_list.php
+ */
 
-        .batch-table .th-main {
-            display: block;
-            line-height: 1.4;
-        }
+// 页面配置
+$page_title = '收货批次列表';
+$page_css = ['/mrs/ap/css/batch_list.css'];
 
-        .batch-table .header-hint {
-            display: block;
-            margin-top: 4px;
-            font-size: 12px;
-            color: #6b7280;
-            font-weight: 400;
-        }
+// 包含页面头部
+include MRS_VIEW_PATH . '/shared/header.php';
+?>
 
-        .batch-table .sort-link {
-            color: inherit;
-            text-decoration: none;
-        }
-
-        .batch-table .sort-link:hover {
-            color: #2563eb;
-        }
-    </style>
-</head>
-<body>
-    <header>
-        <div class="title"><?php echo htmlspecialchars($page_title); ?></div>
-        <div class="user">
-            欢迎, <?php echo htmlspecialchars($_SESSION['user_display_name'] ?? '用户'); ?> | <a href="/mrs/be/index.php?action=logout">登出</a>
-        </div>
-    </header>
     <div class="layout">
         <?php include MRS_VIEW_PATH . '/shared/sidebar.php'; ?>
         <main class="content">
@@ -204,5 +172,8 @@ function get_batch_display_properties($batch)
 
         </main>
     </div>
-</body>
-</html>
+
+<?php
+// 包含页面尾部
+include MRS_VIEW_PATH . '/shared/footer.php';
+?>

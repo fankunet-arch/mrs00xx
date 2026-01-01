@@ -18,259 +18,21 @@ if (empty($product_name)) {
 
 // 获取库存明细（使用真正的多产品查询）
 $packages = mrs_get_true_inventory_detail($pdo, $product_name, $order_by);
+
+// 设置页面变量
+$page_title = '库存明细: ' . htmlspecialchars($product_name) . ' - MRS 系统';
+$page_css = ['inventory_detail.css'];
 ?>
-<!DOCTYPE html>
-<html lang="zh">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>库存明细 - MRS 系统</title>
-    <link rel="stylesheet" href="/mrs/ap/css/backend.css">
-    <link rel="stylesheet" href="/mrs/ap/css/modal.css">
-    <style>
-        /* 产品搜索模态框样式 */
-        .product-search-modal-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 9999;
-            animation: fadeIn 0.2s;
-        }
+<?php include MRS_VIEW_PATH . '/shared/header.php'; ?>
 
-        .product-search-modal {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-            width: 90%;
-            max-width: 600px;
-            max-height: 80vh;
-            overflow: hidden;
-            animation: slideDown 0.3s;
-        }
-
-        .product-search-modal-header {
-            padding: 20px 24px;
-            border-bottom: 1px solid #e9ecef;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .product-search-modal-header h3 {
-            margin: 0;
-            font-size: 18px;
-            color: #333;
-        }
-
-        .product-search-modal-close {
-            background: none;
-            border: none;
-            font-size: 28px;
-            color: #6c757d;
-            cursor: pointer;
-            padding: 0;
-            width: 32px;
-            height: 32px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 4px;
-            transition: background 0.2s;
-        }
-
-        .product-search-modal-close:hover {
-            background: #f1f3f5;
-        }
-
-        .product-search-modal-body {
-            padding: 24px;
-        }
-
-        .product-search-input-wrapper {
-            position: relative;
-            margin-bottom: 16px;
-        }
-
-        .product-search-input {
-            width: 100%;
-            padding: 14px 48px 14px 16px;
-            font-size: 16px;
-            border: 2px solid #dee2e6;
-            border-radius: 8px;
-            transition: all 0.2s;
-        }
-
-        .product-search-input:focus {
-            outline: none;
-            border-color: #007bff;
-            box-shadow: 0 0 0 0.2rem rgba(0,123,255,.15);
-        }
-
-        .product-search-input-icon {
-            position: absolute;
-            right: 16px;
-            top: 50%;
-            transform: translateY(-50%);
-            font-size: 20px;
-            color: #adb5bd;
-        }
-
-        .product-search-results-container {
-            max-height: 400px;
-            overflow-y: auto;
-        }
-
-        .product-search-result-item {
-            padding: 14px 16px;
-            border: 1px solid #e9ecef;
-            border-radius: 8px;
-            margin-bottom: 10px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .product-search-result-item:hover {
-            background: #f8f9fa;
-            border-color: #28a745;
-            transform: translateY(-1px);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-
-        .product-result-name {
-            font-weight: 600;
-            font-size: 15px;
-            color: #333;
-            margin-bottom: 4px;
-        }
-
-        .product-result-stats {
-            font-size: 13px;
-            color: #6c757d;
-        }
-
-        .product-result-badge {
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 10px;
-            font-size: 12px;
-            font-weight: 500;
-            margin-left: 8px;
-        }
-
-        .badge-boxes {
-            background: #e7f3ff;
-            color: #0066cc;
-        }
-
-        .badge-qty {
-            background: #e8f5e9;
-            color: #2e7d32;
-        }
-
-        .product-search-empty {
-            padding: 40px 20px;
-            text-align: center;
-            color: #adb5bd;
-        }
-
-        .product-search-empty-icon {
-            font-size: 48px;
-            margin-bottom: 12px;
-        }
-
-        .product-search-hint {
-            font-size: 13px;
-            color: #adb5bd;
-            margin-top: 8px;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        @keyframes slideDown {
-            from {
-                opacity: 0;
-                transform: translate(-50%, -60%);
-            }
-            to {
-                opacity: 1;
-                transform: translate(-50%, -50%);
-            }
-        }
-
-        .btn-success {
-            background-color: #28a745;
-            border-color: #28a745;
-            color: white;
-        }
-
-        .btn-success:hover {
-            background-color: #218838;
-            border-color: #1e7e34;
-        }
-
-        /* 产品名称自动完成样式 */
-        .autocomplete-wrapper {
-            position: relative;
-        }
-
-        .autocomplete-dropdown {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            background: white;
-            border: 1px solid #dee2e6;
-            border-top: none;
-            border-radius: 0 0 4px 4px;
-            max-height: 200px;
-            overflow-y: auto;
-            z-index: 1000;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            display: none;
-        }
-
-        .autocomplete-dropdown.show {
-            display: block;
-        }
-
-        .autocomplete-item {
-            padding: 8px 12px;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-
-        .autocomplete-item:hover,
-        .autocomplete-item.selected {
-            background: #f0f4ff;
-        }
-
-        .autocomplete-empty {
-            padding: 8px 12px;
-            color: #999;
-            text-align: center;
-            font-size: 13px;
-        }
-    </style>
-</head>
-<body>
+<div class="layout">
     <?php include MRS_VIEW_PATH . '/shared/sidebar.php'; ?>
 
     <div class="main-content">
         <div class="page-header">
             <h1>库存明细: <?= htmlspecialchars($product_name) ?></h1>
             <div class="header-actions">
-                <button onclick="openProductSearchModal()" class="btn btn-success" style="margin-right: 10px;">
+                <button onclick="openProductSearchModal()" class="btn btn-success mr-10">
                     🔍 搜索产品
                 </button>
                 <a href="/mrs/ap/index.php?action=inventory_list" class="btn btn-secondary">返回</a>
@@ -278,13 +40,13 @@ $packages = mrs_get_true_inventory_detail($pdo, $product_name, $order_by);
         </div>
 
         <div class="content-wrapper">
-            <div class="info-box" style="display: flex; justify-content: space-between; align-items: center;">
+            <div class="info-box flex-center">
                 <div>
                     <strong>当前在库数量:</strong> <?= count($packages) ?> 箱
                 </div>
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <label for="sort-select" style="margin: 0; font-weight: 500;">排序方式:</label>
-                    <select id="sort-select" class="form-control" style="width: auto; min-width: 180px;" onchange="changeSortOrder(this.value)">
+                <div class="flex-gap-10">
+                    <label for="sort-select" class="m-0 fw-500">排序方式:</label>
+                    <select id="sort-select" class="form-control w-auto min-w-180" onchange="changeSortOrder(this.value)">
                         <option value="fifo" <?= $order_by === 'fifo' ? 'selected' : '' ?>>入库时间↑ (先进先出)</option>
                         <option value="inbound_time_desc" <?= $order_by === 'inbound_time_desc' ? 'selected' : '' ?>>入库时间↓ (后进先出)</option>
                         <option value="expiry_date_asc" <?= $order_by === 'expiry_date_asc' ? 'selected' : '' ?>>有效期↑ (最早到期)</option>
@@ -325,7 +87,7 @@ $packages = mrs_get_true_inventory_detail($pdo, $product_name, $order_by);
                                     if (mb_strlen($tracking) >= 4) {
                                         $prefix = mb_substr($tracking, 0, -4);
                                         $suffix = mb_substr($tracking, -4);
-                                        echo $prefix . '<span style="color: #dc3545; font-weight: bold;">' . $suffix . '</span>';
+                                        echo $prefix . '<span class="text-danger-bold">' . $suffix . '</span>';
                                     } else {
                                         echo $tracking;
                                     }
@@ -335,15 +97,15 @@ $packages = mrs_get_true_inventory_detail($pdo, $product_name, $order_by);
                                 <td><?= htmlspecialchars($pkg['spec_info']) ?></td>
                                 <td>
                                     <?php if (!empty($pkg['items']) && is_array($pkg['items'])): ?>
-                                        <div style="display: flex; flex-direction: column; gap: 4px;">
+                                        <div class="flex-column-gap-4">
                                             <?php foreach ($pkg['items'] as $item): ?>
-                                                <div style="padding: 4px 8px; background: #f8f9fa; border-radius: 4px; font-size: 13px;">
+                                                <div class="product-item-badge">
                                                     <strong><?= htmlspecialchars($item['product_name']) ?></strong>
                                                     <?php if (!empty($item['quantity'])): ?>
                                                         × <?= htmlspecialchars($item['quantity']) ?>
                                                     <?php endif; ?>
                                                     <?php if (!empty($item['expiry_date'])): ?>
-                                                        <span style="color: #666; margin-left: 8px;">
+                                                        <span class="text-muted-light ml-8">
                                                             <?= htmlspecialchars($item['expiry_date']) ?>
                                                         </span>
                                                     <?php endif; ?>
@@ -351,7 +113,7 @@ $packages = mrs_get_true_inventory_detail($pdo, $product_name, $order_by);
                                             <?php endforeach; ?>
                                         </div>
                                     <?php else: ?>
-                                        <span style="color: #999;">-</span>
+                                        <span class="text-muted-lighter">-</span>
                                     <?php endif; ?>
                                 </td>
                                 <td><?= date('Y-m-d H:i', strtotime($pkg['inbound_time'])) ?></td>
@@ -395,7 +157,6 @@ $packages = mrs_get_true_inventory_detail($pdo, $product_name, $order_by);
         </div>
     </div>
 
-</html>
     <script src="/mrs/ap/js/modal.js"></script>
     <script>
     // 改变排序方式
@@ -438,13 +199,13 @@ $packages = mrs_get_true_inventory_detail($pdo, $product_name, $order_by);
         }
 
         const formHtml = `
-            <form id="editPackageForm" style="padding: 20px; max-height: 70vh; overflow-y: auto;">
-                <div style="background: #f0f4ff; border: 1px solid #d0ddff; border-radius: 6px; padding: 12px; margin-bottom: 16px;">
-                    <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; font-size: 13px;">
-                        <span style="color: #666; font-weight: 500;">快递单号:</span>
-                        <span style="color: #333; font-weight: 600;">${trackingNumber || '-'}</span>
-                        <span style="color: #666; font-weight: 500;">箱号:</span>
-                        <span style="color: #333; font-weight: 600;">${boxNumber || '-'}</span>
+            <form id="editPackageForm" class="edit-package-form">
+                <div class="edit-package-info-box">
+                    <div class="edit-package-info-grid">
+                        <span class="edit-package-info-label">快递单号:</span>
+                        <span class="edit-package-info-value">${trackingNumber || '-'}</span>
+                        <span class="edit-package-info-label">箱号:</span>
+                        <span class="edit-package-info-value">${boxNumber || '-'}</span>
                     </div>
                 </div>
                 <div class="modal-form-group">
@@ -452,11 +213,10 @@ $packages = mrs_get_true_inventory_detail($pdo, $product_name, $order_by);
                     <input type="text" name="spec_info" class="modal-form-control"
                            value="${specInfo || ''}" placeholder="请输入规格信息">
                 </div>
-                <div class="modal-form-group" style="margin-bottom: 15px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                        <label class="modal-form-label" style="margin: 0;">产品信息</label>
-                        <button type="button" class="modal-btn modal-btn-success" onclick="addProductItem()"
-                                style="padding: 5px 12px; font-size: 13px;">+ 添加产品</button>
+                <div class="modal-form-group product-form-section">
+                    <div class="product-section-header">
+                        <label class="modal-form-label m-0">产品信息</label>
+                        <button type="button" class="modal-btn modal-btn-success btn-add-product" onclick="addProductItem()">+ 添加产品</button>
                     </div>
                     <div id="products-container"></div>
                 </div>
@@ -490,14 +250,13 @@ $packages = mrs_get_true_inventory_detail($pdo, $product_name, $order_by);
         container.innerHTML = items.map((item, index) => {
             const itemId = productItemCounter++;
             return `
-            <div class="product-item-box" data-item-id="${itemId}" style="border: 1px solid #ddd; padding: 12px; margin-bottom: 10px; border-radius: 4px; background: #f9f9f9;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                    <strong style="color: #667eea;">产品 <span class="product-number">${index + 1}</span></strong>
-                    <button type="button" onclick="removeProductItem(${itemId})"
-                            style="background: #dc3545; color: white; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; font-size: 16px;">×</button>
+            <div class="product-item-box" data-item-id="${itemId}">
+                <div class="product-item-header">
+                    <strong class="product-number-label">产品 <span class="product-number">${index + 1}</span></strong>
+                    <button type="button" onclick="removeProductItem(${itemId})" class="btn-remove-product">×</button>
                 </div>
-                <div class="modal-form-group" style="margin-bottom: 8px;">
-                    <label style="font-size: 13px; color: #555;">产品名称/内容</label>
+                <div class="modal-form-group product-field-mb-8">
+                    <label class="product-field-label">产品名称/内容</label>
                     <div class="autocomplete-wrapper">
                         <input type="text" class="modal-form-control product-name"
                                value="${item.product_name || ''}" placeholder="例如：番茄酱"
@@ -505,14 +264,14 @@ $packages = mrs_get_true_inventory_detail($pdo, $product_name, $order_by);
                         <div class="autocomplete-dropdown"></div>
                     </div>
                 </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                    <div class="modal-form-group" style="margin-bottom: 0;">
-                        <label style="font-size: 13px; color: #555;">数量</label>
+                <div class="product-fields-grid">
+                    <div class="modal-form-group product-field-mb-0">
+                        <label class="product-field-label">数量</label>
                         <input type="text" class="modal-form-control product-quantity"
                                value="${item.quantity || ''}" placeholder="数量">
                     </div>
-                    <div class="modal-form-group" style="margin-bottom: 0;">
-                        <label style="font-size: 13px; color: #555;">保质期</label>
+                    <div class="modal-form-group product-field-mb-0">
+                        <label class="product-field-label">保质期</label>
                         <input type="date" class="modal-form-control product-expiry"
                                value="${item.expiry_date || ''}">
                     </div>
@@ -532,14 +291,13 @@ $packages = mrs_get_true_inventory_detail($pdo, $product_name, $order_by);
         const displayNumber = existingItems.length + 1;
 
         const itemHtml = `
-            <div class="product-item-box" data-item-id="${itemId}" style="border: 1px solid #ddd; padding: 12px; margin-bottom: 10px; border-radius: 4px; background: #f9f9f9;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                    <strong style="color: #667eea;">产品 <span class="product-number">${displayNumber}</span></strong>
-                    <button type="button" onclick="removeProductItem(${itemId})"
-                            style="background: #dc3545; color: white; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; font-size: 16px;">×</button>
+            <div class="product-item-box" data-item-id="${itemId}">
+                <div class="product-item-header">
+                    <strong class="product-number-label">产品 <span class="product-number">${displayNumber}</span></strong>
+                    <button type="button" onclick="removeProductItem(${itemId})" class="btn-remove-product">×</button>
                 </div>
-                <div class="modal-form-group" style="margin-bottom: 8px;">
-                    <label style="font-size: 13px; color: #555;">产品名称/内容</label>
+                <div class="modal-form-group product-field-mb-8">
+                    <label class="product-field-label">产品名称/内容</label>
                     <div class="autocomplete-wrapper">
                         <input type="text" class="modal-form-control product-name"
                                placeholder="例如：番茄酱"
@@ -547,13 +305,13 @@ $packages = mrs_get_true_inventory_detail($pdo, $product_name, $order_by);
                         <div class="autocomplete-dropdown"></div>
                     </div>
                 </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                    <div class="modal-form-group" style="margin-bottom: 0;">
-                        <label style="font-size: 13px; color: #555;">数量</label>
+                <div class="product-fields-grid">
+                    <div class="modal-form-group product-field-mb-0">
+                        <label class="product-field-label">数量</label>
                         <input type="text" class="modal-form-control product-quantity" placeholder="数量">
                     </div>
-                    <div class="modal-form-group" style="margin-bottom: 0;">
-                        <label style="font-size: 13px; color: #555;">保质期</label>
+                    <div class="modal-form-group product-field-mb-0">
+                        <label class="product-field-label">保质期</label>
                         <input type="date" class="modal-form-control product-expiry">
                     </div>
                 </div>
@@ -682,7 +440,7 @@ $packages = mrs_get_true_inventory_detail($pdo, $product_name, $order_by);
 
         // 显示输入框让用户输入损耗原因
         const formHtml = `
-            <form id="voidReasonForm" style="padding: 20px;">
+            <form id="voidReasonForm" class="void-reason-form">
                 <div class="modal-form-group">
                     <label class="modal-form-label">损耗原因 *</label>
                     <textarea name="reason" class="modal-form-control" rows="3"
@@ -764,25 +522,25 @@ $packages = mrs_get_true_inventory_detail($pdo, $product_name, $order_by);
 
         const content = `
             <div class="modal-section">
-                <div style="background: #e3f2fd; padding: 12px; border-radius: 4px; margin-bottom: 20px;">
+                <div class="outbound-info-box">
                     <strong>商品名称：</strong>${productName}<br>
-                    <strong>当前库存：</strong><span style="color: #1976d2; font-size: 18px; font-weight: bold;">${availableQty}</span> 件
+                    <strong>当前库存：</strong><span class="outbound-qty-highlight">${availableQty}</span> 件
                 </div>
 
                 <div class="form-group">
-                    <label for="outbound-date">出库日期 <span style="color: red;">*</span></label>
+                    <label for="outbound-date">出库日期 <span class="required-mark">*</span></label>
                     <input type="date" id="outbound-date" class="form-control" value="${today}" required>
                 </div>
 
                 <div class="form-group">
-                    <label for="outbound-qty">出货数量 <span style="color: red;">*</span></label>
+                    <label for="outbound-qty">出货数量 <span class="required-mark">*</span></label>
                     <input type="number" id="outbound-qty" class="form-control"
                            placeholder="请输入出货数量" min="0.01" step="0.01" max="${availableQty}" required>
-                    <small style="color: #666;">可出货数量：${availableQty} 件</small>
+                    <small class="help-text">可出货数量：${availableQty} 件</small>
                 </div>
 
                 <div class="form-group">
-                    <label for="destination">目的地（门店） <span style="color: red;">*</span></label>
+                    <label for="destination">目的地（门店） <span class="required-mark">*</span></label>
                     <input type="text" id="destination" class="form-control"
                            placeholder="请输入门店名称" required>
                 </div>
@@ -1160,29 +918,6 @@ $packages = mrs_get_true_inventory_detail($pdo, $product_name, $order_by);
         }
     });
     </script>
+</div>
 
-    <!-- 产品搜索模态框 -->
-    <div id="product-search-modal-overlay" class="product-search-modal-overlay" onclick="closeProductSearchModal(event)">
-        <div class="product-search-modal" onclick="event.stopPropagation()">
-            <div class="product-search-modal-header">
-                <h3>🔍 搜索产品</h3>
-                <button class="product-search-modal-close" onclick="closeProductSearchModal()">&times;</button>
-            </div>
-            <div class="product-search-modal-body">
-                <div class="product-search-input-wrapper">
-                    <input type="text"
-                           id="product-search-input"
-                           class="product-search-input"
-                           placeholder="输入产品名称..."
-                           autocomplete="off">
-                    <span class="product-search-input-icon">🔍</span>
-                </div>
-                <div class="product-search-hint">
-                    搜索整个库存中的产品（已自动去重）
-                </div>
-                <div id="product-search-results" class="product-search-results-container"></div>
-            </div>
-        </div>
-    </div>
-</body>
-</html>
+<?php include MRS_VIEW_PATH . '/shared/footer.php'; ?>
