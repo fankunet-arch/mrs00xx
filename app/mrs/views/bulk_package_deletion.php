@@ -223,7 +223,7 @@ if (!defined('MRS_ENTRY')) {
                             placeholder="例如：&#10;1234567890123&#10;9876543210987"
                         ></textarea>
                     </div>
-                    <div class="mt-3">
+                    <div class="mt-3" style="margin-bottom: 25px;">
                         <button type="button" class="btn btn-primary" onclick="checkPackages()">
                             <i class="fa fa-search"></i> 检查包裹状态
                         </button>
@@ -241,7 +241,7 @@ if (!defined('MRS_ENTRY')) {
             </div>
 
             <!-- 结果区域 -->
-            <div id="resultSection" style="display: none;">
+            <div id="resultSection" style="display: none; margin-top: 25px;">
 
                 <!-- 统计概览 (美化版) -->
                 <div class="stats-container" id="summaryStats">
