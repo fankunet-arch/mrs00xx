@@ -235,6 +235,10 @@ $content_summary = express_get_content_summary($pdo, $batch_id);
                                             } else {
                                                 echo $tracking;
                                             }
+                                            // 显示"不入库"标识
+                                            if (!empty($package['skip_inbound'])) {
+                                                echo '<br><span class="badge" style="background-color: #ffc107; color: #856404; font-size: 11px; margin-top: 4px;">⚠️ 不入库</span>';
+                                            }
                                             ?>
                                         </td>
                                         <td>
@@ -479,13 +483,22 @@ $content_summary = express_get_content_summary($pdo, $batch_id);
                 const currentExpiry = button.getAttribute('data-expiry-date') || '';
                 const currentQuantity = button.getAttribute('data-quantity') || '';
 
-                // 获取现有的产品明细
+                // 获取现有的产品明细和 skip_inbound 状态
                 let existingItems = [];
+                let skipInbound = 0;
                 try {
                     const resp = await fetch(`/express/exp/index.php?action=get_package_items&package_id=${packageId}`);
                     const data = await resp.json();
-                    if (data.success && data.data && data.data.length > 0) {
-                        existingItems = data.data;
+                    if (data.success && data.data) {
+                        // 新的 API 返回格式：{ items: [...], skip_inbound: 0/1 }
+                        if (Array.isArray(data.data)) {
+                            // 兼容旧的返回格式（直接是数组）
+                            existingItems = data.data;
+                        } else {
+                            // 新的返回格式（包含 items 和 skip_inbound）
+                            existingItems = data.data.items || [];
+                            skipInbound = data.data.skip_inbound || 0;
+                        }
                     }
                 } catch (error) {
                     console.error('获取产品明细失败:', error);
@@ -550,7 +563,7 @@ $content_summary = express_get_content_summary($pdo, $batch_id);
                     `
                 });
 
-                // 等待DOM渲染完成后，渲染现有产品或添加空白产品
+                // 等待DOM渲染完成后，渲染现有产品或添加空白产品，并设置 skip_inbound 状态
                 setTimeout(() => {
                     if (existingItems.length > 0) {
                         existingItems.forEach(item => {
@@ -559,6 +572,12 @@ $content_summary = express_get_content_summary($pdo, $batch_id);
                     } else {
                         // 如果完全没有数据，添加一个空白产品
                         addProductItem();
+                    }
+
+                    // 设置 skip_inbound 复选框的初始状态
+                    const skipInboundCheckbox = document.getElementById('skip_inbound');
+                    if (skipInboundCheckbox) {
+                        skipInboundCheckbox.checked = skipInbound === 1;
                     }
                 }, 50);
             });
