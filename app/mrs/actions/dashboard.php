@@ -20,6 +20,7 @@ $stats = [
 $recent_batches = [];
 $recent_outbounds = [];
 $low_inventory = [];
+$expiring_items = []; // 即将到期的物料
 $local_now = new DateTime('now', new DateTimeZone('Europe/Madrid'));
 $current_local_date = $local_now->format('Y-m-d');
 $last_refresh_time = $local_now->format('H:i');
@@ -65,6 +66,25 @@ try {
         "LIMIT 5"
     );
     $low_inventory = $inventory_stmt->fetchAll();
+
+    // 查询即将到期的物料（3个月内）
+    $expiry_stmt = $pdo->query(
+        "SELECT
+            pl.content_note as sku_name,
+            MIN(pi.expiry_date) as nearest_expiry_date,
+            COUNT(DISTINCT pl.ledger_id) as total_boxes,
+            DATEDIFF(MIN(pi.expiry_date), CURDATE()) as days_to_expiry
+        FROM mrs_package_ledger pl
+        INNER JOIN mrs_package_items pi ON pl.ledger_id = pi.ledger_id
+        WHERE pl.status = 'in_stock'
+        AND pi.expiry_date IS NOT NULL
+        AND pi.expiry_date <= DATE_ADD(CURDATE(), INTERVAL 90 DAY)
+        AND pi.expiry_date >= CURDATE()
+        GROUP BY pl.content_note
+        ORDER BY nearest_expiry_date ASC
+        LIMIT 10"
+    );
+    $expiring_items = $expiry_stmt->fetchAll();
 } catch (PDOException $e) {
     mrs_log('加载仪表盘数据失败: ' . $e->getMessage(), 'ERROR');
 }

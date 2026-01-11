@@ -162,40 +162,88 @@
                 </div>
             </div>
 
-            <div class="card">
-                <div class="flex-between" style="align-items: flex-start;">
-                    <div>
-                        <h3>低库存提醒</h3>
-                        <p class="muted">按库存数量从低到高排序的物料，便于及时补货。</p>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 16px;">
+                <div class="card">
+                    <div class="flex-between" style="align-items: flex-start;">
+                        <div>
+                            <h3>低库存提醒</h3>
+                            <p class="muted">按库存数量从低到高排序的物料，便于及时补货。</p>
+                        </div>
+                    </div>
+                    <div class="table-responsive" style="margin-top: 12px;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>物料</th>
+                                    <th>品类</th>
+                                    <th>品牌</th>
+                                    <th>当前库存</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php if (!empty($low_inventory)): ?>
+                                    <?php foreach ($low_inventory as $item): ?>
+                                        <tr>
+                                            <td><strong><?php echo htmlspecialchars($item['sku_name']); ?></strong></td>
+                                            <td><?php echo htmlspecialchars($item['category_name'] ?? '-'); ?></td>
+                                            <td><?php echo htmlspecialchars($item['brand_name'] ?? '-'); ?></td>
+                                            <td><?php echo htmlspecialchars(format_number($item['current_qty'])) . ' ' . htmlspecialchars($item['standard_unit'] ?? ''); ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <tr>
+                                        <td colspan="4" class="text-center muted">暂无库存数据</td>
+                                    </tr>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
-                <div class="table-responsive" style="margin-top: 12px;">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>物料</th>
-                                <th>品类</th>
-                                <th>品牌</th>
-                                <th>当前库存</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php if (!empty($low_inventory)): ?>
-                                <?php foreach ($low_inventory as $item): ?>
-                                    <tr>
-                                        <td><strong><?php echo htmlspecialchars($item['sku_name']); ?></strong></td>
-                                        <td><?php echo htmlspecialchars($item['category_name'] ?? '-'); ?></td>
-                                        <td><?php echo htmlspecialchars($item['brand_name'] ?? '-'); ?></td>
-                                        <td><?php echo htmlspecialchars(format_number($item['current_qty'])) . ' ' . htmlspecialchars($item['standard_unit'] ?? ''); ?></td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            <?php else: ?>
+
+                <div class="card">
+                    <div class="flex-between" style="align-items: flex-start;">
+                        <div>
+                            <h3>效期到期提醒</h3>
+                            <p class="muted">按到期日期从近到远排序，便于优先处理即将到期的物料。</p>
+                        </div>
+                    </div>
+                    <div class="table-responsive" style="margin-top: 12px;">
+                        <table>
+                            <thead>
                                 <tr>
-                                    <td colspan="4" class="text-center muted">暂无库存数据</td>
+                                    <th>物料</th>
+                                    <th>到期日期</th>
+                                    <th>剩余天数</th>
+                                    <th>在库箱数</th>
                                 </tr>
-                            <?php endif; ?>
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                <?php if (!empty($expiring_items)): ?>
+                                    <?php foreach ($expiring_items as $item): ?>
+                                        <?php
+                                        $days = (int)$item['days_to_expiry'];
+                                        $color_style = '';
+                                        if ($days <= 30) {
+                                            $color_style = 'style="color: #dc3545; font-weight: bold;"'; // 1个月内：红色加粗
+                                        } elseif ($days <= 90) {
+                                            $color_style = 'style="color: #ff9800; font-weight: bold;"'; // 3个月内：橙色加粗
+                                        }
+                                        ?>
+                                        <tr>
+                                            <td><strong><?php echo htmlspecialchars($item['sku_name']); ?></strong></td>
+                                            <td><span <?php echo $color_style; ?>><?php echo htmlspecialchars($item['nearest_expiry_date']); ?></span></td>
+                                            <td><span <?php echo $color_style; ?>><?php echo $days; ?> 天</span></td>
+                                            <td><?php echo htmlspecialchars($item['total_boxes']); ?> 箱</td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <tr>
+                                        <td colspan="4" class="text-center muted">暂无即将到期的物料</td>
+                                    </tr>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </main>
