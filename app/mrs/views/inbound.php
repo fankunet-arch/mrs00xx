@@ -56,6 +56,16 @@ if (!empty($selected_batch)) {
             background: #f9f9f9;
             display: flex;
             align-items: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .package-item:hover {
+            background: #e3f2fd;
+            border-color: #2196f3;
+        }
+        .package-item.selected {
+            background: #e8f5e9;
+            border-color: #4caf50;
         }
         .package-item input[type="checkbox"] {
             margin-right: 10px;
@@ -192,8 +202,47 @@ if (!empty($selected_batch)) {
     // 全选功能
     document.getElementById('selectAll')?.addEventListener('change', function() {
         const checkboxes = document.querySelectorAll('.package-checkbox');
-        checkboxes.forEach(cb => cb.checked = this.checked);
+        checkboxes.forEach(cb => {
+            cb.checked = this.checked;
+            // 更新行的选中状态样式
+            updateRowSelectedState(cb);
+        });
     });
+
+    // 整行点击选中功能
+    document.querySelectorAll('.package-item').forEach(item => {
+        const checkbox = item.querySelector('.package-checkbox');
+
+        // 点击整行时切换复选框
+        item.addEventListener('click', function(e) {
+            // 如果点击的是复选框本身，不需要处理（浏览器会自动处理）
+            if (e.target === checkbox) {
+                return;
+            }
+
+            // 切换复选框状态
+            checkbox.checked = !checkbox.checked;
+            updateRowSelectedState(checkbox);
+        });
+
+        // 复选框直接点击时也更新样式
+        checkbox.addEventListener('change', function() {
+            updateRowSelectedState(this);
+        });
+
+        // 初始化行的选中状态
+        updateRowSelectedState(checkbox);
+    });
+
+    // 更新行的选中状态样式
+    function updateRowSelectedState(checkbox) {
+        const row = checkbox.closest('.package-item');
+        if (checkbox.checked) {
+            row.classList.add('selected');
+        } else {
+            row.classList.remove('selected');
+        }
+    }
 
     // 提交表单
     document.getElementById('inboundForm')?.addEventListener('submit', function(e) {
