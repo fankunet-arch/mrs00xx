@@ -15,6 +15,19 @@ if ($package_id <= 0) {
 }
 
 try {
+    // 获取包裹信息（包括 skip_inbound 字段）
+    $stmt = $pdo->prepare("
+        SELECT skip_inbound FROM express_package
+        WHERE package_id = :package_id
+    ");
+    $stmt->execute(['package_id' => $package_id]);
+    $package = $stmt->fetch();
+
+    if (!$package) {
+        express_json_response(false, null, '包裹不存在');
+    }
+
+    // 获取产品明细
     $stmt = $pdo->prepare("
         SELECT * FROM express_package_items
         WHERE package_id = :package_id
@@ -23,7 +36,11 @@ try {
     $stmt->execute(['package_id' => $package_id]);
     $items = $stmt->fetchAll();
 
-    express_json_response(true, $items);
+    // 返回产品明细和 skip_inbound 状态
+    express_json_response(true, [
+        'items' => $items,
+        'skip_inbound' => (int)$package['skip_inbound']
+    ]);
 } catch (PDOException $e) {
     express_log('Failed to get package items: ' . $e->getMessage(), 'ERROR');
     express_json_response(false, null, '获取产品明细失败');
