@@ -431,11 +431,11 @@ if (!empty($selected_batch)) {
 
             if (result.success) {
                 let msg = '<div class="message success">拆分入库成功！<br>';
-                msg += '批次ID: ' + result.batch_id + '<br>';
-                msg += '创建了 ' + result.records_created + ' 条收货记录。<br>';
+                msg += '批次ID: ' + result.data.batch_id + '<br>';
+                msg += '创建了 ' + result.data.records_created + ' 条收货记录。<br>';
 
-                if (result.errors && result.errors.length > 0) {
-                    msg += '<br><strong>部分错误:</strong><br>' + result.errors.join('<br>');
+                if (result.data.errors && result.data.errors.length > 0) {
+                    msg += '<br><strong>部分错误:</strong><br>' + result.data.errors.join('<br>');
                 }
 
                 msg += '<br><br>请前往 <a href="/mrs/ap/index.php?action=backend_manage">后台管理</a> 匹配 SKU 并确认入库。';
