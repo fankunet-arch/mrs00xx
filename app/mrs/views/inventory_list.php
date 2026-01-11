@@ -333,12 +333,10 @@ function get_sort_icon($column, $current_sort, $current_dir) {
                                         $color_class = '';
                                         if ($days_to_expiry < 0) {
                                             $color_class = 'style="color: #999; text-decoration: line-through;"'; // 已过期：灰色删除线
-                                        } elseif ($days_to_expiry <= 7) {
-                                            $color_class = 'style="color: #dc3545; font-weight: bold;"'; // 7天内：红色加粗
                                         } elseif ($days_to_expiry <= 30) {
-                                            $color_class = 'style="color: #ff9800; font-weight: bold;"'; // 30天内：橙色加粗
+                                            $color_class = 'style="color: #dc3545; font-weight: bold;"'; // 1个月内：红色加粗
                                         } elseif ($days_to_expiry <= 90) {
-                                            $color_class = 'style="color: #ffc107;"'; // 90天内：黄色
+                                            $color_class = 'style="color: #ff9800; font-weight: bold;"'; // 3个月内：橙色加粗
                                         }
                                         ?>
                                         <span <?= $color_class ?>>
