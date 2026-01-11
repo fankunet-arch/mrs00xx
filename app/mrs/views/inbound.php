@@ -229,9 +229,9 @@ if (!empty($selected_batch)) {
             const messageDiv = document.getElementById('resultMessage');
 
             if (result.success) {
-                let msg = `<div class="message success">入库成功! 创建了 ${result.created} 个包裹记录。`;
-                if (result.errors && result.errors.length > 0) {
-                    msg += `<br>部分错误: ${result.errors.join(', ')}`;
+                let msg = `<div class="message success">入库成功! 创建了 ${result.data.created} 个包裹记录。`;
+                if (result.data.errors && result.data.errors.length > 0) {
+                    msg += `<br>部分错误: ${result.data.errors.join(', ')}`;
                 }
                 msg += '</div>';
                 messageDiv.innerHTML = msg;
