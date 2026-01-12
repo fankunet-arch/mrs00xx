@@ -261,6 +261,35 @@ $packages = mrs_get_true_inventory_detail($pdo, $product_name, $order_by);
             text-align: center;
             font-size: 13px;
         }
+
+        /* 有效期提醒样式 */
+        .expiry-warning {
+            background: #fff3cd;
+            color: #856404;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+            border: 1px solid #ffc107;
+        }
+
+        .expiry-danger {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+            border: 1px solid #dc3545;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .expiry-normal {
+            color: #666;
+        }
     </style>
 </head>
 <body>
@@ -343,8 +372,31 @@ $packages = mrs_get_true_inventory_detail($pdo, $product_name, $order_by);
                                                         × <?= htmlspecialchars($item['quantity']) ?>
                                                     <?php endif; ?>
                                                     <?php if (!empty($item['expiry_date'])): ?>
-                                                        <span style="color: #666; margin-left: 8px;">
-                                                            <?= htmlspecialchars($item['expiry_date']) ?>
+                                                        <?php
+                                                        // 计算有效期提醒
+                                                        $expiry_date = strtotime($item['expiry_date']);
+                                                        $today = strtotime(date('Y-m-d'));
+                                                        $days_until_expiry = floor(($expiry_date - $today) / 86400);
+
+                                                        $expiry_class = 'expiry-normal';
+                                                        $expiry_prefix = '';
+
+                                                        if ($days_until_expiry < 0) {
+                                                            // 已过期
+                                                            $expiry_class = 'expiry-danger';
+                                                            $expiry_prefix = '⚠️ 已过期 ';
+                                                        } elseif ($days_until_expiry <= 30) {
+                                                            // 一个月内到期 - 强警示
+                                                            $expiry_class = 'expiry-danger';
+                                                            $expiry_prefix = '⚠️ ';
+                                                        } elseif ($days_until_expiry <= 90) {
+                                                            // 三个月内到期 - 提醒
+                                                            $expiry_class = 'expiry-warning';
+                                                            $expiry_prefix = '⚡ ';
+                                                        }
+                                                        ?>
+                                                        <span class="<?= $expiry_class ?>" style="margin-left: 8px;">
+                                                            <?= $expiry_prefix . htmlspecialchars($item['expiry_date']) ?>
                                                         </span>
                                                     <?php endif; ?>
                                                 </div>
