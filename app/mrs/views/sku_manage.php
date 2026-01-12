@@ -421,7 +421,6 @@ function get_sort_icon($column, $current_sort, $current_dir) {
                 const data = await response.json();
 
                 if (data.success) {
-                    await showAlert(`${actionText}成功`, '成功', 'success');
                     location.reload();
                 } else {
                     await showAlert(`${actionText}失败: ` + data.message, '错误', 'error');
