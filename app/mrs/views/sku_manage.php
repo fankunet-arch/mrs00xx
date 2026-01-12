@@ -19,7 +19,7 @@ $filter_status = $_GET['status'] ?? '';
 $sql = "SELECT
     s.sku_id,
     s.sku_code,
-    COALESCE(s.sku_name_cn, s.sku_name) as sku_name_cn,
+    s.sku_name_cn,
     s.sku_name_es,
     s.product_category,
     s.barcode,
@@ -42,7 +42,7 @@ $params = [];
 
 // 搜索条件
 if (!empty($search_keyword)) {
-    $sql .= " AND (COALESCE(s.sku_name_cn, s.sku_name) LIKE :search
+    $sql .= " AND (s.sku_name_cn LIKE :search
               OR s.sku_name_es LIKE :search
               OR s.sku_code LIKE :search
               OR s.barcode LIKE :search)";
