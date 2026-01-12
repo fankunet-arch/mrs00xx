@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- 主机： mhdlmskp2kpxguj.mysql.db
--- 生成日期： 2025-12-27 15:27:26
+-- 生成日期： 2026-01-12 13:49:25
 -- 服务器版本： 8.4.6-6
 -- PHP 版本： 8.1.33
 
@@ -558,10 +558,15 @@ DROP TABLE IF EXISTS `mrs_sku`;
 CREATE TABLE `mrs_sku` (
   `sku_id` int UNSIGNED NOT NULL COMMENT 'SKU ID',
   `category_id` int UNSIGNED DEFAULT NULL COMMENT '分类ID',
+  `product_category` enum('packaging','raw_material','semi_finished','finished_product') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '产品类别：packaging=包材，raw_material=原物料，semi_finished=半成品，finished_product=成品',
   `sku_code` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'SKU编码',
-  `sku_name` varchar(200) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'SKU名称',
+  `barcode` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '产品条码',
+  `sku_name_cn` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'SKU中文名称',
+  `sku_name_es` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'SKU西班牙语名称',
   `brand_name` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '品牌名称',
   `spec_info` varchar(200) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '规格信息',
+  `shelf_life_months` int UNSIGNED DEFAULT NULL COMMENT '保质期效（月）',
+  `supplier_country` enum('china','spain') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '供货商所属国家：china=中国，spain=西班牙',
   `default_shelf_location` varchar(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '默认货架位置',
   `standard_unit` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT '件' COMMENT '标准单位（件、个、瓶等）',
   `case_unit_name` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT '箱' COMMENT '箱单位名称',
@@ -590,25 +595,6 @@ CREATE TABLE `mrs_usage_log` (
   `operator` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '操作员',
   `remark` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci COMMENT '备注'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='统一出货记录表（拆零+整箱）';
-
--- --------------------------------------------------------
-
---
--- 表的结构 `sys_users`
---
-
-DROP TABLE IF EXISTS `sys_users`;
-CREATE TABLE `sys_users` (
-  `user_id` bigint UNSIGNED NOT NULL COMMENT '用户唯一ID (主键)',
-  `user_login` varchar(60) COLLATE utf8mb4_unicode_520_ci NOT NULL COMMENT '用户登录名 (不可变, 用于登录)',
-  `user_secret_hash` varchar(255) COLLATE utf8mb4_unicode_520_ci NOT NULL COMMENT '用户密码的哈希值 (用于验证)',
-  `user_email` varchar(100) COLLATE utf8mb4_unicode_520_ci NOT NULL COMMENT '用户电子邮箱 (可用于通知和找回密码)',
-  `user_display_name` varchar(250) COLLATE utf8mb4_unicode_520_ci NOT NULL COMMENT '用户显示名称 (在界面上展示的名字)',
-  `user_status` varchar(20) COLLATE utf8mb4_unicode_520_ci NOT NULL DEFAULT 'pending' COMMENT '用户账户状态 (例如: active, suspended, pending, deleted)',
-  `user_registered_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '用户注册时间 (UTC)',
-  `user_last_login_at` datetime(6) DEFAULT NULL COMMENT '用户最后登录时间 (UTC)',
-  `user_updated_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '记录最后更新时间'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_520_ci COMMENT='系统用户表';
 
 --
 -- 转储表的索引
@@ -833,9 +819,14 @@ ALTER TABLE `mrs_sku`
   ADD PRIMARY KEY (`sku_id`),
   ADD UNIQUE KEY `uk_sku_code` (`sku_code`),
   ADD KEY `idx_category_id` (`category_id`),
-  ADD KEY `idx_sku_name` (`sku_name`),
+  ADD KEY `idx_sku_name` (`sku_name_cn`),
   ADD KEY `idx_brand_name` (`brand_name`),
-  ADD KEY `idx_default_shelf` (`default_shelf_location`);
+  ADD KEY `idx_default_shelf` (`default_shelf_location`),
+  ADD KEY `idx_product_category` (`product_category`),
+  ADD KEY `idx_barcode` (`barcode`),
+  ADD KEY `idx_supplier_country` (`supplier_country`),
+  ADD KEY `idx_sku_name_cn` (`sku_name_cn`(100)),
+  ADD KEY `idx_sku_name_es` (`sku_name_es`(100));
 
 --
 -- 表的索引 `mrs_usage_log`
@@ -846,14 +837,6 @@ ALTER TABLE `mrs_usage_log`
   ADD KEY `idx_destination` (`destination`),
   ADD KEY `idx_created_at` (`created_at`),
   ADD KEY `idx_ledger_id` (`ledger_id`);
-
---
--- 表的索引 `sys_users`
---
-ALTER TABLE `sys_users`
-  ADD PRIMARY KEY (`user_id`),
-  ADD UNIQUE KEY `uk_user_login` (`user_login`),
-  ADD UNIQUE KEY `uk_user_email` (`user_email`);
 
 --
 -- 在导出的表使用AUTO_INCREMENT
@@ -1008,12 +991,6 @@ ALTER TABLE `mrs_sku`
 --
 ALTER TABLE `mrs_usage_log`
   MODIFY `id` int UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '记录ID';
-
---
--- 使用表AUTO_INCREMENT `sys_users`
---
-ALTER TABLE `sys_users`
-  MODIFY `user_id` bigint UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '用户唯一ID (主键)';
 
 -- --------------------------------------------------------
 
