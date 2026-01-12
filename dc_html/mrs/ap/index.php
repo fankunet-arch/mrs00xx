@@ -70,6 +70,8 @@ $allowed_actions = [
     'sku_edit',             // 编辑SKU
     'sku_manage',           // 物料管理
     'sku_save',             // 保存物料
+    'sku_save_api',         // 保存SKU API
+    'sku_toggle_status',    // 切换SKU状态
     'sku_search_api',       // SKU搜索API
 
     // === 分类管理 ===
@@ -131,6 +133,8 @@ $api_actions = [
     'partial_outbound',
     'usage_statistics',
     'sku_save',
+    'sku_save_api',
+    'sku_toggle_status',
     'category_save',
     'batch_save',
     'batch_create_save',

@@ -53,6 +53,7 @@ $menu_items = [
         'title' => '基础设置',
         'icon' => '⚙️',
         'items' => [
+            ['action' => 'sku_manage', 'label' => 'SKU管理'],
             ['action' => 'destination_manage', 'label' => '去向管理'],
             ['action' => 'bulk_package_deletion', 'label' => '批量删除包裹']
         ]
