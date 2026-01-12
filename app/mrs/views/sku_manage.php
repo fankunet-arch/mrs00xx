@@ -371,7 +371,7 @@ function get_sort_icon($column, $current_sort, $current_dir) {
                                     <?php endif; ?>
                                 </td>
                                 <td>
-                                    <span class="status-badge <?= $sku['status'] === 'active' ? 'status-active' : 'status-inactive' ?>">
+                                    <span id="status-badge-<?= $sku['sku_id'] ?>" class="status-badge <?= $sku['status'] === 'active' ? 'status-active' : 'status-inactive' ?>">
                                         <?= $sku['status'] === 'active' ? '✓ 使用中' : '✗ 已停用' ?>
                                     </span>
                                 </td>
@@ -381,7 +381,8 @@ function get_sort_icon($column, $current_sort, $current_dir) {
                                            class="btn btn-sm btn-primary btn-icon" title="编辑">
                                             ✏️ 编辑
                                         </a>
-                                        <button onclick="toggleSkuStatus(<?= $sku['sku_id'] ?>, '<?= $sku['status'] ?>')"
+                                        <button id="status-btn-<?= $sku['sku_id'] ?>"
+                                                onclick="toggleSkuStatus(<?= $sku['sku_id'] ?>, '<?= $sku['status'] ?>')"
                                                 class="btn btn-sm btn-<?= $sku['status'] === 'active' ? 'warning' : 'success' ?> btn-icon"
                                                 title="<?= $sku['status'] === 'active' ? '停用' : '启用' ?>">
                                             <?= $sku['status'] === 'active' ? '⏸️' : '▶️' ?>
