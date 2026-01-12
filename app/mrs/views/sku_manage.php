@@ -19,7 +19,7 @@ $filter_status = $_GET['status'] ?? '';
 $sql = "SELECT
     s.sku_id,
     s.sku_code,
-    COALESCE(s.sku_name_cn, s.sku_name) as sku_name_cn,
+    s.sku_name_cn,
     s.sku_name_es,
     s.product_category,
     s.barcode,
@@ -42,7 +42,7 @@ $params = [];
 
 // 搜索条件
 if (!empty($search_keyword)) {
-    $sql .= " AND (COALESCE(s.sku_name_cn, s.sku_name) LIKE :search
+    $sql .= " AND (s.sku_name_cn LIKE :search
               OR s.sku_name_es LIKE :search
               OR s.sku_code LIKE :search
               OR s.barcode LIKE :search)";
@@ -371,7 +371,7 @@ function get_sort_icon($column, $current_sort, $current_dir) {
                                     <?php endif; ?>
                                 </td>
                                 <td>
-                                    <span class="status-badge <?= $sku['status'] === 'active' ? 'status-active' : 'status-inactive' ?>">
+                                    <span id="status-badge-<?= $sku['sku_id'] ?>" class="status-badge <?= $sku['status'] === 'active' ? 'status-active' : 'status-inactive' ?>">
                                         <?= $sku['status'] === 'active' ? '✓ 使用中' : '✗ 已停用' ?>
                                     </span>
                                 </td>
@@ -381,7 +381,8 @@ function get_sort_icon($column, $current_sort, $current_dir) {
                                            class="btn btn-sm btn-primary btn-icon" title="编辑">
                                             ✏️ 编辑
                                         </a>
-                                        <button onclick="toggleSkuStatus(<?= $sku['sku_id'] ?>, '<?= $sku['status'] ?>')"
+                                        <button id="status-btn-<?= $sku['sku_id'] ?>"
+                                                onclick="toggleSkuStatus(<?= $sku['sku_id'] ?>, '<?= $sku['status'] ?>')"
                                                 class="btn btn-sm btn-<?= $sku['status'] === 'active' ? 'warning' : 'success' ?> btn-icon"
                                                 title="<?= $sku['status'] === 'active' ? '停用' : '启用' ?>">
                                             <?= $sku['status'] === 'active' ? '⏸️' : '▶️' ?>
