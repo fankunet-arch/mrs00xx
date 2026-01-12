@@ -917,8 +917,9 @@ function express_update_content_note($pdo, $package_id, $operator, $content_note
         $old_status = $package['package_status'];
         $new_status = $old_status;
 
-        // 如果包裹状态是pending或verified，并且填写了内容备注，则自动变为counted（已清点）
-        if (in_array($old_status, ['pending', 'verified']) && !empty($content_note)) {
+        // 如果包裹状态是pending或verified，并且填写了内容备注（或有产品明细），则自动变为counted（已清点）
+        $has_content = !empty($content_note) || ($items !== null && count($items) > 0);
+        if (in_array($old_status, ['pending', 'verified']) && $has_content) {
             $new_status = 'counted';
 
             $update = $pdo->prepare("

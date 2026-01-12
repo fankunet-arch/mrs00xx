@@ -578,10 +578,43 @@ $content_summary = express_get_content_summary($pdo, $batch_id);
                     const skipInboundCheckbox = document.getElementById('skip_inbound');
                     if (skipInboundCheckbox) {
                         skipInboundCheckbox.checked = skipInbound === 1;
+
+                        // 监听状态变化
+                        skipInboundCheckbox.addEventListener('change', toggleProductInputs);
+                        // 初始化状态
+                        toggleProductInputs();
                     }
                 }, 50);
             });
         });
+
+        // 切换产品输入框状态
+        function toggleProductInputs() {
+            const skipInboundCheckbox = document.getElementById('skip_inbound');
+            if (!skipInboundCheckbox) return;
+
+            const isSkipped = skipInboundCheckbox.checked;
+            const container = document.getElementById('products-container');
+            const addBtn = document.querySelector('.modal-btn-secondary[onclick="addProductItem()"]');
+
+            // 禁用/启用容器内的所有输入框和按钮
+            const inputs = container.querySelectorAll('input, button');
+            inputs.forEach(input => {
+                input.disabled = isSkipped;
+                if (input.tagName === 'INPUT') {
+                    input.style.backgroundColor = isSkipped ? '#f5f5f5' : '';
+                    input.style.color = isSkipped ? '#aaa' : '';
+                }
+            });
+
+            // 禁用/启用添加按钮
+            if (addBtn) {
+                addBtn.disabled = isSkipped;
+                addBtn.style.opacity = isSkipped ? '0.5' : '1';
+                addBtn.style.cursor = isSkipped ? 'not-allowed' : 'pointer';
+            }
+        }
+
 
         // 切换时间列显示
         function toggleTimeColumns() {
@@ -696,17 +729,17 @@ $content_summary = express_get_content_summary($pdo, $batch_id);
         const messageDiv = document.getElementById('update-message');
 
         try {
-            // 收集产品数据
-            const items = collectProductItems();
-
-            if (items.length === 0) {
-                await showAlert('请至少填写一个产品信息', '提示', 'warning');
-                return;
-            }
-
             // 获取"不入库"标记
             const skipInboundCheckbox = document.getElementById('skip_inbound');
             const skipInbound = skipInboundCheckbox && skipInboundCheckbox.checked ? 1 : 0;
+
+            // 收集产品数据
+            const items = collectProductItems();
+
+            if (items.length === 0 && !skipInbound) {
+                await showAlert('请至少填写一个产品信息', '提示', 'warning');
+                return;
+            }
 
             const payload = {
                 package_id: packageId,
