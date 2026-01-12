@@ -41,6 +41,12 @@ mysql -h <host> -u <user> -p < docs/migrations/add_sku_fields_20260112.sql
 
 将现有库存中的商品名称批量导入到新的SKU表中。
 
+**重要说明**：
+- ✓ 所有现有商品名称都作为**中文名称**（sku_name_cn）导入
+- ✓ **西班牙语名称**（sku_name_es）字段留空，待后续在SKU管理页面手动填写
+- ✓ 自动生成SKU编码（格式：AUTO-YYMMDD-####）
+- ✓ 自动去重，不会插入重复数据
+
 ### 提供三种迁移脚本
 
 #### 1. 简单迁移（SQL版本）

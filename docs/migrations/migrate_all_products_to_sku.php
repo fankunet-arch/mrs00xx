@@ -116,6 +116,7 @@ try {
 
     // 6. 批量插入新商品到SKU表
     echo "\n步骤 3: 开始批量插入新商品...\n";
+    echo "注意：所有商品名称都作为中文名称（sku_name_cn），西班牙语名称（sku_name_es）留空待后续填写\n\n";
 
     $insert_sql = "INSERT INTO mrs_sku (
         sku_code,
