@@ -33,6 +33,7 @@ try {
         'brand_name' => $input['brand_name'] ?? null,
         'spec_info' => $input['spec_info'] ?? null,
         'shelf_life_months' => !empty($input['shelf_life_months']) ? (int)$input['shelf_life_months'] : null,
+        'production_time_days' => !empty($input['production_time_days']) ? (int)$input['production_time_days'] : null,
         'standard_unit' => $input['standard_unit'] ?? '件',
         'case_unit_name' => $input['case_unit_name'] ?? '箱',
         'case_to_standard_qty' => !empty($input['case_to_standard_qty']) ? (float)$input['case_to_standard_qty'] : null,

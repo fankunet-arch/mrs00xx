@@ -105,6 +105,77 @@ $page_title = $is_edit ? '编辑SKU' : '新增SKU';
             color: #6c757d;
             margin-top: 4px;
         }
+
+        /* 生产时间快捷选择样式 */
+        .production-time-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .quick-select-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .quick-btn {
+            padding: 6px 12px;
+            border: 1px solid #dee2e6;
+            background: #fff;
+            border-radius: 4px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .quick-btn:hover {
+            background: #e9ecef;
+            border-color: #adb5bd;
+        }
+
+        .quick-btn.active {
+            background: #007bff;
+            color: #fff;
+            border-color: #007bff;
+        }
+
+        .quick-btn.clear-btn {
+            color: #6c757d;
+            background: #f8f9fa;
+        }
+
+        .quick-btn.clear-btn:hover {
+            background: #e9ecef;
+            color: #495057;
+        }
+
+        .custom-input-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .custom-input-wrapper input {
+            width: 80px;
+            text-align: center;
+        }
+
+        .custom-input-wrapper .unit-text {
+            font-size: 14px;
+            color: #495057;
+        }
+
+        .production-time-display {
+            font-size: 13px;
+            color: #28a745;
+            margin-top: 4px;
+        }
+
+        .production-time-display.empty {
+            color: #6c757d;
+        }
     </style>
 </head>
 <body>
@@ -200,6 +271,32 @@ $page_title = $is_edit ? '编辑SKU' : '新增SKU';
                             <div class="help-text">产品的保质期（以月为单位）</div>
                         </div>
                         <div>
+                            <label class="form-label">生产时间（天）</label>
+                            <div class="production-time-wrapper">
+                                <input type="hidden" name="production_time_days" id="productionTimeDays"
+                                       value="<?= htmlspecialchars($sku['production_time_days'] ?? '') ?>">
+                                <div class="quick-select-row">
+                                    <button type="button" class="quick-btn" data-days="3">3天</button>
+                                    <button type="button" class="quick-btn" data-days="5">5天</button>
+                                    <button type="button" class="quick-btn" data-days="7">7天</button>
+                                    <button type="button" class="quick-btn" data-days="10">10天</button>
+                                    <button type="button" class="quick-btn" data-days="15">15天</button>
+                                    <button type="button" class="quick-btn" data-days="30">30天</button>
+                                    <button type="button" class="quick-btn clear-btn" data-days="">清除</button>
+                                </div>
+                                <div class="custom-input-wrapper">
+                                    <span class="unit-text">自定义:</span>
+                                    <input type="number" id="customProductionTime" class="form-control"
+                                           placeholder="天数" min="1" max="365">
+                                    <span class="unit-text">天</span>
+                                </div>
+                                <div id="productionTimeDisplay" class="production-time-display empty">
+                                    未设置（普通产品无需填写）
+                                </div>
+                            </div>
+                            <div class="help-text">定制产品的生产所需时间，普通产品可留空</div>
+                        </div>
+                        <div>
                             <label class="form-label">标准单位</label>
                             <input type="text" name="standard_unit" class="form-control"
                                    value="<?= htmlspecialchars($sku['standard_unit'] ?? '件') ?>"
@@ -272,6 +369,70 @@ $page_title = $is_edit ? '编辑SKU' : '新增SKU';
 
     <script src="/mrs/ap/js/modal.js"></script>
     <script>
+        // 生产时间选择逻辑
+        (function() {
+            const hiddenInput = document.getElementById('productionTimeDays');
+            const customInput = document.getElementById('customProductionTime');
+            const displayEl = document.getElementById('productionTimeDisplay');
+            const quickBtns = document.querySelectorAll('.quick-btn[data-days]');
+
+            // 更新显示状态
+            function updateDisplay(days) {
+                quickBtns.forEach(btn => {
+                    btn.classList.remove('active');
+                    if (btn.dataset.days === String(days)) {
+                        btn.classList.add('active');
+                    }
+                });
+
+                if (days && days > 0) {
+                    displayEl.textContent = '已设置: ' + days + ' 天';
+                    displayEl.classList.remove('empty');
+                    // 如果值不是快捷按钮中的，显示在自定义输入框
+                    const quickValues = ['3', '5', '7', '10', '15', '30'];
+                    if (!quickValues.includes(String(days))) {
+                        customInput.value = days;
+                    } else {
+                        customInput.value = '';
+                    }
+                } else {
+                    displayEl.textContent = '未设置（普通产品无需填写）';
+                    displayEl.classList.add('empty');
+                    customInput.value = '';
+                }
+            }
+
+            // 设置生产时间
+            function setProductionTime(days) {
+                hiddenInput.value = days || '';
+                updateDisplay(days);
+            }
+
+            // 快捷按钮点击
+            quickBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const days = this.dataset.days;
+                    setProductionTime(days ? parseInt(days) : null);
+                });
+            });
+
+            // 自定义输入
+            customInput.addEventListener('input', function() {
+                const days = parseInt(this.value);
+                if (days > 0) {
+                    setProductionTime(days);
+                } else if (this.value === '') {
+                    setProductionTime(null);
+                }
+            });
+
+            // 初始化显示
+            const initialValue = hiddenInput.value;
+            if (initialValue) {
+                updateDisplay(parseInt(initialValue));
+            }
+        })();
+
         document.getElementById('skuForm').addEventListener('submit', async function(e) {
             e.preventDefault();
 
