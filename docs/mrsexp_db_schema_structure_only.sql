@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- 主机： mhdlmskp2kpxguj.mysql.db
--- 生成日期： 2026-01-12 13:49:25
+-- 生成日期： 2026-01-16 12:44:01
 -- 服务器版本： 8.4.6-6
 -- PHP 版本： 8.1.33
 
@@ -566,6 +566,7 @@ CREATE TABLE `mrs_sku` (
   `brand_name` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '品牌名称',
   `spec_info` varchar(200) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '规格信息',
   `shelf_life_months` int UNSIGNED DEFAULT NULL COMMENT '保质期效（月）',
+  `production_time_days` int UNSIGNED DEFAULT NULL COMMENT '生产时间（天）- 用于定制产品',
   `supplier_country` enum('china','spain') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '供货商所属国家：china=中国，spain=西班牙',
   `default_shelf_location` varchar(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '默认货架位置',
   `standard_unit` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT '件' COMMENT '标准单位（件、个、瓶等）',
@@ -826,7 +827,8 @@ ALTER TABLE `mrs_sku`
   ADD KEY `idx_barcode` (`barcode`),
   ADD KEY `idx_supplier_country` (`supplier_country`),
   ADD KEY `idx_sku_name_cn` (`sku_name_cn`(100)),
-  ADD KEY `idx_sku_name_es` (`sku_name_es`(100));
+  ADD KEY `idx_sku_name_es` (`sku_name_es`(100)),
+  ADD KEY `idx_production_time` (`production_time_days`);
 
 --
 -- 表的索引 `mrs_usage_log`
