@@ -424,30 +424,6 @@ $packages = mrs_get_true_inventory_detail($pdo, $product_name, $order_by);
             <?php endif; ?>
         </div>
     </div>
-    <div id="product-search-modal-overlay" class="product-search-modal-overlay" onclick="closeProductSearchModal(event)">
-        <div class="product-search-modal" onclick="event.stopPropagation()">
-            <div class="product-search-modal-header">
-                <h3>🔍 搜索产品</h3>
-                <button class="product-search-modal-close" onclick="closeProductSearchModal()">&times;</button>
-            </div>
-            <div class="product-search-modal-body">
-                <div class="product-search-input-wrapper">
-                    <input type="text"
-                           id="product-search-input"
-                           class="product-search-input"
-                           placeholder="输入产品名称..."
-                           autocomplete="off">
-                    <span class="product-search-input-icon">🔍</span>
-                </div>
-                <div class="product-search-hint">
-                    搜索整个库存中的产品（已自动去重）
-                </div>
-                <div id="product-search-results" class="product-search-results-container"></div>
-            </div>
-        </div>
-    </div>
-
-</html>
     <script src="/mrs/ap/js/modal.js"></script>
     <script>
     // 改变排序方式
@@ -684,9 +660,13 @@ $packages = mrs_get_true_inventory_detail($pdo, $product_name, $order_by);
         const items = collectProductItems();
 
         if (items.length === 0) {
-            await showAlert('请至少填写一个产品信息', '错误', 'error');
+            // 使用原生alert进行表单内验证，避免破坏当前编辑模态框
+            alert('请至少填写一个产品信息');
             return;
         }
+
+        // 先关闭编辑模态框，再提交数据
+        window.modal.close(true);
 
         try {
             const response = await fetch('/mrs/ap/index.php?action=update_package', {
@@ -714,9 +694,6 @@ $packages = mrs_get_true_inventory_detail($pdo, $product_name, $order_by);
         } catch (error) {
             await showAlert('网络错误: ' + error.message, '错误', 'error');
         }
-
-        // 关闭模态框
-        window.modal.close(true);
     }
 
     async function markVoid(ledgerId) {
@@ -732,65 +709,67 @@ $packages = mrs_get_true_inventory_detail($pdo, $product_name, $order_by);
 
         if (!confirmed) return;
 
-        // 显示输入框让用户输入损耗原因
-        const formHtml = `
-            <form id="voidReasonForm" style="padding: 20px;">
-                <div class="modal-form-group">
-                    <label class="modal-form-label">损耗原因 *</label>
-                    <textarea name="reason" class="modal-form-control" rows="3"
-                              placeholder="请描述损耗原因..." required></textarea>
-                </div>
-            </form>
-        `;
+        // 循环显示原因输入框，直到用户提交有效内容或取消
+        while (true) {
+            const formHtml = `
+                <form id="voidReasonForm" style="padding: 20px;">
+                    <div class="modal-form-group">
+                        <label class="modal-form-label">损耗原因 *</label>
+                        <textarea name="reason" class="modal-form-control" rows="3"
+                                  placeholder="请描述损耗原因..." required></textarea>
+                    </div>
+                </form>
+            `;
 
-        const reasonConfirmed = await showModal({
-            title: '输入损耗原因',
-            content: formHtml,
-            footer: `
-                <div class="modal-footer">
-                    <button class="modal-btn modal-btn-secondary" data-action="cancel">取消</button>
-                    <button class="modal-btn modal-btn-primary" onclick="submitVoid(${ledgerId})">提交</button>
-                </div>
-            `
-        });
-    }
-
-    async function submitVoid(ledgerId) {
-        const form = document.getElementById('voidReasonForm');
-        const reason = form.querySelector('[name="reason"]').value.trim();
-
-        if (!reason) {
-            await showAlert('请输入损耗原因', '提示', 'warning');
-            return;
-        }
-
-        try {
-            const response = await fetch('/mrs/ap/index.php?action=status_change', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    ledger_id: ledgerId,
-                    new_status: 'void',
-                    reason: reason
-                })
+            const reasonConfirmed = await showModal({
+                title: '输入损耗原因',
+                content: formHtml,
+                footer: `
+                    <div class="modal-footer">
+                        <button class="modal-btn modal-btn-secondary" data-action="cancel">取消</button>
+                        <button class="modal-btn modal-btn-primary" data-action="confirm">提交</button>
+                    </div>
+                `
             });
 
-            const data = await response.json();
+            if (!reasonConfirmed) return;
 
-            if (data.success) {
-                await showAlert('操作成功', '成功', 'success');
-                location.reload();
-            } else {
-                await showAlert('操作失败: ' + data.message, '错误', 'error');
+            // 读取表单数据（DOM在close后300ms内仍然可用）
+            const form = document.getElementById('voidReasonForm');
+            const reason = form ? form.querySelector('[name="reason"]').value.trim() : '';
+
+            if (!reason) {
+                await showAlert('请输入损耗原因', '提示', 'warning');
+                continue; // 重新显示原因输入框
             }
-        } catch (error) {
-            await showAlert('网络错误: ' + error.message, '错误', 'error');
-        }
 
-        // 关闭模态框
-        window.modal.close(true);
+            // 提交请求
+            try {
+                const response = await fetch('/mrs/ap/index.php?action=status_change', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        ledger_id: ledgerId,
+                        new_status: 'void',
+                        reason: reason
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    await showAlert('操作成功', '成功', 'success');
+                    location.reload();
+                } else {
+                    await showAlert('操作失败: ' + data.message, '错误', 'error');
+                }
+            } catch (error) {
+                await showAlert('网络错误: ' + error.message, '错误', 'error');
+            }
+            break;
+        }
     }
 
     // ==========================================
