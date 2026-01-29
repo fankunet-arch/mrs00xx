@@ -227,8 +227,24 @@ function format_tracking_number($tracking_number) {
                                     <td><?= date('Y-m-d H:i', strtotime($pkg['inbound_time'])) ?></td>
                                     <td><?= $pkg['days_in_stock'] ?> 天</td>
                                     <td onclick="event.stopPropagation()">
+                                        <?php
+                                        // 按具体产品出货时，使用 item 级别的产品名和数量
+                                        if (!empty($selected_sku) && !empty($pkg['items'])) {
+                                            $outbound_product = $selected_sku;
+                                            $outbound_qty = '';
+                                            foreach ($pkg['items'] as $_item) {
+                                                if ($_item['product_name'] === $selected_sku) {
+                                                    $outbound_qty = $_item['quantity'] ?? '';
+                                                    break;
+                                                }
+                                            }
+                                        } else {
+                                            $outbound_product = $pkg['content_note'];
+                                            $outbound_qty = $pkg['ledger_quantity'] ?? '';
+                                        }
+                                        ?>
                                         <button type="button" class="btn btn-sm btn-success"
-                                                onclick="partialOutbound(<?= $pkg['ledger_id'] ?>, '<?= htmlspecialchars($pkg['content_note'], ENT_QUOTES) ?>', '<?= htmlspecialchars($pkg['ledger_quantity'] ?? '', ENT_QUOTES) ?>')">拆零出货</button>
+                                                onclick="partialOutbound(<?= $pkg['ledger_id'] ?>, '<?= htmlspecialchars($outbound_product, ENT_QUOTES) ?>', '<?= htmlspecialchars($outbound_qty, ENT_QUOTES) ?>')">拆零出货</button>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -522,6 +538,7 @@ function format_tracking_number($tracking_number) {
                 },
                 body: JSON.stringify({
                     ledger_id: ledgerId,
+                    product_name: productName,
                     deduct_qty: deductQty,
                     destination: destination,
                     remark: remark,

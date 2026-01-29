@@ -415,10 +415,22 @@ function get_sort_icon($column, $current_sort, $current_dir) {
 
             const packages = data.data.packages;
             const today = new Date().toISOString().split('T')[0];
-            const firstQty = cleanQty(packages[0]?.ledger_quantity ?? packages[0]?.quantity ?? '');
+
+            // 从产品明细中提取该产品的独立数量
+            const getItemQty = (pkg) => {
+                if (Array.isArray(pkg.items)) {
+                    const match = pkg.items.find(item => item.product_name === skuName);
+                    if (match && match.quantity !== null && match.quantity !== '') {
+                        return cleanQty(match.quantity);
+                    }
+                }
+                return cleanQty(pkg.ledger_quantity ?? pkg.quantity ?? '');
+            };
+
+            const firstQty = getItemQty(packages[0]);
 
             const optionsHtml = packages.map(pkg => {
-                const qty = cleanQty(pkg.ledger_quantity ?? pkg.quantity ?? '');
+                const qty = getItemQty(pkg);
                 const label = `${pkg.batch_name || '-'} / 箱号：${pkg.box_number || '-'} / 库存：${qty}件`;
                 return `<option value="${pkg.ledger_id}" data-qty="${qty}">${label}</option>`;
             }).join('');
@@ -514,6 +526,7 @@ function get_sort_icon($column, $current_sort, $current_dir) {
                 },
                 body: JSON.stringify({
                     ledger_id: ledgerId,
+                    product_name: skuName,
                     deduct_qty: outboundQty,
                     destination: destination,
                     remark: remark,

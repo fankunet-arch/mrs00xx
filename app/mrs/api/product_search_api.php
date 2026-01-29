@@ -2,7 +2,7 @@
 /**
  * MRS 物料收发管理系统 - API: 产品名称搜索
  * 文件路径: app/mrs/api/product_search_api.php
- * 说明: 支持产品名称的模糊搜索，自动去重
+ * 说明: 按产品明细（mrs_package_items）搜索，每个独立产品名称单独展示
  */
 
 if (!defined('MRS_ENTRY')) {
@@ -21,17 +21,20 @@ if (empty($keyword)) {
 }
 
 try {
-    // 搜索产品名称（去重，只返回不同的产品名称）
+    // 搜索产品明细表中的独立产品名称
     $search_pattern = '%' . $keyword . '%';
 
     $sql = "SELECT DISTINCT
-                content_note as product_name,
-                COUNT(*) as box_count,
-                SUM(quantity) as total_quantity
-            FROM mrs_package_ledger
-            WHERE status = 'in_stock'
-            AND content_note LIKE :keyword
-            GROUP BY content_note
+                i.product_name,
+                COUNT(DISTINCT l.ledger_id) as box_count,
+                COALESCE(SUM(i.quantity), 0) as total_quantity
+            FROM mrs_package_items i
+            INNER JOIN mrs_package_ledger l ON i.ledger_id = l.ledger_id
+            WHERE l.status = 'in_stock'
+            AND i.product_name LIKE :keyword
+            AND i.product_name IS NOT NULL
+            AND i.product_name != ''
+            GROUP BY i.product_name
             ORDER BY box_count DESC
             LIMIT 20";
 

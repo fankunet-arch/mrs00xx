@@ -2,7 +2,7 @@
 /**
  * API: Partial Outbound (拆零出库)
  * 文件路径: app/mrs/api/partial_outbound.php
- * 说明: 从包裹中拆出部分数量给门店，记录用量统计
+ * 说明: 从包裹中拆出部分数量给门店，支持按具体产品扣减
  */
 
 if (!defined('MRS_ENTRY')) {
@@ -24,6 +24,7 @@ $deduct_qty = floatval($input['deduct_qty'] ?? 0);
 $destination = trim($input['destination'] ?? '');
 $remark = trim($input['remark'] ?? '');
 $outbound_date = trim($input['outbound_date'] ?? '');
+$product_name = trim($input['product_name'] ?? '');
 
 // 参数验证
 if ($ledger_id <= 0) {
@@ -70,30 +71,88 @@ try {
         mrs_json_response(false, null, '只能从在库包裹中出货');
     }
 
-    // 2. 清洗并解析当前数量（处理不规范数据：纯数字、空值、包含文字）
-    $quantity_str = $package['quantity'] ?? '';
-
-    // 清洗数量：提取数字部分
-    if ($quantity_str === null || $quantity_str === '') {
-        $current_qty = 0.0;
-    } else {
-        // 移除所有非数字字符（保留小数点）
-        $cleaned = preg_replace('/[^0-9.]/', '', trim((string)$quantity_str));
-        $current_qty = $cleaned !== '' ? floatval($cleaned) : 0.0;
-    }
-
-    // 3. 检查库存是否足够
-    if ($deduct_qty > $current_qty) {
-        mrs_json_response(false, null, "库存不足。当前库存：{$current_qty} 件，需要出库：{$deduct_qty} 件");
-    }
-
-    // 4. 计算剩余数量
-    $new_qty = $current_qty - $deduct_qty;
-
-    // 5. 开启事务
+    // 2. 开启事务
     $pdo->beginTransaction();
 
-    // 6. 更新包裹数量
+    // 3. 如果指定了产品名称，从 item 级别扣减
+    if (!empty($product_name)) {
+        // 查找该产品在包裹中的明细记录
+        $item_stmt = $pdo->prepare("
+            SELECT item_id, quantity
+            FROM mrs_package_items
+            WHERE ledger_id = :ledger_id AND product_name = :product_name
+            LIMIT 1
+        ");
+        $item_stmt->execute([
+            'ledger_id' => $ledger_id,
+            'product_name' => $product_name
+        ]);
+        $item = $item_stmt->fetch();
+
+        if (!$item) {
+            $pdo->rollBack();
+            mrs_json_response(false, null, "包裹中未找到产品「{$product_name}」");
+        }
+
+        // 清洗 item 级别数量
+        $item_qty_str = $item['quantity'] ?? '';
+        if ($item_qty_str === null || $item_qty_str === '') {
+            $item_current_qty = 0.0;
+        } else {
+            $cleaned = preg_replace('/[^0-9.]/', '', trim((string)$item_qty_str));
+            $item_current_qty = $cleaned !== '' ? floatval($cleaned) : 0.0;
+        }
+
+        if ($deduct_qty > $item_current_qty) {
+            $pdo->rollBack();
+            mrs_json_response(false, null, "「{$product_name}」库存不足。当前库存：{$item_current_qty} 件，需要出库：{$deduct_qty} 件");
+        }
+
+        $new_item_qty = $item_current_qty - $deduct_qty;
+
+        // 更新 item 级别数量
+        $update_item_stmt = $pdo->prepare("
+            UPDATE mrs_package_items
+            SET quantity = :new_qty
+            WHERE item_id = :item_id
+        ");
+        $update_item_stmt->execute([
+            'new_qty' => $new_item_qty,
+            'item_id' => $item['item_id']
+        ]);
+
+        // 重新计算 ledger 级别总数量（所有 item 数量之和）
+        $sum_stmt = $pdo->prepare("
+            SELECT COALESCE(SUM(CAST(quantity AS DECIMAL(10,2))), 0) as total_qty
+            FROM mrs_package_items
+            WHERE ledger_id = :ledger_id
+        ");
+        $sum_stmt->execute(['ledger_id' => $ledger_id]);
+        $new_ledger_qty = floatval($sum_stmt->fetchColumn());
+
+        $remaining_qty = $new_item_qty;
+        $log_product_name = $product_name;
+    } else {
+        // 未指定产品名称时（兼容旧调用），从 ledger 级别扣减
+        $quantity_str = $package['quantity'] ?? '';
+        if ($quantity_str === null || $quantity_str === '') {
+            $current_qty = 0.0;
+        } else {
+            $cleaned = preg_replace('/[^0-9.]/', '', trim((string)$quantity_str));
+            $current_qty = $cleaned !== '' ? floatval($cleaned) : 0.0;
+        }
+
+        if ($deduct_qty > $current_qty) {
+            $pdo->rollBack();
+            mrs_json_response(false, null, "库存不足。当前库存：{$current_qty} 件，需要出库：{$deduct_qty} 件");
+        }
+
+        $new_ledger_qty = $current_qty - $deduct_qty;
+        $remaining_qty = $new_ledger_qty;
+        $log_product_name = $package['content_note'];
+    }
+
+    // 4. 更新 ledger 级别数量
     $update_stmt = $pdo->prepare("
         UPDATE mrs_package_ledger
         SET quantity = :new_qty,
@@ -101,11 +160,11 @@ try {
         WHERE ledger_id = :ledger_id
     ");
     $update_stmt->execute([
-        'new_qty' => $new_qty,
+        'new_qty' => $new_ledger_qty,
         'ledger_id' => $ledger_id
     ]);
 
-    // 7. 记录出库到统计表
+    // 5. 记录出库到统计表
     $insert_stmt = $pdo->prepare("
         INSERT INTO mrs_usage_log (
             ledger_id,
@@ -129,7 +188,7 @@ try {
     ");
     $insert_stmt->execute([
         'ledger_id' => $ledger_id,
-        'product_name' => $package['content_note'],
+        'product_name' => $log_product_name,
         'deduct_qty' => $deduct_qty,
         'destination' => $destination,
         'operator' => $operator,
@@ -137,17 +196,17 @@ try {
         'remark' => $remark ?: null
     ]);
 
-    // 8. 提交事务
+    // 6. 提交事务
     $pdo->commit();
 
-    // 9. 返回成功
+    // 7. 返回成功
     mrs_json_response(true, [
         'ledger_id' => $ledger_id,
-        'product_name' => $package['content_note'],
+        'product_name' => $log_product_name,
         'deduct_qty' => $deduct_qty,
-        'remaining_qty' => $new_qty,
+        'remaining_qty' => $remaining_qty,
         'destination' => $destination
-    ], "拆零出库成功！已从包裹中扣减 {$deduct_qty} 件，剩余 {$new_qty} 件");
+    ], "拆零出库成功！已从「{$log_product_name}」扣减 {$deduct_qty} 件，剩余 {$remaining_qty} 件");
 
 } catch (PDOException $e) {
     // 回滚事务

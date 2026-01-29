@@ -410,8 +410,20 @@ $packages = mrs_get_true_inventory_detail($pdo, $product_name, $order_by);
                                 <td><?= $pkg['days_in_stock'] ?> 天</td>
                                 <td><span class="badge badge-in-stock">在库</span></td>
                                 <td>
+                                    <?php
+                                    // 查找当前查看产品在此包裹中的数量
+                                    $current_item_qty = '';
+                                    if (!empty($pkg['items'])) {
+                                        foreach ($pkg['items'] as $item) {
+                                            if ($item['product_name'] === $product_name) {
+                                                $current_item_qty = $item['quantity'] ?? '';
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    ?>
                                     <button type="button" class="btn btn-sm btn-success"
-                                            onclick="partialOutbound(<?= $pkg['ledger_id'] ?>, '<?= htmlspecialchars($pkg['content_note'], ENT_QUOTES) ?>', '<?= htmlspecialchars($pkg['ledger_quantity'] ?? '', ENT_QUOTES) ?>')">拆零出货</button>
+                                            onclick="partialOutbound(<?= $pkg['ledger_id'] ?>, '<?= htmlspecialchars($product_name, ENT_QUOTES) ?>', '<?= htmlspecialchars($current_item_qty, ENT_QUOTES) ?>')">拆零出货</button>
                                     <button class="btn btn-sm btn-primary"
                                             onclick="editPackage(<?= $pkg['ledger_id'] ?>, '<?= htmlspecialchars($pkg['tracking_number'], ENT_QUOTES) ?>', '<?= htmlspecialchars($pkg['box_number'], ENT_QUOTES) ?>', '<?= htmlspecialchars($pkg['spec_info'], ENT_QUOTES) ?>', '<?= htmlspecialchars($pkg['content_note'], ENT_QUOTES) ?>', '<?= $pkg['ledger_expiry_date'] ?? '' ?>', '<?= htmlspecialchars($pkg['ledger_quantity'] ?? '', ENT_QUOTES) ?>')">修改</button>
                                     <button class="btn btn-sm btn-danger"
@@ -876,6 +888,7 @@ $packages = mrs_get_true_inventory_detail($pdo, $product_name, $order_by);
                 },
                 body: JSON.stringify({
                     ledger_id: ledgerId,
+                    product_name: productName,
                     deduct_qty: deductQty,
                     destination: destination,
                     remark: remark,
