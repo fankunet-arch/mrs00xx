@@ -436,6 +436,31 @@ $packages = mrs_get_true_inventory_detail($pdo, $product_name, $order_by);
             <?php endif; ?>
         </div>
     </div>
+
+    <!-- 产品搜索模态框 -->
+    <div id="product-search-modal-overlay" class="product-search-modal-overlay" onclick="closeProductSearchModal(event)">
+        <div class="product-search-modal" onclick="event.stopPropagation()">
+            <div class="product-search-modal-header">
+                <h3>🔍 搜索产品</h3>
+                <button class="product-search-modal-close" onclick="closeProductSearchModal()">&times;</button>
+            </div>
+            <div class="product-search-modal-body">
+                <div class="product-search-input-wrapper">
+                    <input type="text"
+                           id="product-search-input"
+                           class="product-search-input"
+                           placeholder="输入产品名称..."
+                           autocomplete="off">
+                    <span class="product-search-input-icon">🔍</span>
+                </div>
+                <div class="product-search-hint">
+                    搜索整个库存中的产品（已自动去重）
+                </div>
+                <div id="product-search-results" class="product-search-results-container"></div>
+            </div>
+        </div>
+    </div>
+
     <script src="/mrs/ap/js/modal.js"></script>
     <script>
     // 改变排序方式
@@ -1204,29 +1229,5 @@ $packages = mrs_get_true_inventory_detail($pdo, $product_name, $order_by);
         }
     });
     </script>
-
-    <!-- 产品搜索模态框 -->
-    <div id="product-search-modal-overlay" class="product-search-modal-overlay" onclick="closeProductSearchModal(event)">
-        <div class="product-search-modal" onclick="event.stopPropagation()">
-            <div class="product-search-modal-header">
-                <h3>🔍 搜索产品</h3>
-                <button class="product-search-modal-close" onclick="closeProductSearchModal()">&times;</button>
-            </div>
-            <div class="product-search-modal-body">
-                <div class="product-search-input-wrapper">
-                    <input type="text"
-                           id="product-search-input"
-                           class="product-search-input"
-                           placeholder="输入产品名称..."
-                           autocomplete="off">
-                    <span class="product-search-input-icon">🔍</span>
-                </div>
-                <div class="product-search-hint">
-                    搜索整个库存中的产品（已自动去重）
-                </div>
-                <div id="product-search-results" class="product-search-results-container"></div>
-            </div>
-        </div>
-    </div>
 </body>
 </html>
