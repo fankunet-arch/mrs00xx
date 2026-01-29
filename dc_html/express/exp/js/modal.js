@@ -1,6 +1,6 @@
 /**
  * 现代化模态框组件
- * 文件路径: dc_html/mrs/ap/js/modal.js
+ * 文件路径: dc_html/express/exp/js/modal.js
  * 说明: 替代传统的alert()和confirm()，支持中间模态框和抽屉式模态框
  */
 
@@ -11,6 +11,7 @@ class Modal {
         this.resolveCallback = null;
         this.rejectCallback = null;
         this.currentType = 'center'; // 'center' or 'drawer'
+        this._handleClick = this.handleClick.bind(this);
     }
 
     /**
@@ -192,7 +193,7 @@ class Modal {
         if (!this.overlay) return;
 
         // 添加事件监听
-        this.container.addEventListener('click', this.handleClick.bind(this));
+        this.container.addEventListener('click', this._handleClick);
 
         // 先设置display，再添加active类触发动画
         this.overlay.style.display = 'block';
@@ -223,21 +224,42 @@ class Modal {
     close(result) {
         if (!this.overlay) return;
 
+        // 捕获当前DOM引用，防止延迟清理时误删新模态框
+        const overlay = this.overlay;
+        const container = this.container;
+        const escHandler = this.escHandler;
+
+        // 立即清除实例引用，避免后续 createModal 时产生竞态
+        this.overlay = null;
+        this.container = null;
+        this.escHandler = null;
+
         // 先返回结果，确保调用方在DOM清理前读取用户输入
         if (this.resolveCallback) {
             this.resolveCallback(result);
             this.resolveCallback = null;
         }
 
+        // 立即移除ESC键监听
+        if (escHandler) {
+            document.removeEventListener('keydown', escHandler);
+        }
+
         // 移除active类，触发退出动画
-        this.overlay.classList.remove('active');
+        overlay.classList.remove('active');
 
-        // 等待动画完成后再清理DOM
+        // 等待动画完成后再清理DOM（使用捕获的本地引用，不影响新模态框）
         setTimeout(() => {
-            this.cleanup();
-
-            // 恢复页面滚动
-            document.body.style.overflow = '';
+            if (container) {
+                container.removeEventListener('click', this._handleClick);
+            }
+            if (overlay && overlay.parentNode) {
+                overlay.parentNode.removeChild(overlay);
+            }
+            // 仅当没有新模态框打开时才恢复滚动
+            if (!this.overlay) {
+                document.body.style.overflow = '';
+            }
         }, 300); // 与CSS transition时间一致
     }
 
@@ -246,7 +268,7 @@ class Modal {
      */
     cleanup() {
         if (this.container) {
-            this.container.removeEventListener('click', this.handleClick);
+            this.container.removeEventListener('click', this._handleClick);
         }
 
         if (this.escHandler) {
